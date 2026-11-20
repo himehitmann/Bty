@@ -155,3 +155,105 @@ section.tracking {
     flex: 1;
   }
 }
+
+:global(.category-tag).perfumeTag {
+  color: #334d66;
+  background: #edf3f7;
+}
+
+.declarationList {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.declarationList > div {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 1fr) minmax(0, 2fr);
+  gap: 0.5rem;
+}
+
+.declarationList dt {
+  font-weight: 650;
+}
+
+.declarationList dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.instructionText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.evidenceFields {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+}
+
+.evidenceFields p {
+  margin: 0;
+}
+
+.evidenceField {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.removeEvidence {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 0.45rem;
+  color: var(--muted);
+}
+
+.removeEvidence input {
+  flex: none;
+  margin-top: 0.2rem;
+}
+
+.makeupFields {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.65rem 0.8rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+.makeupFields legend {
+  padding-inline: 0.2rem;
+  font-weight: 650;
+}
+
+.shadeFields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: end;
+}
+
+.makeupFields input[type="color"] {
+  width: 100%;
+  min-width: 3rem;
+  min-height: 2.65rem;
+  padding: 0.3rem;
+  cursor: pointer;
+}
+
+.colorSample {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.colorSample span {
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}

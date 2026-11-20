@@ -216,3 +216,10 @@ svg{flex-shrink:0}
 .privacy-page p{color:var(--muted)}
 .privacy-page a,.preference-help a{text-decoration:underline;text-underline-offset:3px}
 .install-link{margin-bottom:8px;min-height:39px}
+.profile-checklist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;border:0;padding:0}
+.profile-checklist legend{font-weight:600;font-size:.9rem;margin-bottom:6px}
+.profile-help summary{font-weight:650;cursor:pointer}
+.profile-help p{margin-top:.5rem;color:var(--muted)}
+.profile-coach{display:grid;gap:.7rem;margin-top:1rem}
+.profile-coach .button{justify-self:start}
+.profile-coach .stacked-form{max-width:38rem}

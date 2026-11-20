@@ -62,3 +62,5 @@ Le [relevé concurrentiel et tarifaire](docs/veille-navier.md) décrit la propos
 4. Essaye l’achat, la réception du webhook, l’activation du journal et la fin des droits dans le bac à sable. Les comptes de test et de production doivent utiliser des clés et des prix distincts. La mise en vente requiert des clés live, l’activation explicite de `NAVIER_BILLING_ALLOW_LIVE` et une configuration SQL live dans `billing_settings`. Utilise un projet Supabase séparé pour la production.
 
 Le [dossier de contrôle de sécurité](docs/securite-navier.md) précise les essais locaux et les validations nécessaires avant une mise en vente.
+
+La [recette locale et GitHub](docs/recette-navier.md) détaille le lancement et les vérifications. Le [relevé des besoins et du catalogue](docs/navier-catalogue-usages.md) explique les sources, les limites et les choix produit.

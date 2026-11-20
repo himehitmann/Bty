@@ -1,0 +1,27 @@
+# Navier, catalogue et besoins utilisateurs
+
+Relevé du 20 novembre 2026. Les discussions ci-dessous sont des témoignages qualitatifs. Elles aident à prioriser des essais et ne mesurent ni la fréquence du besoin ni la volonté de payer.
+
+## Ce que cherchent les utilisateurs
+
+| Signal observé | Conséquence pour Navier |
+| --- | --- |
+| Des personnes inventorient leur collection dans des tableurs, y compris les teintes individuelles d’une palette, pour mieux utiliser ce qu’elles possèdent. [Inventaire MakeupRehab](https://www.reddit.com/r/MakeupRehab/comments/1ltrbod) · [Suivi et notes](https://www.reddit.com/r/MakeupRehab/comments/1ii03aw) | Priorité aux produits déjà possédés, aux teintes nommées, aux repères de conservation et aux exports. Une référence séparée pour chaque teinte en catalogue serait une évolution utile. |
+| Des débutantes cherchent quelles étapes garder, où appliquer les produits et dans quel ordre. Certaines trouvent les vidéos peu adaptées. [Débuter, AskMeuf](https://www.reddit.com/r/AskMeuf/comments/1hqogio/comment_commencer_%C3%A0_se_maquiller/) · [Apprendre autrement, AskMeuf](https://www.reddit.com/r/AskMeuf/comments/1udrl7o/comment_apprendre_%C3%A0_se_maquiller_autre_que_tutos/) | Le tutoriel utilise le vanity réel. Le Face Chart indique une zone et n’ajoute de couleur que pour un produit teinté dont la teinte est renseignée. |
+| Les utilisateurs distinguent l’effet matifiant, le fini translucide, les poudres colorées et les effets de la lumière. [Poudres et couleurs](https://www.reddit.com/r/MakeupAddiction/comments/1s4netd/what_color_loose_powder/) · [Poudre sur peau olive](https://www.reddit.com/r/OliveMUA/comments/1u7xzgf/green_tinted_powder/) · [Éclairage des swatches](https://www.reddit.com/r/AsianBeauty/comments/p0eu9s) | Séparer type de produit, effet et teinte. Tester ensuite un comparateur de deux échantillons de teintes avec notes d’éclairage et de fini, sans simulation photo. |
+| Une même personne peut alterner plusieurs produits pour un même geste et veut conserver la trace du produit réellement appliqué. [Discussion sur les substitutions](https://www.reddit.com/r/SkincareAddiction/comments/1wzrv4h/routine_help_skincare_app_without_fixed_products/) | Le suivi actuel porte sur les routines terminées, avec un journal Plus éditable. Une substitution par étape et un historique du geste effectué restent des pistes à tester. |
+| Les retours en vitrine mettent en avant l’analyse et l’organisation. Les jeux de données et la qualité des fiches importent autant que le nombre de fonctionnalités. [INCI Beauty France](https://apps.apple.com/fr/app/inci-beauty-scan-cosm%C3%A9tiques/id1276113963) · [Skin Bliss France](https://apps.apple.com/fr/app/skin-bliss-analyse-cosm%C3%A9tique/id1385561364) · [Beautistics France](https://apps.apple.com/fr/app/beautistics-mon-maquillage/id1455000363?platform=iphone&see-all=reviews) | Documenter la provenance et permettre la correction manuelle. Identifier le format, le pays ou la teinte exacte serait plus utile qu’un score global. |
+
+Ce relevé prolonge la [veille concurrentielle et tarifaire](veille-navier.md). Les besoins récurrents à confirmer lors d’essais sont la fiabilité des fiches importées, la simplicité d’un premier maquillage guidé et la possibilité de garder une trace des nuances possédées.
+
+## Couverture du catalogue
+
+**Ajouter un produit → Catalogue** cherche par nom ou code-barres dans Open Beauty Facts et le catalogue indicatif de Navier. **Mon vanity** filtre uniquement les fiches enregistrées. Open Beauty Facts collecte les fiches et inscriptions auprès de contributeurs. Sa couverture dépend du produit, de son marché et de l’exhaustivité de la fiche. La saisie manuelle couvre un produit absent, une teinte distincte ou une formule mise à jour. [Projet Open Beauty Facts](https://github.com/openfoodfacts/openbeautyfacts)
+
+L’INCI, la notice, la mention végane et la mention cruelty-free sont des informations indépendantes. Une fiche peut avoir l’une sans les autres. Une mention communautaire ou une déclaration de marque s’affiche avec sa provenance et ne constitue pas une certification Navier. Une absence de mention reste inconnue. Les allégations animales dépendent notamment du périmètre couvert par la source. [Commission européenne](https://single-market-economy.ec.europa.eu/sectors/cosmetics/ban-animal-testing_en) · [Leaping Bunny](https://www.leapingbunny.org/Web/Web/content/Myths-and-Facts.aspx)
+
+## Profil et routine
+
+Les observations de peau et le sous-ton sont déclarés et modifiables dans les préférences. Le guide de sous-ton propose une comparaison visuelle en lumière du jour. La pipette mesure une couleur dans l’image et ne permet pas de déterminer la teinte réelle, le sous-ton ou le rendu sur une peau.
+
+La trame du matin propose, si des produits pertinents sont identifiés dans le vanity, nettoyage, hydratation et protection solaire avant le maquillage. Chaque choix est confirmé par l’utilisateur. L’ordre de la routine, les mises en garde et la fréquence hebdomadaire sont présentés comme des repères. Les consignes du produit priment et la fréquence des actifs n’est pas déduite d’une seule liste INCI. Le suivi de routine ne remplace pas un avis médical. [American Academy of Dermatology](https://www.aad.org/public/everyday-care/skin-care-basics/care/apply-skin-care-certain-order) · [Cleveland Clinic](https://health.clevelandclinic.org/proper-skin-care-product-order)

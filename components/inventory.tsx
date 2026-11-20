@@ -1,17 +1,25 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Barcode, CalendarClock, ChevronRight, CircleAlert, Columns2, Droplets, Feather, FlaskConical, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { Barcode, CalendarClock, ChevronRight, CircleAlert, Columns2, Droplets, Feather, FlaskConical, Pencil, Plus, Search, Sparkles, SprayCan, Trash2, X } from "lucide-react";
 import { analyzeProduct, ingredientList } from "@/lib/analysis";
-import { searchLocalCatalog } from "@/lib/catalog";
-import { categories, categoryLabels, productInput, productSchema, sourceLabels, type Preferences, type Product } from "@/lib/model";
+import { normalizeCatalogText, searchLocalCatalog } from "@/lib/catalog";
+import { categories, categoryLabels, makeupEffectLabels, makeupEffects, makeupKindLabels, makeupKinds, productInput, productSchema, sourceLabels, type Preferences, type Product } from "@/lib/model";
 import { formatTrackingDate, getProductLifecycle, lifecycleStatusLabels, localCalendarDate, upcomingWindowDays } from "@/lib/product-life";
 import styles from "./inventory.module.css";
 
 type Filter = "all" | Product["category"];
 type DateFilter = "all" | "soon" | "past";
-const categoryIcons = { soin: Droplets, maquillage: Sparkles, cheveux: Feather };
-const categoryBackgrounds = { soin: "#eae0f5", maquillage: "#f6e4ed", cheveux: "#f5e9de" };
+const categoryIcons = { soin: Droplets, maquillage: Sparkles, cheveux: Feather, parfums: SprayCan };
+const categoryBackgrounds = { soin: "#eae0f5", maquillage: "#f6e4ed", cheveux: "#f5e9de", parfums: "#e2e9ef" };
+const claimFields = [
+  { key: "vegan", label: "Vegan" },
+  { key: "crueltyFree", label: "Cruelty-free" },
+] as const;
+
+function CategoryTag({ category, inline = false }: { category: Product["category"]; inline?: boolean }) {
+  return <span className={`category-tag ${category}${inline ? " static-tag" : ""}${category === "parfums" ? ` ${styles.perfumeTag}` : ""}`}>{categoryLabels[category]}</span>;
+}
 
 export function ProductTile({ product, onSelect, today }: { product: Product; onSelect: () => void; today?: string }) {
   const [failed, setFailed] = useState(false);
@@ -20,7 +28,7 @@ export function ProductTile({ product, onSelect, today }: { product: Product; on
   return <button className="product-tile" type="button" onClick={onSelect}>
     <span className="product-image" style={{ backgroundColor: product.tint ?? categoryBackgrounds[product.category] }}>
       {product.imageUrl && !failed ? <img src={product.imageUrl} alt="" loading="lazy" onError={() => setFailed(true)}/> : <Icon size={40} strokeWidth={1.05}/>}
-      <span className={`category-tag ${product.category}`}>{categoryLabels[product.category]}</span>
+      <CategoryTag category={product.category}/>
     </span>
     <span className="product-caption">
       <span>
@@ -45,10 +53,10 @@ export function Inventory({ products, preferences, selected, onSelect, onEdit, o
   const detail = useRef<HTMLDialogElement>(null);
   const current = products.find((product) => product.id === selected);
   const today = localCalendarDate();
-  const search = query.trim().toLocaleLowerCase("fr");
+  const search = normalizeCatalogText(query.trim());
   const visible = products.filter((product) => {
     if (filter !== "all" && filter !== product.category) return false;
-    if (!`${product.name} ${product.brand} ${product.barcode ?? ""}`.toLocaleLowerCase("fr").includes(search)) return false;
+    if (!normalizeCatalogText(`${product.name} ${product.brand} ${categoryLabels[product.category]} ${product.barcode ?? ""}`).includes(search)) return false;
     if (dateFilter === "all") return true;
     const { status } = getProductLifecycle(product, today);
     return status === dateFilter || (dateFilter === "soon" && status === "today");
@@ -87,16 +95,20 @@ export function Inventory({ products, preferences, selected, onSelect, onEdit, o
     <dialog ref={detail} className="dialog" aria-labelledby="product-title" onClose={() => { onSelect(null); setRemovePending(null); }}>
       {current && <>
         <div className="dialog-heading">
-          <div><span className={`category-tag static-tag ${current.category}`}>{categoryLabels[current.category]}</span><h2 id="product-title">{current.name}</h2><p>{current.brand || "Marque non renseignée"}</p></div>
+          <div><CategoryTag category={current.category} inline/><h2 id="product-title">{current.name}</h2><p>{current.brand || "Marque non renseignée"}</p></div>
           <button type="button" className="icon-button" onClick={() => detail.current?.close()} aria-label="Fermer la fiche"><X size={20}/></button>
         </div>
         <ProductTracking product={current} today={today}/>
         <section className="product-detail-panel">
           <h3>Composition INCI</h3>
-          <p className="muted">{sourceLabels[current.source]}{current.barcode ? ` · ${current.barcode}` : ""}</p>
-          {ingredients.length ? <ul className="ingredient-list">{ingredients.map((ingredient, index) => <li key={`${index}-${ingredient}`}>{ingredient}</li>)}</ul> : <p>La liste d’ingrédients n’est pas renseignée.</p>}
-          {current.source === "open-beauty-facts" && current.barcode && <a href={`https://world.openbeautyfacts.org/product/${current.barcode}`} target="_blank" rel="noreferrer">Voir la fiche Open Beauty Facts</a>}
+          {ingredients.length ? <>
+            <p className="muted">{sourceLabels[current.source]}{current.barcode ? ` · ${current.barcode}` : ""}</p>
+            <ul className="ingredient-list">{ingredients.map((ingredient, index) => <li key={`${index}-${ingredient}`}>{ingredient}</li>)}</ul>
+          </> : <p>Composition non renseignée. Consulte la liste d’ingrédients sur l’emballage.</p>}
+          {(current.sourceUrl || (current.source === "open-beauty-facts" && current.barcode)) && <a href={current.sourceUrl ?? `https://world.openbeautyfacts.org/product/${current.barcode}`} target="_blank" rel="noreferrer">Voir la fiche catalogue d’origine</a>}
         </section>
+        <ProductDeclarations product={current}/>
+        {current.category === "maquillage" && <MakeupDetails product={current}/>}
         <section className="product-detail-panel insight-panel">
           <h3><CircleAlert size={18}/> Points de vigilance</h3>
           {notes.length ? <ul>{notes.map((note) => <li key={note}>{note}</li>)}</ul> : <p>Aucun signal repéré dans la liste fournie avec tes préférences actuelles.</p>}
@@ -113,6 +125,50 @@ export function Inventory({ products, preferences, selected, onSelect, onEdit, o
       </>}
     </dialog>
   </>;
+}
+
+function evidenceLabel(source: "open-beauty-facts" | "manufacturer" | "packaging") {
+  return source === "manufacturer" ? "Fabricant · lien renseigné"
+    : source === "packaging" ? "Emballage · saisie manuelle" : "Open Beauty Facts · fiche communautaire";
+}
+
+function ProductDeclarations({ product }: { product: Product }) {
+  const instructions = product.usageInstructions;
+  return <>
+    <section className="product-detail-panel">
+      <h3>Mode d’emploi</h3>
+      {instructions ? <>
+        <p className={styles.instructionText}>{instructions.text}</p>
+        {instructions.source === "packaging" ? <p className="muted">{evidenceLabel(instructions.source)}</p>
+          : <a href={instructions.url} target="_blank" rel="noreferrer">{evidenceLabel(instructions.source)}</a>}
+      </> : <p>Consignes non renseignées. Consulte le mode d’emploi sur l’emballage ou auprès du fabricant.</p>}
+    </section>
+    <section className="product-detail-panel">
+      <h3>Déclarations produit</h3>
+      <dl className={styles.declarationList}>
+        {claimFields.map(({ key, label }) => {
+          const claim = product.claims?.[key];
+          return <div key={key}>
+            <dt>{label}</dt>
+            <dd>{claim ? <a href={claim.url} target="_blank" rel="noreferrer">Mention déclarée · {evidenceLabel(claim.source)}</a>
+              : <span className="muted">Non renseigné</span>}</dd>
+          </div>;
+        })}
+      </dl>
+      {(product.claims?.vegan || product.claims?.crueltyFree) && <p className="muted">Les mentions reflètent les déclarations de la source indiquée.</p>}
+    </section>
+  </>;
+}
+
+function MakeupDetails({ product }: { product: Product }) {
+  return <section className="product-detail-panel">
+    <h3>Rendu sur le Face Chart</h3>
+    <dl className={styles.declarationList}>
+      <div><dt>Type de maquillage</dt><dd>{product.makeupKind ? makeupKindLabels[product.makeupKind] : "Non renseigné"}</dd></div>
+      <div><dt>Effet visuel</dt><dd>{makeupEffectLabels[product.makeupEffect ?? "unknown"]}</dd></div>
+      {product.shadeHex && <div><dt>Teinte</dt><dd className={styles.colorSample}><span style={{ backgroundColor: product.shadeHex }} aria-hidden="true"/>{product.shadeHex.toUpperCase()}</dd></div>}
+    </dl>
+  </section>;
 }
 
 function CompareProducts({ products }: { products: Product[] }) {
@@ -211,6 +267,95 @@ function ProductTracking({ product, today }: { product: Product; today: string }
   </section>;
 }
 
+function optionalText(form: FormData, name: string) {
+  const value = form.get(name);
+  return typeof value === "string" ? value.trim() || undefined : undefined;
+}
+
+function readClaims(form: FormData, draft: Product | undefined, sameBarcode: boolean): Product["claims"] {
+  const claims: NonNullable<Product["claims"]> = {};
+  for (const { key } of claimFields) {
+    const url = optionalText(form, `${key}Url`);
+    const existing = draft?.claims?.[key];
+    if (url) claims[key] = { source: "manufacturer", url };
+    else if (sameBarcode && existing?.source === "open-beauty-facts" && !form.has(`${key}Remove`)) claims[key] = existing;
+  }
+  return claims.vegan || claims.crueltyFree ? claims : undefined;
+}
+
+function EvidenceFields({ draft }: { draft?: Product }) {
+  const instructions = draft?.usageInstructions;
+  const [source, setSource] = useState<NonNullable<Product["usageInstructions"]>["source"]>(instructions?.source ?? "packaging");
+
+  return <details className={styles.tracking} onInvalid={(event) => { event.currentTarget.open = true; }}>
+    <summary>Mode d’emploi et déclarations <span className="muted">(facultatifs)</span></summary>
+    <div className={styles.evidenceFields}>
+      <label>Consignes d’utilisation
+        <textarea name="instructions" rows={3} maxLength={1200} defaultValue={instructions?.text}
+          placeholder="Recopie les consignes indiquées pour ce produit."/>
+      </label>
+      <label>Provenance des consignes
+        <select name="instructionsSource" value={source} onChange={(event) => setSource(event.target.value as typeof source)}>
+          <option value="packaging">Emballage</option>
+          <option value="manufacturer">Site du fabricant</option>
+          {instructions?.source === "open-beauty-facts" && <option value="open-beauty-facts">Open Beauty Facts · fiche communautaire</option>}
+        </select>
+      </label>
+      {source === "manufacturer" && <label>Lien HTTPS des consignes du fabricant
+        <input name="instructionsUrl" type="url" inputMode="url" pattern="https://.+" maxLength={700}
+          defaultValue={instructions?.source === "manufacturer" ? instructions.url : undefined} placeholder="https://"/>
+      </label>}
+      <p>Ajoute un lien vers la page du fabricant seulement si la mention y figure explicitement.</p>
+      {claimFields.map(({ key, label }) => {
+        const claim = draft?.claims?.[key];
+        return <div className={styles.evidenceField} key={key}>
+          <label>{label} · lien HTTPS du fabricant
+            <input name={`${key}Url`} type="url" inputMode="url" pattern="https://.+" maxLength={700}
+              defaultValue={claim?.source === "manufacturer" ? claim.url : undefined} placeholder="https://"/>
+          </label>
+          {claim?.source === "open-beauty-facts" && <label className={styles.removeEvidence}>
+            <input name={`${key}Remove`} type="checkbox"/>
+            Retirer la mention {label} issue d’Open Beauty Facts
+          </label>}
+        </div>;
+      })}
+    </div>
+  </details>;
+}
+
+function MakeupFields({ draft }: { draft?: Product }) {
+  const [effect, setEffect] = useState<Product["makeupEffect"]>(draft?.makeupEffect ?? "unknown");
+  const [shade, setShade] = useState(draft?.shadeHex ?? "");
+  const shadeValid = /^#[\da-f]{6}$/i.test(shade);
+
+  return <fieldset className={styles.makeupFields}>
+    <legend>Rendu sur le Face Chart</legend>
+    <div className="form-grid">
+      <label>Type de maquillage
+        <select name="makeupKind" defaultValue={draft?.makeupKind ?? ""}>
+          <option value="">Non renseigné</option>
+          {makeupKinds.map((kind) => <option key={kind} value={kind}>{makeupKindLabels[kind]}</option>)}
+        </select>
+      </label>
+      <label>Effet visuel
+        <select name="makeupEffect" value={effect} onChange={(event) => setEffect(event.target.value as Product["makeupEffect"])}>
+          {makeupEffects.map((option) => <option key={option} value={option}>{makeupEffectLabels[option]}</option>)}
+        </select>
+      </label>
+    </div>
+    {effect === "tinted" && <div className={styles.shadeFields}>
+      <label>Code de la teinte <span className="muted">(facultatif)</span>
+        <input name="shadeHex" value={shade} onChange={(event) => setShade(event.target.value)} pattern="#[0-9a-fA-F]{6}"
+          maxLength={7} autoCapitalize="off" spellCheck={false} placeholder="#A47973"/>
+      </label>
+      <label>Choisir une couleur
+        <input type="color" value={shadeValid ? shade : "#a47973"} onChange={(event) => setShade(event.target.value)}/>
+      </label>
+    </div>}
+    <p className="muted">Le rendu dépend des données que tu renseignes et sert à préparer un look.</p>
+  </fieldset>;
+}
+
 export function ProductDialog({ product, currentProducts, onClose, onSave }: {
   product?: Product; currentProducts: Product[]; onClose: () => void; onSave: (product: Product) => boolean;
 }) {
@@ -218,6 +363,7 @@ export function ProductDialog({ product, currentProducts, onClose, onSave }: {
   const controller = useRef<AbortController | null>(null);
   const [tab, setTab] = useState<"catalogue" | "manuel">(product ? "manuel" : "catalogue");
   const [draft, setDraft] = useState<Product | undefined>(product);
+  const [category, setCategory] = useState<Product["category"]>(product?.category ?? "soin");
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [pending, setPending] = useState(false);
@@ -263,27 +409,56 @@ export function ProductDialog({ product, currentProducts, onClose, onSave }: {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const barcode = String(form.get("barcode") ?? "").trim();
-    const openedOn = String(form.get("openedOn") ?? "").trim() || undefined;
-    const expiresOn = String(form.get("expiresOn") ?? "").trim() || undefined;
-    const pao = String(form.get("paoMonths") ?? "").trim();
+    const barcode = optionalText(form, "barcode");
+    const openedOn = optionalText(form, "openedOn");
+    const expiresOn = optionalText(form, "expiresOn");
+    const pao = optionalText(form, "paoMonths");
     if (openedOn && openedOn > localCalendarDate()) {
       setError("La date d’ouverture doit être aujourd’hui ou dans le passé.");
       return;
     }
+    const sameBarcode = draft?.barcode === barcode;
+    const instructions = optionalText(form, "instructions");
+    const instructionsSource = form.get("instructionsSource");
+    let usageInstructions: unknown;
+    if (instructions && instructionsSource === "open-beauty-facts") {
+      if (draft?.usageInstructions?.source !== "open-beauty-facts" || draft.usageInstructions.text !== instructions) {
+        setError("Choisis l’emballage ou le site du fabricant pour les consignes que tu as modifiées.");
+        return;
+      }
+      usageInstructions = sameBarcode ? draft.usageInstructions : undefined;
+    } else if (instructions && instructionsSource === "manufacturer") {
+      usageInstructions = { text: instructions, source: "manufacturer", url: optionalText(form, "instructionsUrl") };
+    } else if (instructions) {
+      usageInstructions = { text: instructions, source: "packaging" };
+    }
+    const makeupEffect = category === "maquillage" ? optionalText(form, "makeupEffect") : undefined;
     const parsed = productInput.safeParse({
-      name: form.get("name"), brand: form.get("brand"), category: form.get("category"),
-      ingredients: form.get("ingredients"), barcode: barcode || undefined, openedOn, expiresOn,
-      paoMonths: pao ? Number(pao) : undefined,
+      name: form.get("name"), brand: form.get("brand"), category,
+      ingredients: form.get("ingredients"), barcode, openedOn, expiresOn, paoMonths: pao ? Number(pao) : undefined,
+      makeupKind: category === "maquillage" ? optionalText(form, "makeupKind") : undefined,
+      makeupEffect, shadeHex: makeupEffect === "tinted" ? optionalText(form, "shadeHex") : undefined,
+      claims: readClaims(form, draft, sameBarcode), usageInstructions,
     });
-    if (!parsed.success) { setError("Vérifie le nom, la composition, le code-barres et les dates renseignées."); return; }
+    if (!parsed.success) {
+      const field = parsed.error.issues[0]?.path[0];
+      setError(field === "claims" || field === "usageInstructions"
+        ? "Vérifie les consignes et les liens HTTPS vers le fabricant."
+        : "Vérifie le nom, la composition, le code-barres et les informations renseignées.");
+      return;
+    }
     if (barcode && currentProducts.some((entry) => entry.barcode === barcode && entry.id !== product?.id)) {
       setError("Ce code-barres est déjà enregistré dans ton vanity.");
       return;
     }
-    const sourceChanged = draft && (draft.ingredients !== parsed.data.ingredients || draft.barcode !== parsed.data.barcode);
+    const sourceChanged = draft && (draft.ingredients !== parsed.data.ingredients || !sameBarcode);
     const saved = onSave({ ...draft, ...parsed.data, id: product?.id ?? crypto.randomUUID(),
-      source: sourceChanged ? "manuel" : draft?.source ?? "manuel" });
+      source: sourceChanged ? "manuel" : draft?.source ?? "manuel",
+      sourceUrl: sameBarcode ? draft?.sourceUrl : undefined,
+      imageUrl: !sameBarcode && draft?.source === "open-beauty-facts" ? undefined : draft?.imageUrl,
+      claims: parsed.data.claims, usageInstructions: parsed.data.usageInstructions,
+      makeupKind: parsed.data.makeupKind, makeupEffect: parsed.data.makeupEffect, shadeHex: parsed.data.shadeHex,
+    });
     if (!saved) setError("Ce produit n’a pas été enregistré. Vérifie la taille de ton inventaire et raccourcis la composition si nécessaire.");
   }
 
@@ -298,7 +473,7 @@ export function ProductDialog({ product, currentProducts, onClose, onSave }: {
     </div>}
     {tab === "catalogue" ? <div className="catalog-pane">
       <form className="catalog-search" onSubmit={(event) => { event.preventDefault(); void search(query); }}>
-        <label className="search-field"><Barcode size={19}/><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Nom ou code-barres" placeholder="Nom ou code-barres" maxLength={120}/></label>
+        <label className="search-field"><Barcode size={19} aria-hidden="true"/><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Nom ou code-barres" placeholder="Nom ou code-barres" maxLength={120}/></label>
         <button type="submit" className="button button-primary" disabled={pending}><Search size={17}/>Rechercher</button>
       </form>
       {pending && <p role="status">Recherche en cours…</p>}
@@ -306,9 +481,9 @@ export function ProductDialog({ product, currentProducts, onClose, onSave }: {
       <ul className="catalog-results">
         {catalog.map((item) => {
           const Icon = categoryIcons[item.category];
-          return <li key={item.id}><button className="catalog-item" onClick={() => { setDraft(item); setTab("manuel"); setError(""); }}>
-            <span className="routine-icon"><Icon size={19}/></span>
-            <span><strong>{item.name}</strong><small>{item.brand && item.source !== "local" ? `${item.brand} · ` : ""}{sourceLabels[item.source]}</small></span><Plus size={18}/>
+          return <li key={item.id}><button className="catalog-item" onClick={() => { setDraft(item); setCategory(item.category); setTab("manuel"); setError(""); }}>
+            <span className="routine-icon"><Icon size={19} aria-hidden="true"/></span>
+            <span><strong>{item.name}</strong><small>{categoryLabels[item.category]} · {item.brand && item.source !== "local" ? `${item.brand} · ` : ""}{sourceLabels[item.source]}</small></span><Plus size={18} aria-hidden="true"/>
           </button></li>;
         })}
       </ul>
@@ -317,11 +492,13 @@ export function ProductDialog({ product, currentProducts, onClose, onSave }: {
       <div className="form-grid">
         <label>Nom du produit<input name="name" required maxLength={140} defaultValue={draft?.name}/></label>
         <label>Marque<input name="brand" maxLength={140} defaultValue={draft?.brand}/></label>
-        <label>Catégorie<select name="category" defaultValue={draft?.category ?? "soin"}>{categories.map((category) => <option key={category} value={category}>{categoryLabels[category]}</option>)}</select></label>
+        <label>Catégorie<select name="category" value={category} onChange={(event) => setCategory(event.target.value as Product["category"])}>{categories.map((option) => <option key={option} value={option}>{categoryLabels[option]}</option>)}</select></label>
         <label>Code-barres<input name="barcode" inputMode="numeric" pattern="[0-9]{8,14}" maxLength={14} defaultValue={draft?.barcode}/></label>
       </div>
-      <label>Composition INCI <span className="muted">(facultative)</span><textarea name="ingredients" rows={5} maxLength={6500} defaultValue={draft?.ingredients} placeholder="Aqua, Glycerin, …"/></label>
-      {draft && <p className="muted">Source initiale de la composition · {sourceLabels[draft.source]}</p>}
+      <label>Composition INCI <span className="muted">(facultative)</span><textarea name="ingredients" rows={5} maxLength={6500} defaultValue={draft?.ingredients} placeholder={category === "parfums" ? "Recopie la liste d’ingrédients de l’emballage" : "Aqua, Glycerin, …"}/></label>
+      {draft?.ingredients && <p className="muted">Source initiale de la composition · {sourceLabels[draft.source]}</p>}
+      {category === "maquillage" && <MakeupFields draft={draft}/>}
+      <EvidenceFields draft={draft}/>
       <details className={styles.tracking} open={Boolean(product)} onInvalid={(event) => { event.currentTarget.open = true; }}>
         <summary>Dates de conservation <span className="muted">(facultatives)</span></summary>
         <p>Reporte les repères de l’emballage. Le symbole du pot ouvert indique une durée en mois, par exemple 12M.</p>

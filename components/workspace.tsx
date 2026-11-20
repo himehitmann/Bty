@@ -8,6 +8,7 @@ import { Routines } from "./routines";
 import { Tutorials } from "./tutorials";
 import { Journal } from "./journal";
 import { Plans } from "./plans";
+import { ProfileFields, RoutineCoach } from "./profile-coach";
 import { useBillingStatus } from "@/lib/billing-client";
 import { emptyState, preferenceSchema, type Product, type Routine, type State } from "@/lib/model";
 import { getPalettePhotoUrl, removePalettePhoto, uploadPalettePhoto } from "@/lib/supabase/browser";
@@ -238,7 +239,7 @@ export function Workspace() {
               {!ready ? <p role="status">Chargement de ton espace…</p> : <>
                 {view === "vanity" && <Inventory products={state.products} preferences={state.preferences}
                   selected={selected} onSelect={setSelected} onEdit={setProductEditor} onRemove={removeProduct} onAdd={addProduct}/>}
-                {view === "routines" && <Routines products={state.products} routines={state.routines} preferences={state.preferences}
+                {view === "routines" && <Routines products={state.products} routines={state.routines} preferences={state.preferences} palette={state.palette}
                   onChange={(routines) => update((previous) => ({ ...previous, routines }))}
                   startRoutineId={guide} onStartGuide={setGuide} onExitGuide={() => setGuide(undefined)} onComplete={complete}/>}
                 {view === "palette" && <Palette key={user?.id ?? "guest"} colors={state.palette}
@@ -252,11 +253,13 @@ export function Workspace() {
                   plus={billing.plus} entitlementLoading={billing.loading} products={state.products} routines={state.routines}
                   completed={state.completed} onOpenPlans={() => navigate("offres")}/>}
                 {view === "offres" && <Plans signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth(true)}/>}
-                {view === "preferences" && <PreferencesForm state={state}
+                {view === "preferences" && <><PreferencesForm state={state}
                   onClearSamples={() => sampleDialog.current?.showModal()}
                   onSave={(preferences) => {
                     if (update((previous) => ({ ...previous, preferences }))) setNotice("Préférences enregistrées.");
-                  }} />}
+                  }} />
+                  <RoutineCoach preferences={state.preferences} products={state.products} onCreate={createFromTutorial}/>
+                </>}
               </>}
             </>
           )}
@@ -304,6 +307,12 @@ function Dashboard({ state, date, firstName, ready, onAdd, onNavigate, onGuide, 
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Paris" }).format(new Date());
   const dateFormat = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Paris" });
   const allToday = new Set(completed.filter(({ at }) => dateFormat.format(new Date(at)) === today).map(({ routineId }) => routineId));
+  const weekStart = new Date(`${today}T12:00:00Z`);
+  weekStart.setUTCDate(weekStart.getUTCDate() - 6);
+  const recentSessions = completed.filter(({ at }) => {
+    const day = dateFormat.format(new Date(at));
+    return day >= weekStart.toISOString().slice(0, 10) && day <= today;
+  }).length;
   const featured = routines.find((routine) => routine.period === "matin" && routine.steps.length) ?? routines.find((routine) => routine.steps.length);
   return (
     <>
@@ -330,6 +339,7 @@ function Dashboard({ state, date, firstName, ready, onAdd, onNavigate, onGuide, 
       <div className="dashboard-grid">
         <section className="dashboard-card" aria-labelledby="today-title">
           <div className="section-heading"><h2 id="today-title">Mes routines</h2><button className="text-button" onClick={() => onNavigate("routines")}>Toutes les routines</button></div>
+          <p className="muted">{recentSessions} {recentSessions === 1 ? "routine terminée" : "routines terminées"} sur les 7 derniers jours</p>
           <div className="routine-list">
             {routines.slice(0, 2).map((routine) => {
               const Icon = routine.period === "matin" ? Sun : routine.period === "soir" ? Moon : Sparkles;
@@ -392,6 +402,7 @@ function PreferencesForm({ state, onSave, onClearSamples }: {
     const form = new FormData(event.currentTarget);
     const parsed = preferenceSchema.safeParse({
       fragranceFree: form.has("fragranceFree"), sensitive: form.has("sensitive"), avoid: form.get("avoid"),
+      skinFeel: form.get("skinFeel") || undefined, skinConcerns: form.getAll("skinConcerns"), undertone: form.get("undertone") || undefined,
     });
     if (parsed.success) onSave(parsed.data);
   }
@@ -405,6 +416,7 @@ function PreferencesForm({ state, onSave, onClearSamples }: {
         <span><strong>Ma peau réagit facilement</strong><small>Afficher des repères de tolérance supplémentaires.</small></span></label>
       <label>Ingrédients à éviter<textarea name="avoid" maxLength={600} rows={3} defaultValue={state.preferences.avoid} placeholder="Par exemple : Parfum, Limonene"/>
         <small className="muted">Utilise les noms de l’emballage et sépare-les par des virgules.</small></label>
+      <ProfileFields preferences={state.preferences}/>
       <div className="form-actions"><button className="button button-primary" type="submit">Enregistrer mes préférences</button></div>
     </form>
     <aside className="dashboard-card preference-help">
