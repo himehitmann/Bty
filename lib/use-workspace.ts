@@ -25,6 +25,11 @@ function writeDraft(id: string | null, draft: Draft) {
   catch { return false; }
 }
 
+function matchesDraft(remote: unknown, draft: State) {
+  const validated = stateSchema.safeParse(remote);
+  return validated.success && JSON.stringify(validated.data) === JSON.stringify(draft);
+}
+
 export function useWorkspaceState() {
   const [state, setState] = useState<State>(starterState);
   const [user, setUser] = useState<User | null>(null);
@@ -42,11 +47,20 @@ export function useWorkspaceState() {
     try {
       while (scope.current === current && current.draft.dirty) {
         const snapshot = current.draft.state;
-        const version = await saveRemoteState(client, current.id, snapshot, current.draft.version);
+        let version: string;
+        try {
+          version = await saveRemoteState(client, current.id, snapshot, current.draft.version);
+        } catch (error) {
+          if (!(error instanceof RemoteStateConflict)) throw error;
+          const remote = await loadRemoteState<unknown>(client, current.id);
+          if (!remote.updatedAt || !matchesDraft(remote.state, snapshot)) throw error;
+          version = remote.updatedAt;
+        }
         const previousPhotos = new Set(current.confirmed?.palette.flatMap((color) => color.photoPath ? [color.photoPath] : []));
         const currentPhotos = new Set(snapshot.palette.map((color) => color.photoPath));
         current.confirmed = snapshot;
         current.draft = { state: current.draft.state, version, dirty: current.draft.state !== snapshot };
+        if (scope.current !== current) return;
         writeDraft(current.id, current.draft);
         for (const path of previousPhotos) {
           if (!currentPhotos.has(path) && path.startsWith(`${current.id}/`)) {
@@ -85,13 +99,15 @@ export function useWorkspaceState() {
     try {
       const remote = await loadRemoteState<unknown>(client, id);
       if (scope.current !== current) return;
-      if (saved?.dirty && saved.version !== remote.updatedAt) {
+      const draftAlreadySaved = saved?.dirty && saved.version !== remote.updatedAt &&
+        matchesDraft(remote.state, saved.state);
+      if (saved?.dirty && saved.version !== remote.updatedAt && !draftAlreadySaved) {
         setReady(true);
         setSync("conflict");
         return;
       }
       const parsed = remote.state === null ? emptyState : stateSchema.parse(remote.state);
-      current.draft = saved?.dirty ? saved : { state: parsed, version: remote.updatedAt, dirty: false };
+      current.draft = saved?.dirty && !draftAlreadySaved ? saved : { state: parsed, version: remote.updatedAt, dirty: false };
       current.writable = true;
       current.confirmed = parsed;
       writeDraft(id, current.draft);
@@ -130,6 +146,18 @@ export function useWorkspaceState() {
     });
     return () => { active = false; subscription.unsubscribe(); };
   }, [activate, client]);
+
+  useEffect(() => {
+    if (sync !== "error") return;
+    function reconnect() {
+      const current = scope.current;
+      if (!current?.id) return;
+      if (current.writable) void flush();
+      else void activate(current.id);
+    }
+    window.addEventListener("online", reconnect);
+    return () => window.removeEventListener("online", reconnect);
+  }, [activate, flush, sync]);
 
   const update = useCallback((recipe: (previous: State) => State, expectedId?: string | null) => {
     const current = scope.current;

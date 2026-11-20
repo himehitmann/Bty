@@ -86,7 +86,7 @@ export function Inventory({ products, preferences, selected, onSelect, onEdit, o
 }
 
 export function ProductDialog({ product, currentProducts, onClose, onSave }: {
-  product?: Product; currentProducts: Product[]; onClose: () => void; onSave: (product: Product) => void;
+  product?: Product; currentProducts: Product[]; onClose: () => void; onSave: (product: Product) => boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const controller = useRef<AbortController | null>(null);
@@ -148,8 +148,9 @@ export function ProductDialog({ product, currentProducts, onClose, onSave }: {
       return;
     }
     const ingredientsEdited = Boolean(draft && draft.ingredients !== parsed.data.ingredients);
-    onSave({ ...draft, ...parsed.data, id: product?.id ?? crypto.randomUUID(),
+    const saved = onSave({ ...draft, ...parsed.data, id: product?.id ?? crypto.randomUUID(),
       source: ingredientsEdited ? "manuel" : draft?.source ?? "manuel" });
+    if (!saved) setError("Ce produit n’a pas été enregistré. Vérifie la taille de ton inventaire et raccourcis la composition si nécessaire.");
   }
 
   return <dialog className="dialog product-dialog" aria-labelledby="editor-title" ref={dialog} onClose={onClose}>

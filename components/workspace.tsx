@@ -47,6 +47,9 @@ export function Workspace() {
   const accountDialog = useRef<HTMLDialogElement>(null);
   const conflictDialog = useRef<HTMLDialogElement>(null);
   const sampleDialog = useRef<HTMLDialogElement>(null);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
+  const menuClose = useRef<HTMLButtonElement>(null);
+  const mainContent = useRef<HTMLElement>(null);
   const [now, setNow] = useState<Date>();
   useEffect(() => { setNow(new Date()); }, []);
   const date = now ? new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(now) : "";
@@ -74,12 +77,29 @@ export function Workspace() {
     if (auth && !accountDialog.current?.open) accountDialog.current?.showModal();
   }, [auth]);
 
+  useEffect(() => {
+    if (!mobileNav) return;
+    menuClose.current?.focus();
+    const desktop = window.matchMedia("(width > 760px)");
+    function handleResize(event: MediaQueryListEvent) {
+      if (event.matches) setMobileNav(false);
+    }
+    desktop.addEventListener("change", handleResize);
+    return () => desktop.removeEventListener("change", handleResize);
+  }, [mobileNav]);
+
+  function dismissMobileNav() {
+    setMobileNav(false);
+    menuTrigger.current?.focus();
+  }
+
   function navigate(next: View) {
     setView(next);
     setMobileNav(false);
     setGuide(undefined);
     if (next !== readView()) history.pushState(null, "", next === "accueil" ? location.pathname : `#${next}`);
     window.scrollTo(0, 0);
+    if (mobileNav) requestAnimationFrame(() => mainContent.current?.focus());
   }
 
   function openGuide(routine: Routine) {
@@ -88,38 +108,41 @@ export function Workspace() {
   }
 
   function saveProduct(product: Product) {
-    update((previous) => ({
+    const saved = update((previous) => ({
       ...previous,
       products: previous.products.some((entry) => entry.id === product.id)
         ? previous.products.map((entry) => entry.id === product.id ? product : entry)
         : [product, ...previous.products],
     }));
-    setProductEditor(null);
+    if (saved) setProductEditor(null);
+    return saved;
   }
 
   function removeProduct(id: string) {
-    update((previous) => ({
+    const saved = update((previous) => ({
       ...previous,
       products: previous.products.filter((item) => item.id !== id),
       routines: previous.routines.map((routine) => ({
         ...routine, steps: routine.steps.filter((step) => step.productId !== id),
       })),
     }));
+    if (!saved) return;
     setProductEditor(null);
     setSelected(null);
   }
 
   function complete(routine: Routine) {
-    update((previous) => ({
+    const saved = update((previous) => ({
       ...previous,
       completed: [{ routineId: routine.id, at: new Date().toISOString() }, ...previous.completed].slice(0, 1000),
     }));
-    setNotice(`Routine « ${routine.name} » terminée.`);
+    if (saved) setNotice(`Routine « ${routine.name} » terminée.`);
+    return saved;
   }
 
   function createFromTutorial(routine: Routine) {
     if (state.routines.length >= 100) { setNotice("Tu as atteint la limite de 100 routines."); return; }
-    update((previous) => ({ ...previous, routines: [...previous.routines, routine] }));
+    if (!update((previous) => ({ ...previous, routines: [...previous.routines, routine] }))) return;
     navigate("routines");
     setNotice(`Routine « ${routine.name} » ajoutée.`);
   }
@@ -142,8 +165,11 @@ export function Workspace() {
   return (
     <div className="app-shell">
       <a href="#main-content" className="skip-link" onClick={(event) => { event.preventDefault(); document.getElementById("main-content")?.focus(); }}>Aller au contenu</a>
-      {mobileNav && <button className="nav-scrim" onClick={() => setMobileNav(false)} aria-label="Fermer le menu" />}
-      <aside id="primary-navigation" className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
+      {mobileNav && <button className="nav-scrim" tabIndex={-1} onClick={dismissMobileNav} aria-label="Fermer le menu depuis l’arrière-plan" />}
+      <aside id="primary-navigation" className={`sidebar ${mobileNav ? "sidebar-open" : ""}`} onKeyDown={(event) => {
+        if (mobileNav && !event.defaultPrevented && event.key === "Escape") dismissMobileNav();
+      }}>
+        <button ref={menuClose} className="mobile-menu-close icon-button" type="button" onClick={dismissMobileNav} aria-label="Fermer le menu"><X size={21}/></button>
         <a className="brand" href="#" onClick={(event) => { event.preventDefault(); navigate("accueil"); }}>
           <span className="brand-mark"><Sparkle size={23} strokeWidth={1.35}/></span><span>Navier<span className="brand-dot">.</span></span>
         </a>
@@ -170,7 +196,7 @@ export function Workspace() {
       <div className="main-shell">
         <header className="topbar">
           <div className="breadcrumb">
-            <button className="mobile-menu icon-button" type="button" aria-label={mobileNav ? "Fermer le menu" : "Ouvrir le menu"} aria-expanded={mobileNav} aria-controls="primary-navigation" onClick={() => setMobileNav(!mobileNav)}>
+            <button ref={menuTrigger} className="mobile-menu icon-button" type="button" aria-label={mobileNav ? "Fermer le menu" : "Ouvrir le menu"} aria-expanded={mobileNav} aria-controls="primary-navigation" onClick={() => setMobileNav(!mobileNav)}>
               {mobileNav ? <X size={21}/> : <Menu size={21}/>}
             </button>
             <span>Mon espace</span><ChevronRight size={14}/><strong>{navigation.find((item) => item.id === view)?.label}</strong>
@@ -178,7 +204,7 @@ export function Workspace() {
           <span className="sync-pill"><span className={`sync-dot ${sync === "error" || sync === "conflict" ? "sync-warning" : ""}`}/>{syncLabels[sync]}</span>
         </header>
 
-        <main id="main-content" tabIndex={-1} className="main-content">
+        <main id="main-content" ref={mainContent} tabIndex={-1} className="main-content" inert={mobileNav}>
           {(notice || sync === "error" || sync === "conflict") && (
             <div className="notice" role="status">
               <span>{notice || (sync === "conflict" ? "Une version plus récente existe. Tes modifications restent enregistrées sur cet appareil." : "Les modifications sont conservées sur cet appareil lorsque le stockage du navigateur est disponible.")}</span>
@@ -212,7 +238,9 @@ export function Workspace() {
                 {view === "tutoriels" && <Tutorials products={state.products} onCreateRoutine={createFromTutorial}/>}
                 {view === "preferences" && <PreferencesForm state={state}
                   onClearSamples={() => sampleDialog.current?.showModal()}
-                  onSave={(preferences) => { update((previous) => ({ ...previous, preferences })); setNotice("Préférences enregistrées."); }} />}
+                  onSave={(preferences) => {
+                    if (update((previous) => ({ ...previous, preferences }))) setNotice("Préférences enregistrées.");
+                  }} />}
               </>}
             </>
           )}

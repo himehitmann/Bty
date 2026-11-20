@@ -54,8 +54,8 @@ interface RoutinesProps {
   products: Product[];
   routines: Routine[];
   preferences?: Preferences;
-  onChange: (routines: Routine[]) => void;
-  onComplete?: (routine: Routine) => void;
+  onChange: (routines: Routine[]) => boolean;
+  onComplete?: (routine: Routine) => boolean;
   startRoutineId?: string;
   onStartGuide?: (id: string) => void;
   onExitGuide?: () => void;
@@ -78,8 +78,9 @@ export function Routines({ products, routines, preferences = emptyState.preferen
 
   function saveRoutine(routine: Routine) {
     const existing = routines.some((item) => item.id === routine.id);
-    onChange(existing ? routines.map((item) => item.id === routine.id ? routine : item) : [...routines, routine]);
-    setDraft(null);
+    if (onChange(existing ? routines.map((item) => item.id === routine.id ? routine : item) : [...routines, routine])) {
+      setDraft(null);
+    }
   }
 
   if (activeRoutine?.steps.length) {
@@ -136,8 +137,7 @@ export function Routines({ products, routines, preferences = emptyState.preferen
                     <div className={styles.actions}>
                       <button type="button" className="button button-secondary" onClick={() => setPendingDelete(null)}>Annuler</button>
                       <button type="button" className={`${styles.danger} button button-secondary`} onClick={() => {
-                        onChange(routines.filter((item) => item.id !== routine.id));
-                        setPendingDelete(null);
+                        if (onChange(routines.filter((item) => item.id !== routine.id))) setPendingDelete(null);
                       }}>Supprimer</button>
                     </div>
                   </div>
@@ -347,7 +347,7 @@ function RoutineGuide({ routine, products, preferences, onExit, onComplete }: {
   products: Product[];
   preferences: Preferences;
   onExit: () => void;
-  onComplete?: (routine: Routine) => void;
+  onComplete?: (routine: Routine) => boolean;
 }) {
   const [index, setIndex] = useState(0);
   const [furthest, setFurthest] = useState(0);
@@ -421,7 +421,7 @@ function RoutineGuide({ routine, products, preferences, onExit, onComplete }: {
                 goTo(index + 1);
                 return;
               }
-              onComplete?.(routine);
+              if (onComplete?.(routine) === false) return;
               setFinished(true);
             }}>{last ? <Check size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}{last ? "Terminer" : "Suivante"}</button>
           </div>
