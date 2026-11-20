@@ -79,13 +79,16 @@ export function Workspace() {
 
   useEffect(() => {
     if (!mobileNav) return;
-    menuClose.current?.focus();
+    const focusDrawer = requestAnimationFrame(() => menuClose.current?.focus());
     const desktop = window.matchMedia("(width > 760px)");
     function handleResize(event: MediaQueryListEvent) {
       if (event.matches) setMobileNav(false);
     }
     desktop.addEventListener("change", handleResize);
-    return () => desktop.removeEventListener("change", handleResize);
+    return () => {
+      cancelAnimationFrame(focusDrawer);
+      desktop.removeEventListener("change", handleResize);
+    };
   }, [mobileNav]);
 
   function dismissMobileNav() {
