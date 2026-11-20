@@ -1,6 +1,28 @@
 import type { Product } from "@/lib/model";
 
+export type CatalogSearchMode = "all" | "brand";
+
+// Product identifiers from Open Beauty Facts (ODbL). Keep the source on each entry.
+function offlineProduct(name: string, brand: string, barcode: string, category: Product["category"]): Product {
+  return {
+    id: `obf-${barcode}`,
+    name,
+    brand,
+    barcode,
+    category,
+    ingredients: "",
+    source: "open-beauty-facts",
+    sourceUrl: `https://world.openbeautyfacts.org/product/${barcode}`,
+  };
+}
+
 export const localCatalog: readonly Product[] = [
+  offlineProduct("SA Smoothing Cleanser", "CeraVe", "3337875795456", "soin"),
+  offlineProduct("Skin Renewing Night Cream", "CeraVe", "3337875903509", "soin"),
+  offlineProduct("Effaclar Duo+", "La Roche-Posay", "3337875863377", "soin"),
+  offlineProduct("Cicaplast Baume B5+", "La Roche-Posay", "3337875816847", "soin"),
+  offlineProduct("Rouge Blush", "Dior", "3348901607339", "maquillage"),
+  offlineProduct("Forever Nude Bronze", "Dior", "3348901746687", "maquillage"),
   {
     id: "local-gel-nettoyant",
     name: "Gel nettoyant doux",
@@ -102,13 +124,78 @@ export function normalizeCatalogText(value: string): string {
   return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 }
 
-export function searchLocalCatalog(query: string): Product[] {
-  const words = normalizeCatalogText(query).trim().split(/\s+/).filter(Boolean);
+export function normalizeCatalogQuery(value: string): string {
+  return normalizeCatalogText(value).replaceAll("œ", "oe").replaceAll("æ", "ae")
+    .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
 
-  return localCatalog.filter((product) => {
-    const text = normalizeCatalogText(
-      [product.name, product.brand, product.category, product.ingredients, product.barcode].join(" "),
-    );
-    return words.every((word) => text.includes(word));
-  });
+export function catalogBarcode(value: string): string | undefined {
+  const digits = value.replace(/[\s\p{Pd}]/gu, "");
+  return /^\d{8,14}$/.test(digits) ? digits : undefined;
+}
+
+function matchWords(words: string[], text: string): boolean {
+  const options = text.split(" ");
+  return words.every((word) => options.some((option) => option.startsWith(word)));
+}
+
+function brandScore(value: string, query: string, words: string[]): number {
+  const brand = normalizeCatalogQuery(value.replace(/^[a-z]{2}:/i, ""));
+  if (!brand) return 0;
+  if (brand === query || brand.replaceAll(" ", "") === query.replaceAll(" ", "")) return 90;
+  if (brand.startsWith(`${query} `)) return 78;
+  return matchWords(words, brand) ? 62 : 0;
+}
+
+export function matchesCatalogBrand(brands: readonly string[], query: string): boolean {
+  const name = normalizeCatalogQuery(query);
+  if (!name) return false;
+  const words = name.split(" ");
+  return brands.some((brand) => brandScore(brand, name, words) > 0);
+}
+
+function rankProduct(product: Product, query: string, words: string[], mode: CatalogSearchMode): number {
+  const brand = Math.max(0, ...product.brand.split(/[,;|]/).map((part) => brandScore(part, query, words)));
+  if (mode === "brand") return brand;
+
+  const name = normalizeCatalogQuery(product.name);
+  if (name === query) return 100;
+  if (brand === 90) return brand;
+  const brandedName = `${name} ${normalizeCatalogQuery(product.brand)}`;
+  const matchesName = matchWords(words, name);
+  if (!matchesName && matchWords(words, brandedName)) return 88;
+  if (name.startsWith(`${query} `)) return 86;
+  if (` ${name} `.includes(` ${query} `)) return 82;
+  if (brand === 78) return brand;
+  if (matchesName) return 72;
+  if (brand) return brand;
+  const other = normalizeCatalogQuery(`${product.category} ${product.ingredients}`);
+  return matchWords(words, `${brandedName} ${other}`) ? 20 : 0;
+}
+
+export function rankCatalogProducts(
+  products: readonly Product[],
+  search: string,
+  mode: CatalogSearchMode = "all",
+  keepUnmatched = true,
+): Product[] {
+  const query = normalizeCatalogQuery(search);
+  const barcode = mode === "all" ? catalogBarcode(search) : undefined;
+  const gtin = barcode?.padStart(14, "0");
+  const words = query.split(" ");
+  const seen = new Set<string>();
+
+  return products.flatMap((product) => {
+    const productGtin = product.barcode?.padStart(14, "0");
+    const key = productGtin ? `barcode:${productGtin}` : product.id;
+    if (seen.has(key) || (gtin && productGtin !== gtin)) return [];
+    const score = query && !barcode ? rankProduct(product, query, words, mode) : 0;
+    if (query && !barcode && !score && !keepUnmatched) return [];
+    seen.add(key);
+    return [{ product, score }];
+  }).sort((left, right) => right.score - left.score).map(({ product }) => product);
+}
+
+export function searchLocalCatalog(query: string, mode: CatalogSearchMode = "all"): Product[] {
+  return rankCatalogProducts(localCatalog, query, mode, false);
 }

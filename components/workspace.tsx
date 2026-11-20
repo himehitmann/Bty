@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowUpRight, BookOpen, BookOpenCheck, Crown, Download, Smartphone, Check, ChevronRight, CircleHelp, Clock3, Droplets, FlaskConical, House, LogIn, LogOut, Menu, Moon, Palette as PaletteIcon, Plus, Settings2, Sparkles, Sun, X } from "lucide-react";
-import { Inventory, ProductDialog, ProductTile } from "./inventory";
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { ArrowRight, BookOpen, CalendarCheck, ChevronRight, Download, House, Layers, ListChecks, LogIn, LogOut, Plus, Search, Settings, ShoppingBag, SwatchBook, X } from "lucide-react";
+import { Catalog, Inventory, ProductEditor } from "./inventory";
 import { Palette } from "./palette";
 import { Routines } from "./routines";
 import { Tutorials } from "./tutorials";
@@ -10,66 +10,68 @@ import { Journal } from "./journal";
 import { Plans } from "./plans";
 import { ProfileFields, RoutineCoach } from "./profile-coach";
 import { useBillingStatus } from "@/lib/billing-client";
-import { emptyState, preferenceSchema, type Product, type Routine, type State } from "@/lib/model";
+import { LocaleProvider, useLocale } from "@/lib/i18n";
+import { categoryLabels, preferenceSchema, type Product, type Routine, type State } from "@/lib/model";
 import { getPalettePhotoUrl, removePalettePhoto, uploadPalettePhoto } from "@/lib/supabase/browser";
 import { useWorkspaceState } from "@/lib/use-workspace";
 
 const navigation = [
-  { id: "accueil", label: "Vue d’ensemble", icon: House },
-  { id: "vanity", label: "Mon vanity", icon: Droplets },
-  { id: "routines", label: "Mes routines", icon: Sparkles },
-  { id: "palette", label: "Palette", icon: PaletteIcon },
-  { id: "tutoriels", label: "Tutoriels", icon: BookOpen },
-  { id: "journal", label: "Journal", icon: BookOpenCheck },
-  { id: "preferences", label: "Préférences", icon: Settings2 },
-  { id: "offres", label: "Offres", icon: Crown },
+  { id: "accueil", fr: "Accueil", en: "Home", icon: House },
+  { id: "catalogue", fr: "Rechercher", en: "Find products", icon: Search },
+  { id: "vanity", fr: "Mes produits", en: "My products", icon: ShoppingBag },
+  { id: "routines", fr: "Mes routines", en: "My routines", icon: ListChecks },
+  { id: "palette", fr: "Mes teintes", en: "My shades", icon: SwatchBook },
+  { id: "tutoriels", fr: "Tutoriels", en: "Tutorials", icon: BookOpen },
+  { id: "journal", fr: "Journal", en: "Journal", icon: CalendarCheck },
+  { id: "preferences", fr: "Paramètres", en: "Settings", icon: Settings },
+  { id: "offres", fr: "Offres", en: "Plans", icon: Layers },
 ] as const;
 type View = (typeof navigation)[number]["id"];
+type WorkspaceData = ReturnType<typeof useWorkspaceState>;
 
-function readView(): View {
+function readView(portable: boolean): View {
   const hash = location.hash.slice(1);
-  return navigation.find((item) => item.id === hash)?.id ?? "accueil";
+  const view = navigation.find((item) => item.id === hash)?.id ?? "accueil";
+  return portable && (view === "journal" || view === "offres") ? "accueil" : view;
 }
 
-const pageHeadings = {
-  vanity: ["Mon vanity", "Retrouve tes produits et explore leurs compositions."],
-  routines: ["Mes routines", "Compose tes rituels et suis chaque geste avec le Face Chart."],
-  palette: ["Ma palette", "Retrouve et conserve les teintes qui t’inspirent."],
-  tutoriels: ["Tutoriels", "Des gestes simples à essayer avec les produits de ton vanity."],
-  preferences: ["Préférences", "Affiche les points de vigilance qui comptent pour toi."],
-};
+export function Workspace({ portable = false }: { portable?: boolean }) {
+  const data = useWorkspaceState(portable);
+  return <LocaleProvider locale={data.state.preferences.locale}><WorkspaceShell data={data} portable={portable}/></LocaleProvider>;
+}
 
-const syncLabels = { loading: "Chargement…", local: "Espace local", saving: "Enregistrement…", synced: "Synchronisé", error: "Synchronisation indisponible", conflict: "Conflit de synchronisation" };
-
-export function Workspace() {
-  const data = useWorkspaceState();
+function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boolean }) {
+  const { t, locale } = useLocale();
   const { state, user, client, ready, update, sync, notice, setNotice } = data;
-  const billing = useBillingStatus(user?.id);
+  const billing = useBillingStatus(user?.id, !portable);
   const [view, setView] = useState<View>("accueil");
-  const [mobileNav, setMobileNav] = useState(false);
-  const [productEditor, setProductEditor] = useState<Product | "add" | null>(null);
+  const [catalogue, setCatalogue] = useState({ query: "", revision: 0 });
+  const [productEditor, setProductEditor] = useState<Product | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [guide, setGuide] = useState<string | undefined>();
+  const [guide, setGuide] = useState<string>();
   const [auth, setAuth] = useState(false);
   const accountDialog = useRef<HTMLDialogElement>(null);
   const conflictDialog = useRef<HTMLDialogElement>(null);
-  const sampleDialog = useRef<HTMLDialogElement>(null);
-  const menuTrigger = useRef<HTMLButtonElement>(null);
-  const menuClose = useRef<HTMLButtonElement>(null);
-  const mainContent = useRef<HTMLElement>(null);
-  const [now, setNow] = useState<Date>();
-  useEffect(() => { setNow(new Date()); }, []);
-  const date = now ? new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(now) : "";
+  const content = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    function onHash() { setView(readView()); setGuide(undefined); }
-    onHash();
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
+    const onHistoryChange = () => {
+      setView(readView(portable));
+      setSelected(null);
+      setGuide(undefined);
+      setProductEditor(null);
+    };
+    onHistoryChange();
+    window.addEventListener("popstate", onHistoryChange);
+    window.addEventListener("hashchange", onHistoryChange);
+    return () => {
+      window.removeEventListener("popstate", onHistoryChange);
+      window.removeEventListener("hashchange", onHistoryChange);
+    };
+  }, [portable]);
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    if (portable || process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
     void navigator.serviceWorker.register("/sw.js").then(() => navigator.serviceWorker.ready).then((registration) => {
       const assets = [
         ...Array.from(document.scripts, (script) => script.src),
@@ -78,85 +80,11 @@ export function Workspace() {
       ].filter(Boolean);
       registration.active?.postMessage({ type: "WARM_SHELL", assets });
     }).catch(() => {});
-  }, []);
+  }, [portable]);
 
   useEffect(() => {
     if (auth && !accountDialog.current?.open) accountDialog.current?.showModal();
   }, [auth]);
-
-  useEffect(() => {
-    if (!mobileNav) return;
-    const focusDrawer = requestAnimationFrame(() => menuClose.current?.focus());
-    const desktop = window.matchMedia("(width > 760px)");
-    function handleResize(event: MediaQueryListEvent) {
-      if (event.matches) setMobileNav(false);
-    }
-    desktop.addEventListener("change", handleResize);
-    return () => {
-      cancelAnimationFrame(focusDrawer);
-      desktop.removeEventListener("change", handleResize);
-    };
-  }, [mobileNav]);
-
-  function dismissMobileNav() {
-    setMobileNav(false);
-    menuTrigger.current?.focus();
-  }
-
-  function navigate(next: View) {
-    setView(next);
-    setMobileNav(false);
-    setGuide(undefined);
-    if (next !== readView()) history.pushState(null, "", next === "accueil" ? location.pathname : `#${next}`);
-    window.scrollTo(0, 0);
-    if (mobileNav) requestAnimationFrame(() => mainContent.current?.focus());
-  }
-
-  function openGuide(routine: Routine) {
-    navigate("routines");
-    setGuide(routine.id);
-  }
-
-  function saveProduct(product: Product) {
-    const saved = update((previous) => ({
-      ...previous,
-      products: previous.products.some((entry) => entry.id === product.id)
-        ? previous.products.map((entry) => entry.id === product.id ? product : entry)
-        : [product, ...previous.products],
-    }));
-    if (saved) setProductEditor(null);
-    return saved;
-  }
-
-  function removeProduct(id: string) {
-    const saved = update((previous) => ({
-      ...previous,
-      products: previous.products.filter((item) => item.id !== id),
-      routines: previous.routines.map((routine) => ({
-        ...routine, steps: routine.steps.filter((step) => step.productId !== id),
-      })),
-    }));
-    if (!saved) return;
-    setProductEditor(null);
-    setSelected(null);
-  }
-
-  function complete(routine: Routine) {
-    const saved = update((previous) => ({
-      ...previous,
-      completed: [{ routineId: routine.id, at: new Date().toISOString() }, ...previous.completed].slice(0, 1000),
-    }));
-    if (saved) setNotice(`Routine « ${routine.name} » terminée.`);
-    return saved;
-  }
-
-  function createFromTutorial(routine: Routine) {
-    if (state.routines.length >= 100) { setNotice("Tu as atteint la limite de 100 routines."); return false; }
-    if (!update((previous) => ({ ...previous, routines: [...previous.routines, routine] }))) return false;
-    navigate("routines");
-    setNotice(`Routine « ${routine.name} » ajoutée.`);
-    return true;
-  }
 
   const activeAccount = user?.id;
   useEffect(() => {
@@ -165,242 +93,301 @@ export function Workspace() {
     setProductEditor(null);
   }, [activeAccount]);
 
-  const name = user?.user_metadata?.first_name;
-  const firstName = typeof name === "string" ? name.trim().slice(0, 40) : "";
-  const addProduct = () => {
-    if (!ready) return;
-    if (state.products.length >= 500) { setNotice("Tu as atteint la limite de 500 produits."); return; }
-    setProductEditor("add");
+  function navigate(next: View, focus = true) {
+    setView(next);
+    setSelected(null);
+    setProductEditor(null);
+    setGuide(undefined);
+    setNotice("");
+    if (next !== readView(portable)) history.pushState(null, "", `#${next}`);
+    window.scrollTo(0, 0);
+    if (focus) requestAnimationFrame(() => content.current?.focus());
+  }
+
+  function navClick(event: MouseEvent<HTMLAnchorElement>, next: View) {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    navigate(next);
+  }
+
+  function openCatalogue(query = "") {
+    setCatalogue((current) => ({ query, revision: current.revision + 1 }));
+    navigate("catalogue");
+  }
+
+  function saveProduct(product: Product) {
+    const saved = update((previous) => ({
+      ...previous,
+      products: previous.products.some(({ id }) => id === product.id)
+        ? previous.products.map((item) => item.id === product.id ? product : item)
+        : [product, ...previous.products],
+    }));
+    if (saved) {
+      if (productEditor) setSelected(product.id);
+      setProductEditor(null);
+      setNotice(t(`« ${product.name} » enregistré.`, `“${product.name}” saved.`));
+    }
+    return saved;
+  }
+
+  function removeProduct(id: string) {
+    if (!update((previous) => ({
+      ...previous,
+      products: previous.products.filter((item) => item.id !== id),
+      routines: previous.routines.map((routine) => ({ ...routine, steps: routine.steps.filter((step) => step.productId !== id) })),
+    }))) return;
+    setProductEditor(null);
+    setSelected(null);
+    setNotice(t("Produit supprimé.", "Product removed."));
+  }
+
+  function complete(routine: Routine) {
+    const saved = update((previous) => ({
+      ...previous,
+      completed: [{ routineId: routine.id, at: new Date().toISOString() }, ...previous.completed].slice(0, 1000),
+    }));
+    if (saved) setNotice(t(`« ${routine.name} » terminée.`, `“${routine.name}” completed.`));
+    return saved;
+  }
+
+  function createRoutine(routine: Routine) {
+    if (state.routines.length >= 100) {
+      setNotice(t("La limite de 100 routines est atteinte.", "The limit of 100 routines has been reached."));
+      return false;
+    }
+    if (!update((previous) => ({ ...previous, routines: [...previous.routines, routine] }))) return false;
+    navigate("routines");
+    setNotice(t(`« ${routine.name} » ajoutée.`, `“${routine.name}” added.`));
+    return true;
+  }
+
+  const label = (id: View) => {
+    const item = navigation.find((entry) => entry.id === id)!;
+    return t(item.fr, item.en);
   };
+  const availableNavigation = portable ? navigation.filter(({ id }) => id !== "journal" && id !== "offres") : navigation;
+  const status = {
+    loading: t("Chargement", "Loading"),
+    local: t("Sur cet appareil", "On this device"),
+    saving: t("Enregistrement", "Saving"),
+    synced: t("Synchronisé", "Synced"),
+    error: t("Synchronisation indisponible", "Sync unavailable"),
+    conflict: t("Conflit de synchronisation", "Sync conflict"),
+  }[sync];
 
-  return (
-    <div className="app-shell">
-      <a href="#main-content" className="skip-link" onClick={(event) => { event.preventDefault(); document.getElementById("main-content")?.focus(); }}>Aller au contenu</a>
-      {mobileNav && <button className="nav-scrim" tabIndex={-1} onClick={dismissMobileNav} aria-label="Fermer le menu depuis l’arrière-plan" />}
-      <aside id="primary-navigation" className={`sidebar ${mobileNav ? "sidebar-open" : ""}`} onKeyDown={(event) => {
-        if (mobileNav && !event.defaultPrevented && event.key === "Escape") dismissMobileNav();
-      }}>
-        <button ref={menuClose} className="mobile-menu-close icon-button" type="button" onClick={dismissMobileNav} aria-label="Fermer le menu"><X size={21}/></button>
-        <a className="brand" href="#" onClick={(event) => { event.preventDefault(); navigate("accueil"); }}>
-          <span>NAVIER</span>
-        </a>
-        <nav aria-label="Navigation principale" className="navigation">
-          {navigation.map(({ id, label, icon: Icon }) => (
-            <a key={id} href={id === "accueil" ? "/" : `#${id}`} className={`nav-link ${view === id ? "nav-current" : ""}`}
-              aria-current={view === id ? "page" : undefined}
-              onClick={(event) => { event.preventDefault(); navigate(id); }}>
-              <Icon size={18} strokeWidth={1.75}/><span>{label}</span>
-            </a>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <a className="nav-link install-link" href="/installer"><Smartphone size={17}/> Installer Navier</a>
-          <div className="account-card">
-            <span className="avatar" aria-hidden="true">{firstName[0]?.toUpperCase() ?? "N"}</span>
-            <span className="account-label"><strong>{firstName || "Mon espace"}</strong><small>{user ? "Compte Navier" : "Espace personnel"}</small></span>
-            <button className="icon-button account-icon" type="button" aria-label={user ? "Gérer mon compte" : "Se connecter"} onClick={() => setAuth(true)}>
-              {user ? <Settings2 size={17}/> : <LogIn size={17}/>}
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <div className="main-shell">
-        <header className="topbar">
-          <div className="breadcrumb">
-            <button ref={menuTrigger} className="mobile-menu icon-button" type="button" aria-label={mobileNav ? "Fermer le menu" : "Ouvrir le menu"} aria-expanded={mobileNav} aria-controls="primary-navigation" onClick={() => setMobileNav(!mobileNav)}>
-              {mobileNav ? <X size={21}/> : <Menu size={21}/>}
-            </button>
-            <span>Mon espace</span><ChevronRight size={14}/><strong>{navigation.find((item) => item.id === view)?.label}</strong>
-          </div>
-          <span className="sync-pill"><span className={`sync-dot ${sync === "error" || sync === "conflict" ? "sync-warning" : ""}`}/>{syncLabels[sync]}</span>
-        </header>
-
-        <main id="main-content" ref={mainContent} tabIndex={-1} className="main-content" inert={mobileNav}>
-          {(notice || sync === "error" || sync === "conflict") && (
-            <div className="notice" role="status">
-              <span>{notice || (sync === "conflict" ? "Une version plus récente existe. Tes modifications restent enregistrées sur cet appareil." : "Les modifications sont conservées sur cet appareil lorsque le stockage du navigateur est disponible.")}</span>
-              {sync === "error" && <button type="button" onClick={() => void data.retry()}>Réessayer</button>}
-              {sync === "conflict" && <button type="button" onClick={() => conflictDialog.current?.showModal()}>Charger la version en ligne</button>}
-              {notice && <button className="icon-button" type="button" aria-label="Fermer la notification" onClick={() => setNotice("")}><X size={18}/></button>}
-            </div>
-          )}
-
-          {view === "accueil" ? (
-            <Dashboard state={state} date={date} firstName={firstName} ready={ready}
-              onAdd={addProduct} onNavigate={navigate} onGuide={openGuide}
-              onProduct={(id) => { setSelected(id); navigate("vanity"); }} />
-          ) : (
-            <>
-              {(view === "vanity" || view === "preferences" || view === "palette") && <div className="page-heading">
-                <div><h1>{pageHeadings[view][0]}</h1><p>{pageHeadings[view][1]}</p></div>
-                {view === "vanity" && <button className="button button-primary" type="button" onClick={addProduct} disabled={!ready}><Plus size={18}/>Ajouter un produit</button>}
-              </div>}
-              {!ready ? <p role="status">Chargement de ton espace…</p> : <>
-                {view === "vanity" && <Inventory products={state.products} preferences={state.preferences}
-                  selected={selected} onSelect={setSelected} onEdit={setProductEditor} onRemove={removeProduct} onAdd={addProduct}/>}
-                {view === "routines" && <Routines products={state.products} routines={state.routines} preferences={state.preferences} palette={state.palette}
-                  onChange={(routines) => update((previous) => ({ ...previous, routines }))}
-                  startRoutineId={guide} onStartGuide={setGuide} onExitGuide={() => setGuide(undefined)} onComplete={complete}/>}
-                {view === "palette" && <Palette key={user?.id ?? "guest"} colors={state.palette}
-                  onChange={(apply) => update((previous) => ({ ...previous, palette: apply(previous.palette) }), user?.id ?? null)}
-                  onUpload={client && user ? (file) => uploadPalettePhoto(client, user.id, file) : undefined}
-                  onDiscardUpload={client && user ? (path) => removePalettePhoto(client, path) : undefined}
-                  onResolvePhoto={client && user ? (path) => getPalettePhotoUrl(client, path) : undefined}
-                />}
-                {view === "tutoriels" && <Tutorials products={state.products} onCreateRoutine={createFromTutorial}/>}
-                {view === "journal" && <Journal key={user?.id ?? "guest"} userId={user?.id} client={client}
-                  plus={billing.plus} entitlementLoading={billing.loading} products={state.products} routines={state.routines}
-                  completed={state.completed} onOpenPlans={() => navigate("offres")}/>}
-                {view === "offres" && <Plans signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth(true)}/>}
-                {view === "preferences" && <><PreferencesForm state={state}
-                  onClearSamples={() => sampleDialog.current?.showModal()}
-                  onSave={(preferences) => {
-                    if (update((previous) => ({ ...previous, preferences }))) setNotice("Préférences enregistrées.");
-                  }} />
-                  <RoutineCoach preferences={state.preferences} products={state.products} onCreate={createFromTutorial}/>
-                </>}
-              </>}
-            </>
-          )}
-        </main>
+  return <div className="app-shell">
+    <a href="#main-content" className="skip-link" onClick={(event) => { event.preventDefault(); content.current?.focus(); }}>{t("Aller au contenu", "Skip to content")}</a>
+    <aside className="sidebar">
+      <div className="sidebar-top">
+        <a className="brand" href="#accueil" aria-label={t("Navier, accueil", "Navier, home")} onClick={(event) => navClick(event, "accueil")}>Navier</a>
+        <a className={`icon-button mobile-settings${view === "preferences" ? " nav-current" : ""}`} href="#preferences" aria-label={label("preferences")}
+          aria-current={view === "preferences" ? "page" : undefined} onClick={(event) => navClick(event, "preferences")}><Settings size={19} aria-hidden="true"/></a>
       </div>
+      <nav className="navigation" aria-label={t("Navigation principale", "Main navigation")}>
+        {availableNavigation.filter(({ id }) => id !== "preferences" && id !== "offres").map(({ id, icon: Icon }) =>
+          <a key={id} href={`#${id}`} className={`nav-link${view === id ? " nav-current" : ""}`} aria-current={view === id ? "page" : undefined}
+            onClick={(event) => navClick(event, id)}><Icon size={16} strokeWidth={1.65} aria-hidden="true"/><span>{label(id)}</span></a>
+        )}
+        {!portable && <a className={`nav-link mobile-offers${view === "offres" ? " nav-current" : ""}`} href="#offres" aria-current={view === "offres" ? "page" : undefined}
+          onClick={(event) => navClick(event, "offres")}><Layers size={16} strokeWidth={1.65} aria-hidden="true"/><span>{label("offres")}</span></a>}
+      </nav>
+      <div className="sidebar-bottom">
+        <a className={`nav-link${view === "preferences" ? " nav-current" : ""}`} href="#preferences" aria-current={view === "preferences" ? "page" : undefined}
+          onClick={(event) => navClick(event, "preferences")}><Settings size={16} strokeWidth={1.65} aria-hidden="true"/><span>{label("preferences")}</span></a>
+        {!portable && <a className={`nav-link${view === "offres" ? " nav-current" : ""}`} href="#offres" aria-current={view === "offres" ? "page" : undefined}
+          onClick={(event) => navClick(event, "offres")}><Layers size={16} strokeWidth={1.65} aria-hidden="true"/><span>{label("offres")}</span></a>}
+      </div>
+    </aside>
 
-      {productEditor && <ProductDialog product={productEditor === "add" ? undefined : productEditor}
-        currentProducts={state.products} onClose={() => setProductEditor(null)} onSave={saveProduct}/>}
-      <dialog ref={accountDialog} aria-labelledby="account-title" className="dialog" onClose={() => setAuth(false)}>
-        {auth && <Account user={user} client={client} onClose={() => accountDialog.current?.close()} onNotice={setNotice}/>}
-      </dialog>
-      <dialog ref={conflictDialog} className="dialog small-dialog" aria-labelledby="conflict-title">
-        <h2 id="conflict-title">Charger la version en ligne</h2>
-        <p>Une fois chargée, elle remplacera le brouillon local de ce compte sur cet appareil.</p>
-        <form method="dialog" className="form-actions">
-          <button className="button button-secondary">Annuler</button>
-          <button className="button button-primary" onClick={() => void data.reloadRemote()}>Charger</button>
-        </form>
-      </dialog>
-      <dialog ref={sampleDialog} className="dialog small-dialog" aria-labelledby="sample-title">
-        <h2 id="sample-title">Retirer les exemples</h2>
-        <p>Les produits de découverte et les étapes qui les utilisent seront supprimés.</p>
-        <form method="dialog" className="form-actions">
-          <button className="button button-secondary">Annuler</button>
-          <button className="button button-primary" onClick={() => {
-            update((previous) => ({ ...previous,
-              products: previous.products.filter((product) => !product.id.startsWith("example-")),
-              routines: previous.routines.filter((routine) => !routine.id.startsWith("example-")).map((routine) => ({
-                ...routine, steps: routine.steps.filter((step) => !step.productId.startsWith("example-")),
-              })),
-            }));
-            setNotice("Exemples retirés.");
-          }}>Retirer</button>
-        </form>
-      </dialog>
+    <div className="main-shell">
+      <header className={`topbar${client ? " topbar-account" : ""}`}>
+        <span className="breadcrumb">{label(view)}</span>
+        {view !== "accueil" && view !== "catalogue" && <form key={view} className="toolbar-search" role="search" onSubmit={(event) => {
+          event.preventDefault();
+          const query = String(new FormData(event.currentTarget).get("query") ?? "").trim();
+          openCatalogue(query);
+        }}>
+          <label className="search-field">
+            <Search size={15} strokeWidth={1.65} aria-hidden="true"/>
+            <input name="query" type="search" maxLength={120} aria-label={t("Rechercher un produit ou une marque", "Search for a product or brand")}
+              placeholder={t("Produit, marque, code-barres…", "Product, brand, barcode…")}/>
+          </label>
+        </form>}
+        <div className="header-actions">
+          <span className="sync-label">{status}</span>
+          {!portable && client && <button type="button" className="button button-secondary account-control" onClick={() => setAuth(true)}>
+            <LogIn size={16} aria-hidden="true"/>{user ? t("Compte", "Account") : t("Connexion", "Sign in")}
+          </button>}
+        </div>
+      </header>
+
+      <main className="main-content" id="main-content" ref={content} tabIndex={-1}>
+        {(notice || sync === "error" || sync === "conflict") && <div className="notice" role="status">
+          <span>{notice || (sync === "conflict"
+            ? t("Une version plus récente existe en ligne. Ton brouillon reste sur cet appareil.", "A newer version exists online. Your draft remains on this device.")
+            : t("La synchronisation est indisponible. Tes modifications restent sur cet appareil si le navigateur accepte le stockage.", "Sync is unavailable. Changes stay on this device if browser storage is available."))}</span>
+          {sync === "error" && <button type="button" onClick={() => void data.retry()}>{t("Réessayer", "Try again")}</button>}
+          {sync === "conflict" && <button type="button" onClick={() => conflictDialog.current?.showModal()}>{t("Charger la version en ligne", "Load the online version")}</button>}
+          {notice && <button type="button" className="icon-button" aria-label={t("Fermer la notification", "Dismiss notification")} onClick={() => setNotice("")}><X size={16}/></button>}
+        </div>}
+
+        {!ready ? <p role="status">{t("Chargement de ton espace…", "Loading your workspace…")}</p> : <div className="page-content" key={view}>
+          {view === "accueil" && <Dashboard state={state} onSearch={openCatalogue} onNavigate={navigate}
+            onProduct={(id) => { navigate("vanity"); setSelected(id); }}
+            onGuide={(routine) => { navigate("routines"); setGuide(routine.id); }}/>}
+          {view === "catalogue" && <Catalog key={catalogue.revision} initialQuery={catalogue.query} currentProducts={state.products} onSave={saveProduct} localOnly={portable}/>}
+          {view === "vanity" && <>
+            {!productEditor && <div className="page-heading">
+              <div><h1>{t("Mes produits", "My products")}</h1><p>{t("Les produits que tu as enregistrés.", "Products you’ve saved.")}</p></div>
+              <button className="button button-primary" type="button" onClick={() => openCatalogue()}><Plus size={17}/>{t("Ajouter un produit", "Add a product")}</button>
+            </div>}
+            {productEditor
+              ? <ProductEditor product={productEditor} currentProducts={state.products} onCancel={() => setProductEditor(null)} onSave={saveProduct}/>
+              : <Inventory products={state.products} preferences={state.preferences} selected={selected}
+                onSelect={setSelected} onEdit={setProductEditor} onRemove={removeProduct}/>}
+          </>}
+          {view === "routines" && <Routines products={state.products} routines={state.routines} preferences={state.preferences} palette={state.palette}
+            onChange={(routines) => update((previous) => ({ ...previous, routines }))}
+            startRoutineId={guide} onStartGuide={setGuide} onExitGuide={() => setGuide(undefined)} onComplete={complete}/>}
+          {view === "palette" && <>
+            <div className="page-heading"><div><h1>{t("Mes teintes", "My shades")}</h1><p>{t("Préleve une couleur sur une photo de maquillage et réutilise-la dans une routine.", "Sample a colour from a makeup photo and reuse it in a routine.")}</p></div></div>
+            <details className="inline-help">
+              <summary>{t("À quoi ça sert ?", "What is this for?")}</summary>
+              <ol>
+                <li>{t("Ajoute une photo d’un rouge à lèvres, d’un fard ou d’une palette.", "Add a photo of a lipstick, eyeshadow or palette.")}</li>
+                <li>{t("Clique sur la couleur qui t’intéresse et enregistre-la sous un nom.", "Click the colour you want and give it a name.")}</li>
+                <li>{t("Dans une routine, choisis cette teinte pour une étape avec un produit teinté. Le Face Chart l’affichera sur la zone choisie.", "In a routine, select the shade for a tinted product step. The Face Chart will show it on the chosen area.")}</li>
+              </ol>
+            </details>
+            <Palette key={user?.id ?? "guest"} colors={state.palette}
+              onChange={(apply) => update((previous) => ({ ...previous, palette: apply(previous.palette) }), user?.id ?? null)}
+              onUpload={client && user ? (file) => uploadPalettePhoto(client, user.id, file) : undefined}
+              onDiscardUpload={client && user ? (path) => removePalettePhoto(client, path) : undefined}
+              onResolvePhoto={client && user ? (path) => getPalettePhotoUrl(client, path) : undefined}/>
+          </>}
+          {view === "tutoriels" && <Tutorials products={state.products} onCreateRoutine={createRoutine}/>}
+          {view === "journal" && !portable && <Journal key={user?.id ?? "guest"} userId={user?.id} client={client} plus={billing.plus} entitlementLoading={billing.loading}
+            products={state.products} routines={state.routines} completed={state.completed} onOpenPlans={() => navigate("offres")}/>}
+          {view === "offres" && !portable && <Plans signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth(true)}/>}
+          {view === "preferences" && <>
+            <div className="page-heading"><div><h1>{t("Paramètres", "Settings")}</h1><p>{t("Langue, préférences et données.", "Language, preferences and data.")}</p></div></div>
+            <section className="settings-language" aria-labelledby="language-title">
+              <div><h2 id="language-title">{t("Langue de l’interface", "Interface language")}</h2></div>
+              <select aria-labelledby="language-title" value={locale} onChange={(event) => {
+                const next = event.target.value === "en" ? "en" : "fr";
+                if (update((previous) => ({ ...previous, preferences: { ...previous.preferences, locale: next } }))) setNotice("");
+              }}><option value="fr">Français</option><option value="en">English</option></select>
+            </section>
+            <PreferencesForm state={state} portable={portable} onSave={(preferences) => {
+              if (update((previous) => ({ ...previous, preferences }))) setNotice(t("Préférences enregistrées.", "Preferences saved."));
+            }}/>
+            <RoutineCoach preferences={state.preferences} products={state.products} onCreate={createRoutine}/>
+          </>}
+        </div>}
+      </main>
     </div>
-  );
+    {!portable && <dialog ref={accountDialog} aria-labelledby="account-title" className="dialog" onClose={() => setAuth(false)}>
+      {auth && <Account user={user} client={client} onClose={() => accountDialog.current?.close()} onNotice={setNotice}/>}
+    </dialog>}
+    {!portable && <dialog ref={conflictDialog} className="dialog small-dialog" aria-labelledby="conflict-title">
+      <h2 id="conflict-title">{t("Charger la version en ligne", "Load the online version")}</h2>
+      <p>{t("La version en ligne remplacera le brouillon enregistré sur cet appareil.", "The online version will replace the draft saved on this device.")}</p>
+      <form method="dialog" className="form-actions">
+        <button className="button button-secondary">{t("Annuler", "Cancel")}</button>
+        <button className="button button-primary" onClick={() => void data.reloadRemote()}>{t("Charger", "Load")}</button>
+      </form>
+    </dialog>}
+  </div>;
 }
 
-function Dashboard({ state, date, firstName, ready, onAdd, onNavigate, onGuide, onProduct }: {
-  state: State; date: string; firstName: string; ready: boolean; onAdd: () => void;
-  onNavigate: (view: View) => void; onGuide: (routine: Routine) => void; onProduct: (id: string) => void;
+const englishCategories = { soin: "Skincare", maquillage: "Makeup", cheveux: "Hair", parfums: "Fragrance" };
+function Dashboard({ state, onSearch, onNavigate, onProduct, onGuide }: {
+  state: State; onSearch: (query: string) => void; onNavigate: (view: View) => void;
+  onProduct: (id: string) => void; onGuide: (routine: Routine) => void;
 }) {
-  const { products, routines, completed } = state;
-  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Paris" }).format(new Date());
-  const dateFormat = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Paris" });
-  const allToday = new Set(completed.filter(({ at }) => dateFormat.format(new Date(at)) === today).map(({ routineId }) => routineId));
-  const weekStart = new Date(`${today}T12:00:00Z`);
-  weekStart.setUTCDate(weekStart.getUTCDate() - 6);
-  const recentSessions = completed.filter(({ at }) => {
-    const day = dateFormat.format(new Date(at));
-    return day >= weekStart.toISOString().slice(0, 10) && day <= today;
-  }).length;
-  const featured = routines.find((routine) => routine.period === "matin" && routine.steps.length) ?? routines.find((routine) => routine.steps.length);
-  return (
-    <>
-      <div className="page-heading dashboard-heading">
-        <div>
-          <div className="date-label"><Sun size={15} strokeWidth={1.8}/><span>{date || "Aujourd’hui"}</span></div>
-          <h1>Bonjour{firstName ? ` ${firstName}` : ""}<span className="greeting-dot">.</span></h1>
-          <p>Bienvenue dans ton espace beauté.</p>
-        </div>
-        <button className="button button-primary" type="button" onClick={onAdd} disabled={!ready}><Plus size={18}/>Ajouter un produit</button>
-      </div>
+  const { t } = useLocale();
+  const [query, setQuery] = useState("");
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 6);
+  weekStart.setHours(0, 0, 0, 0);
+  const sessions = state.completed.filter(({ at }) => Date.parse(at) >= weekStart.getTime()).length;
+  return <div className="home-page">
+    <header className="home-heading">
+      <h1>{t("Ton espace beauté", "Your beauty workspace")}</h1>
+      <p>{t("Retrouve tes produits et organise tes routines.", "Find your products and organise your routines.")}</p>
+    </header>
+    <form className="home-search" role="search" onSubmit={(event) => { event.preventDefault(); onSearch(query.trim()); }}>
+      <label className="home-search-label">
+        <span className="sr-only">{t("Rechercher par produit, marque ou code-barres", "Search by product, brand or barcode")}</span>
+        <Search size={20} strokeWidth={1.65} aria-hidden="true"/>
+        <input type="search" maxLength={120} value={query} onChange={(event) => setQuery(event.target.value)}
+          placeholder={t("Nom du produit, marque ou code-barres", "Product name, brand or barcode")}/>
+      </label>
+      <button className="button button-primary" type="submit">{t("Rechercher", "Search")}<ArrowRight size={16} aria-hidden="true"/></button>
+    </form>
 
-      <section className="hero-panel" aria-labelledby="hero-title">
-        <div className="hero-content">
-          <span className="hero-label"><Sparkles size={14} strokeWidth={1.6}/> Ton rituel beauté</span>
-          <h2 id="hero-title">Un moment<br/>pour toi.</h2>
-          <p>Avance étape par étape, à ton rythme.</p>
-          <button className="button button-primary hero-button" disabled={!ready} onClick={() => featured ? onGuide(featured) : onNavigate("routines")}>
-            {featured ? "Suivre ma routine" : "Créer une routine"}
-          </button>
-        </div>
+    <div className="dashboard-grid">
+      <section className="home-section" aria-labelledby="home-products">
+        <header className="section-heading">
+          <h2 id="home-products">{t("Mes produits", "My products")}</h2>
+          {state.products.length > 0 && <button className="text-button" type="button" onClick={() => onNavigate("vanity")}>{t("Tout voir", "View all")}<ChevronRight size={15}/></button>}
+        </header>
+        {state.products.length ? <div className="home-list">
+          {state.products.slice(0, 4).map((product) => <button type="button" className="home-row" key={product.id} onClick={() => onProduct(product.id)}>
+            <span><strong>{product.name}</strong><small>{product.brand || t(categoryLabels[product.category], englishCategories[product.category])}</small></span><ChevronRight size={16}/>
+          </button>)}
+        </div> : <div className="home-empty">
+          <p>{t("Aucun produit enregistré.", "No products saved yet.")}</p>
+          <button type="button" className="text-button" onClick={() => onSearch("")}><Plus size={15}/>{t("Ajouter un produit", "Add a product")}</button>
+        </div>}
       </section>
 
-      <div className="dashboard-grid">
-        <section className="dashboard-card" aria-labelledby="today-title">
-          <div className="section-heading"><h2 id="today-title">Mes routines</h2><button className="text-button" onClick={() => onNavigate("routines")}>Toutes les routines</button></div>
-          <p className="muted">{recentSessions} {recentSessions === 1 ? "routine terminée" : "routines terminées"} sur les 7 derniers jours</p>
-          <div className="routine-list">
-            {routines.slice(0, 2).map((routine) => {
-              const Icon = routine.period === "matin" ? Sun : routine.period === "soir" ? Moon : Sparkles;
-              return <button className="routine-row" type="button" key={routine.id} onClick={() => routine.steps.length ? onGuide(routine) : onNavigate("routines")}>
-                <span className={`routine-icon ${routine.period === "soir" ? "evening" : ""}`}><Icon size={20} strokeWidth={1.6}/></span>
-                <span className="routine-label"><strong>{routine.name}</strong><small>{routine.steps.length} {routine.steps.length === 1 ? "étape" : "étapes"}</small></span>
-                <span className="routine-end" title={allToday.has(routine.id) ? "Terminée aujourd’hui" : undefined}>{allToday.has(routine.id) ? <Check size={17}/> : <ChevronRight size={17}/>}</span>
-              </button>;
-            })}
-            {!routines.length && <p className="empty-inline"><Clock3 size={17}/> Tes routines apparaîtront ici.</p>}
-          </div>
-        </section>
-        <section className="dashboard-card quick-card" aria-labelledby="quick-title">
-          <div className="section-heading"><h2 id="quick-title">À explorer</h2></div>
-          <button className="quick-link" onClick={() => onNavigate("palette")}>
-            <span className="quick-icon"><PaletteIcon size={18} strokeWidth={1.7}/></span>
-            <span><strong>Palette de couleurs</strong><small>Capture une teinte depuis une photo</small></span>
-            <ArrowUpRight size={17} className="quick-arrow"/>
-          </button>
-          <button className="quick-link" onClick={() => onNavigate("tutoriels")}>
-            <span className="quick-icon quick-book"><BookOpen size={18} strokeWidth={1.7}/></span>
-            <span><strong>Tutoriels beauté</strong><small>Des idées avec tes produits</small></span>
-            <ArrowUpRight size={17} className="quick-arrow"/>
-          </button>
-        </section>
-      </div>
-
-      <section className="home-vanity" aria-labelledby="home-vanity-title">
-        <div className="section-heading">
-          <div><h2 id="home-vanity-title">Mon vanity</h2><p>{products.length} {products.length === 1 ? "produit" : "produits"} dans ta collection</p></div>
-          <button className="text-button" onClick={() => onNavigate("vanity")}>Voir mon vanity</button>
-        </div>
-        {products.length ? <div className="product-grid">
-          {products.slice(0, 3).map((product) => <ProductTile key={product.id} product={product} onSelect={() => onProduct(product.id)}/>)}
-        </div> : <div className="empty-panel"><FlaskConical size={26}/><h3>Ton vanity est vide</h3><button className="button button-primary" onClick={onAdd}>Ajouter ton premier produit</button></div>}
+      <section className="home-section" aria-labelledby="home-routines">
+        <header className="section-heading">
+          <h2 id="home-routines">{t("Mes routines", "My routines")}</h2>
+          {state.routines.length > 0 && <button className="text-button" type="button" onClick={() => onNavigate("routines")}>{t("Tout voir", "View all")}<ChevronRight size={15}/></button>}
+        </header>
+        {sessions > 0 && <p className="home-summary muted">{t(
+          `${sessions} séance${sessions === 1 ? "" : "s"} ces 7 derniers jours`,
+          `${sessions} ${sessions === 1 ? "session" : "sessions"} in the past 7 days`,
+        )}</p>}
+        {state.routines.length ? <div className="home-list">
+          {state.routines.slice(0, 4).map((routine) => <button type="button" className="home-row" key={routine.id}
+            onClick={() => routine.steps.length ? onGuide(routine) : onNavigate("routines")}>
+            <span><strong>{routine.name}</strong><small>{routine.steps.length} {routine.steps.length === 1 ? t("étape", "step") : t("étapes", "steps")}</small></span><ChevronRight size={16}/>
+          </button>)}
+        </div> : <div className="home-empty">
+          <p>{t("Aucune routine créée.", "No routines created yet.")}</p>
+          <button type="button" className="text-button" onClick={() => onNavigate("routines")}><Plus size={15}/>{t("Créer une routine", "Create a routine")}</button>
+        </div>}
       </section>
-    </>
-  );
+    </div>
+  </div>;
 }
 
 function exportWorkspace(state: State) {
   const palette = state.palette.map(({ id, hex, name }) => ({ id, hex, name }));
   const exported = { version: 1, exportedAt: new Date().toISOString(), ...state, palette };
-  const file = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(file);
+  const url = URL.createObjectURL(new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" }));
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "navier-mes-donnees.json";
+  anchor.download = "navier-data.json";
   document.body.append(anchor);
   anchor.click();
   anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function PreferencesForm({ state, onSave, onClearSamples }: {
-  state: State; onSave: (preferences: State["preferences"]) => void; onClearSamples: () => void;
+function PreferencesForm({ state, portable, onSave }: {
+  state: State; portable: boolean; onSave: (preferences: State["preferences"]) => void;
 }) {
+  const { t } = useLocale();
+  const { locale: _locale, ...criteria } = state.preferences;
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const parsed = preferenceSchema.safeParse({
+      ...state.preferences,
       fragranceFree: form.has("fragranceFree"), sensitive: form.has("sensitive"), avoid: form.get("avoid"),
       skinFeel: form.get("skinFeel") || undefined, skinConcerns: form.getAll("skinConcerns"), undertone: form.get("undertone") || undefined,
     });
@@ -408,35 +395,37 @@ function PreferencesForm({ state, onSave, onClearSamples }: {
   }
 
   return <div className="preferences-layout">
-    <form className="dashboard-card stacked-form" onSubmit={submit} key={JSON.stringify(state.preferences)}>
-      <h2>Mes critères</h2>
+    <form className="dashboard-card stacked-form" onSubmit={submit} key={JSON.stringify(criteria)}>
+      <h2>{t("Mes critères", "My preferences")}</h2>
       <label className="check-field"><input type="checkbox" name="fragranceFree" defaultChecked={state.preferences.fragranceFree}/>
-        <span><strong>Je préfère éviter le parfum</strong><small>Signaler le parfum et certains composés parfumants déclarés.</small></span></label>
+        <span>{t("Je préfère éviter le parfum", "I prefer to avoid fragrance")}</span></label>
       <label className="check-field"><input type="checkbox" name="sensitive" defaultChecked={state.preferences.sensitive}/>
-        <span><strong>Ma peau réagit facilement</strong><small>Afficher des repères de tolérance supplémentaires.</small></span></label>
-      <label>Ingrédients à éviter<textarea name="avoid" maxLength={600} rows={3} defaultValue={state.preferences.avoid} placeholder="Par exemple : Parfum, Limonene"/>
-        <small className="muted">Utilise les noms de l’emballage et sépare-les par des virgules.</small></label>
+        <span>{t("Ma peau réagit facilement", "My skin reacts easily")}</span></label>
+      <label>{t("Ingrédients à éviter", "Ingredients to avoid")}
+        <textarea name="avoid" maxLength={600} rows={3} defaultValue={state.preferences.avoid} placeholder={t("Ex. Parfum, Limonene", "E.g. Parfum, Limonene")}/>
+        <small className="muted">{t("Sépare les noms par des virgules.", "Separate names with commas.")}</small>
+      </label>
       <ProfileFields preferences={state.preferences}/>
-      <div className="form-actions"><button className="button button-primary" type="submit">Enregistrer mes préférences</button></div>
+      <div className="form-actions"><button className="button button-primary" type="submit">{t("Enregistrer", "Save preferences")}</button></div>
     </form>
     <aside className="dashboard-card preference-help">
-      <h2><CircleHelp size={20}/> À propos des repères</h2>
-      <p>Navier compare les listes d’ingrédients et les étapes de ta routine avec tes critères. Vérifie les notices et les emballages en cas de doute.</p>
-      <p>Les repères sont informatifs. Ils ne donnent ni diagnostic ni garantie d’innocuité, d’efficacité ou de résultat esthétique.</p>
-      <button className="button button-secondary" type="button" onClick={() => exportWorkspace(state)}><Download size={16}/> Exporter mon espace</button>
-      <p className="muted">Le fichier inclut le vanity, les routines, les teintes et les préférences. Les photos et le journal sont séparés.</p>
-      <a href="/confidentialite">Confidentialité et données</a>
-      {state.products.some((product) => product.id.startsWith("example-")) && (
-        <button className="button button-secondary" type="button" onClick={onClearSamples}>Retirer les exemples</button>
-      )}
+      <h2>{t("Mes données", "My data")}</h2>
+      <button className="button button-secondary" type="button" onClick={() => exportWorkspace(state)}><Download size={16}/>{t("Exporter mon espace", "Export my workspace")}</button>
+      <p className="muted">{portable
+        ? t("Garde le fichier Navier au même endroit et utilise le même navigateur pour retrouver tes données.", "Keep the Navier file in the same place and use the same browser to find your data.")
+        : t("Le fichier inclut les produits, routines, teintes et préférences.", "The file includes products, routines, shades and preferences.")}</p>
+      {!portable && <>
+        <a href="/installer">{t("Installer Navier", "Install Navier")}</a>
+        <a href="/confidentialite">{t("Confidentialité", "Privacy")}</a>
+      </>}
     </aside>
   </div>;
 }
-
 function Account({ user, client, onClose, onNotice }: {
   user: ReturnType<typeof useWorkspaceState>["user"]; client: ReturnType<typeof useWorkspaceState>["client"];
   onClose: () => void; onNotice: (message: string) => void;
 }) {
+  const { t } = useLocale();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
@@ -460,14 +449,16 @@ function Account({ user, client, onClose, onNotice }: {
           } });
       if (error) throw error;
       if (data.session) {
-        onNotice("Tu es connecté à ton espace Navier.");
+        onNotice(t("Tu es connecté à ton espace Navier.", "You’re signed in to your Navier workspace."));
         onClose();
       } else {
-        setMessage("Consulte ta boîte mail pour confirmer ton adresse.");
+        setMessage(t("Consulte ta boîte mail pour confirmer ton adresse.", "Check your email to confirm your address."));
       }
     } catch {
       setFailed(true);
-      setMessage(mode === "login" ? "Connexion impossible. Vérifie tes identifiants ou réessaie dans un instant." : "La création du compte a échoué. Vérifie l’adresse et choisis un mot de passe d’au moins 8 caractères.");
+      setMessage(mode === "login"
+        ? t("Connexion impossible. Vérifie tes identifiants ou réessaie dans un instant.", "Unable to sign in. Check your credentials or try again in a moment.")
+        : t("La création du compte a échoué. Vérifie l’adresse et choisis un mot de passe d’au moins 8 caractères.", "Unable to create your account. Check the email address and choose a password with at least 8 characters."));
     } finally { setPending(false); }
   }
 
@@ -478,31 +469,31 @@ function Account({ user, client, onClose, onNotice }: {
       const { error } = await client!.auth.signOut();
       if (error) throw error;
       onClose();
-      onNotice("Tu es de retour dans ton espace local.");
+      onNotice(t("Tu es de retour dans ton espace local.", "You’re back in your local workspace."));
     } catch {
       setFailed(true);
-      setMessage("Déconnexion impossible. Réessaie dans un instant.");
+      setMessage(t("Déconnexion impossible. Réessaie dans un instant.", "Unable to sign out. Try again in a moment."));
     } finally { setPending(false); }
   }
 
   return <>
     <div className="dialog-heading">
-      <div><h2 id="account-title">{user ? "Mon compte" : mode === "login" ? "Se connecter" : "Créer un compte"}</h2>
-        <p>{user?.email ?? "Retrouve ton espace sur plusieurs appareils."}</p></div>
-      <button className="icon-button" aria-label="Fermer" onClick={onClose}><X size={21}/></button>
+      <div><h2 id="account-title">{user ? t("Mon compte", "My account") : mode === "login" ? t("Se connecter", "Sign in") : t("Créer un compte", "Create an account")}</h2>
+        <p>{user?.email ?? t("Retrouve ton espace sur plusieurs appareils.", "Access your workspace on your different devices.")}</p></div>
+      <button className="icon-button" aria-label={t("Fermer", "Close")} onClick={onClose}><X size={21}/></button>
     </div>
-    {!client ? <div className="product-detail-panel"><p>La connexion nécessite une configuration Supabase. Les produits et routines de l’espace local sont conservés dans ce navigateur.</p></div>
-      : user ? <div className="stacked-form"><p>Ton compte dispose de sa propre collection. L’espace local reste accessible après la déconnexion.</p>
-          <button type="button" className="button button-secondary" disabled={pending} onClick={() => void signOut()}><LogOut size={17}/> Se déconnecter</button>
+    {!client ? <div className="product-detail-panel"><p>{t("La connexion nécessite une configuration Supabase. Les produits et routines de l’espace local sont conservés dans ce navigateur.", "Sign-in requires a Supabase configuration. Local products and routines are stored in this browser.")}</p></div>
+      : user ? <div className="stacked-form"><p>{t("Ton compte dispose de sa propre collection. L’espace local reste accessible après la déconnexion.", "Your account has its own collection. You can access your local workspace after signing out.")}</p>
+          <button type="button" className="button button-secondary" disabled={pending} onClick={() => void signOut()}><LogOut size={17}/>{t("Se déconnecter", "Sign out")}</button>
         </div>
       : <form className="stacked-form" onSubmit={(event) => void submit(event)}>
-          {mode === "signup" && <label>Prénom<input name="name" autoComplete="given-name" maxLength={40}/></label>}
-          <label>Adresse e-mail<input type="email" name="email" autoComplete="email" maxLength={254} required/></label>
-          <label>Mot de passe<input type="password" name="password" minLength={mode === "signup" ? 8 : 1} autoComplete={mode === "signup" ? "new-password" : "current-password"} maxLength={128} required/></label>
-          <button className="button button-primary" type="submit" disabled={pending}>{mode === "login" ? "Se connecter" : "Créer mon compte"}</button>
+          {mode === "signup" && <label>{t("Prénom", "First name")}<input name="name" autoComplete="given-name" maxLength={40}/></label>}
+          <label>{t("Adresse e-mail", "Email address")}<input type="email" name="email" autoComplete="email" maxLength={254} required/></label>
+          <label>{t("Mot de passe", "Password")}<input type="password" name="password" minLength={mode === "signup" ? 8 : 1} autoComplete={mode === "signup" ? "new-password" : "current-password"} maxLength={128} required/></label>
+          <button className="button button-primary" type="submit" disabled={pending}>{mode === "login" ? t("Se connecter", "Sign in") : t("Créer mon compte", "Create my account")}</button>
           <button className="text-button" type="button" disabled={pending} onClick={() => {
             setMode(mode === "login" ? "signup" : "login"); setMessage(""); setFailed(false);
-          }}>{mode === "login" ? "Créer un compte" : "J’ai déjà un compte"}</button>
+          }}>{mode === "login" ? t("Créer un compte", "Create an account") : t("J’ai déjà un compte", "I already have an account")}</button>
         </form>}
     {message && <p className={failed ? "form-error" : "muted"} role={failed ? "alert" : "status"}>{message}</p>}
   </>;

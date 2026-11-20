@@ -1,57 +1,40 @@
 .hero,
 .guides {
-  width: min(100% - 56px, 1110px);
+  width: min(100% - 44px, 66rem);
   margin-inline: auto;
 }
 
 .hero {
-  padding: clamp(24px, 6vw, 66px) 20px;
-  margin-block: clamp(24px, 4vw, 48px);
-  border: 1px solid #cdd9e3;
-  border-radius: 12px;
-  background: radial-gradient(ellipse at 50% 18%, #fffdf5 2%, #eef0ed 47%, #e5ebf1 100%);
-  text-align: center;
+  padding-block: clamp(34px, 6.2vw, 70px);
 }
 
 .intro {
   display: grid;
   max-width: 45rem;
-  justify-items: center;
-  margin-inline: auto;
-  gap: 13px;
-}
-
-.appIcon {
-  margin-block-end: 4px;
-  border: 1px solid #be9c67;
-  border-radius: 24px;
-  box-shadow: 0 10px 22px #1e304625;
+  justify-items: start;
+  gap: 11px;
 }
 
 .intro h1 {
-  font: 500 clamp(2.45rem, 6vw, 4.75rem)/1.02 var(--serif);
-  letter-spacing: -.055em;
+  font: 600 clamp(1.9rem, 3.5vw, 2.6rem)/1.12 var(--sans, system-ui, sans-serif);
+  letter-spacing: -.035em;
 }
 
 .description {
-  max-width: 28rem;
+  max-width: 33rem;
   color: var(--site-muted);
-  font-size: clamp(1rem, 1.7vw, 1.13rem);
+  font-size: 1rem;
   line-height: 1.55;
 }
 
 .installControl {
   display: grid;
-  justify-items: center;
+  justify-items: start;
   gap: 6px;
-  max-width: 33rem;
+  max-width: 35rem;
   color: var(--site-muted);
-  font-size: .92rem;
+  font-size: .93rem;
   line-height: 1.5;
-}
-
-.installControl :global(.button-primary) {
-  background: var(--site-blue);
 }
 
 .installControl p:empty {
@@ -59,13 +42,14 @@
 }
 
 .guides {
-  padding-block: 12px 46px;
+  padding-block: 25px 46px;
+  border-block-start: 1px solid var(--site-edge);
 }
 
 .guides h2 {
-  margin-block-end: 17px;
-  font: 500 clamp(1.95rem, 3.8vw, 3rem)/1.12 var(--serif);
-  letter-spacing: -.04em;
+  margin-block-end: 15px;
+  font: 600 clamp(1.38rem, 2.7vw, 1.9rem)/1.18 var(--sans, system-ui, sans-serif);
+  letter-spacing: -.03em;
 }
 
 .guideGrid {
@@ -77,19 +61,20 @@
 .guide {
   display: grid;
   align-content: start;
-  gap: 10px;
-  padding: clamp(18px, 2.5vw, 27px);
+  gap: 9px;
+  padding: clamp(16px, 2.2vw, 25px);
   border: 1px solid var(--site-edge);
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--site-white);
 }
 
 .guide > svg {
-  color: var(--site-blue);
+  color: var(--site-muted);
 }
 
 .guide h3 {
-  font: 650 1.35rem/1.18 var(--serif);
+  font-size: 1.07rem;
+  font-weight: 650;
 }
 
 .guide ol {
@@ -105,16 +90,16 @@
 
 .guide strong {
   color: var(--site-ink);
-  font-weight: 700;
+  font-weight: 650;
 }
 
 .guide li::marker {
-  color: var(--site-blue);
-  font-weight: 700;
+  color: var(--site-ink);
+  font-weight: 650;
 }
 
 .note {
-  max-width: 65ch;
+  max-width: 70ch;
   margin-block-start: 16px;
   color: var(--site-muted);
   font-size: .9rem;
@@ -124,7 +109,7 @@
 @media (max-width: 720px) {
   .hero,
   .guides {
-    width: min(100% - 36px, 1110px);
+    width: calc(100% - 34px);
   }
 
   .guideGrid {

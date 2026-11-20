@@ -1,46 +1,28 @@
 # Récupérer, lancer et tester Navier
 
-Dépôt d’origine [himehitmann/Bty](https://github.com/himehitmann/Bty). Si la branche GitHub contient uniquement le README, récupère l’archive ou le patch depuis **Navier — Sources du projet** dans le navigateur Cloud. L’archive contient directement tout le code de la version testée.
+## Ouvrir le fichier portable
 
-## Avec l’archive
+Télécharge **Navier.html** dans la [dernière version publiée sur GitHub](https://github.com/himehitmann/Bty/releases/latest), puis double-clique sur le fichier. L’édition portable fonctionne avec le catalogue embarqué et la saisie manuelle. Les données sont locales au navigateur utilisé.
 
-Décompresse **Navier-sources.zip**, puis ouvre un terminal dans le dossier **Navier**. Avec Node.js 22 ou ultérieur :
+## Depuis le code source
 
-```sh
-npm ci
-npm run dev
-```
-
-Ouvre `http://localhost:3000`. Le mode local fonctionne sans créer de compte. Le site et le guide se trouvent sur `/decouvrir` et `/installer`.
-
-## Avec le dépôt GitHub et le patch
-
-Télécharge **Navier.patch** avant de lancer les commandes, puis adapte le chemin à son emplacement.
+Le code est sur la [branche codex/navier du dépôt](https://github.com/himehitmann/Bty/tree/codex/navier). Avec Node.js 22 ou ultérieur :
 
 ```sh
-git clone https://github.com/himehitmann/Bty.git
+git clone --branch codex/navier https://github.com/himehitmann/Bty.git
 cd Bty
-git switch -c navier-preview
-git apply --check "/chemin/vers/Navier.patch"
-git apply "/chemin/vers/Navier.patch"
 npm ci
 npm run dev
 ```
 
-Ne réapplique pas le patch sur une branche qui contient déjà la version Navier. Une personne disposant des droits d’écriture peut ensuite créer un commit et publier sa branche.
-
-```sh
-git add .
-git commit -m "Ajouter Navier"
-git push -u origin navier-preview
-```
+Ouvre `http://localhost:3000` tant que le serveur tourne. Le site et le guide d’installation se trouvent sur `/decouvrir` et `/installer`. Pour générer le fichier à ouvrir par double-clic, lance `npm run build:portable` puis ouvre `out/Navier.html`.
 
 ## Recette rapide
 
-1. Dans **Ajouter un produit → Catalogue**, essaie le code `3549620008388`. Consulte le nom, le fournisseur et l’INCI s’il est disponible.
+1. Depuis le champ de l’accueil, cherche `CeraVe`, `Cicaplast` ou le code `3337875795456`. Sélectionne une fiche et vérifie que le formulaire s’affiche dans la page. Consulte sa provenance et l’INCI si disponible.
 2. Ajoute un produit manuellement dans la catégorie **Parfums**. Ouvre sa fiche et repère les états inconnus des deux mentions. Une déclaration manuelle doit inclure sa source.
 3. Crée une poudre translucide ou matifiante, puis un fard teinté avec une couleur. Dans une routine, applique les deux à des zones adaptées. La poudre ne doit ajouter aucun pigment. Le fard doit colorer la zone de la routine si une teinte est sélectionnée.
-4. Dans **Préférences**, renseigne une observation et un sous-ton. Enregistre puis recharge la page. Choisis un produit de ton vanity dans la trame du matin et crée la routine. Dans son éditeur, renseigne une fréquence issue de la notice ou de ton organisation.
+4. Dans **Paramètres**, bascule la langue vers **English**, vérifie sa persistance après rechargement, puis repasse en français. Renseigne une observation et un sous-ton. Enregistre puis recharge la page. Choisis un produit de ton vanity dans la trame du matin et crée la routine. Dans son éditeur, renseigne une fréquence issue de la notice ou de ton organisation.
 5. Pour tester le service worker, arrête le serveur de développement, lance `npm run build` puis `npm start`, ouvre l’espace une première fois en ligne, puis réessaie hors connexion. L’installation de la PWA et le service worker exigent HTTPS ou localhost.
 6. Pour tester les comptes et le journal Plus, suis la configuration Supabase et Stripe test du README. Sans configuration, aucun paiement n’est possible dans l’aperçu.
 
@@ -48,7 +30,7 @@ git push -u origin navier-preview
 
 | Espace | Ce que tu peux faire |
 | --- | --- |
-| **Catalogue et vanity** | Rechercher par nom ou code-barres. Importer une fiche disponible, ou saisir la tienne. Filtrer et retrouver les produits par catégorie. Gérer soins, maquillage, cheveux et parfums. Enregistrer la marque, l’INCI, une notice disponible, les déclarations avec leurs sources et les dates de conservation. |
+| **Catalogue et vanity** | Rechercher par nom, marque ou code-barres. Importer une fiche disponible, ou saisir la tienne. Filtrer et retrouver les produits par catégorie. Gérer soins, maquillage, cheveux et parfums. Enregistrer la marque, l’INCI, une notice disponible, les déclarations avec leurs sources et les dates de conservation. |
 | **Compositions** | Lire la provenance, voir quelles données sont inconnues, comparer deux fiches et repérer des libellés INCI communs. Enregistrer des ingrédients à éviter et afficher les correspondances disponibles. |
 | **Conservation** | Renseigner l’ouverture, la PAO et la date explicite. Repérer les échéances proches ou dépassées sans déduire la sécurité du produit. |
 | **Profil** | Noter son ressenti, ses observations et son sous-ton. Consulter la méthode de comparaison des sous-tons. Préparer une trame matinale avec les produits dont on confirme le rôle. |

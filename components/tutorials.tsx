@@ -1,25 +1,27 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Check, ChevronDown, CirclePlus, Moon, Sparkles, Sun, Waves } from "lucide-react";
+import { Brush, Check, ChevronDown, Droplet, Moon, Plus, Sun } from "lucide-react";
+import { useLocale } from "@/lib/i18n";
 import type { FaceZone, Product, Routine } from "@/lib/model";
 import styles from "./tutorials.module.css";
 
+type TutorialCopy = [string, string];
+
 type TutorialStep = {
   id: string;
-  title: string;
+  title: TutorialCopy;
   category: Product["category"];
   zone: FaceZone;
   match: RegExp;
-  note: string;
+  note: TutorialCopy;
 };
 
 type Tutorial = {
   id: string;
-  title: string;
-  description: string;
+  title: TutorialCopy;
+  description: TutorialCopy;
   period: Routine["period"];
-  theme: "peach" | "rose" | "lilac" | "sage";
   Icon: typeof Sun;
   steps: TutorialStep[];
 };
@@ -27,129 +29,125 @@ type Tutorial = {
 const tutorials: Tutorial[] = [
   {
     id: "morning",
-    title: "L’essentiel du matin",
-    description: "Hydrater et finir par la protection solaire.",
+    title: ["L’essentiel du matin", "Morning essentials"],
+    description: ["Hydrater et finir par la protection solaire.", "Moisturize and finish with sunscreen."],
     period: "matin",
-    theme: "peach",
     Icon: Sun,
     steps: [
       {
         id: "hydrate",
-        title: "Hydratant",
+        title: ["Hydratant", "Moisturizer"],
         category: "soin",
         zone: "visage",
         match: /\b(hydratant\w*|moisturi[sz]\w*|water cream|moisture cream)\b/,
-        note: "Applique l’hydratant sur le visage en suivant les indications du produit.",
+        note: ["Applique l’hydratant sur le visage en suivant les indications du produit.", "Apply moisturizer to your face as directed on the packaging."],
       },
       {
         id: "sunscreen",
-        title: "Protection solaire",
+        title: ["Protection solaire", "Sunscreen"],
         category: "soin",
         zone: "visage",
         match: /\b(spf\s*\d*|fps\s*\d*|solaire|sunscreen|sun cream|sun stick|sun fluid)\b/,
-        note: "Applique la protection solaire en dernière étape de soin. Respecte les quantités et la fréquence indiquées sur l’emballage.",
+        note: ["Applique la protection solaire en dernière étape de soin. Respecte les quantités et la fréquence indiquées sur l’emballage.", "Apply sunscreen as the last skincare step. Follow the amount and frequency on the packaging."],
       },
     ],
   },
   {
     id: "makeup",
-    title: "Un teint frais",
-    description: "Unifier le teint, rosir les joues et ajouter une touche de couleur.",
+    title: ["Un teint frais", "A fresh complexion"],
+    description: ["Unifier le teint, rosir les joues et ajouter une touche de couleur.", "Even out your complexion, add blush and finish with a touch of color."],
     period: "libre",
-    theme: "rose",
-    Icon: Sparkles,
+    Icon: Brush,
     steps: [
       {
         id: "base",
-        title: "Base de teint",
+        title: ["Base de teint", "Base makeup"],
         category: "maquillage",
         zone: "visage",
         match: /\b(fond de teint|foundation|skin tint|tinted moisturiser|tinted moisturizer|bb cream|bb creme|cc cream|cc creme|serum teinte)\b/,
-        note: "Dépose une fine couche sur les zones à unifier, puis estompe vers l’extérieur du visage.",
+        note: ["Dépose une fine couche sur les zones à unifier, puis estompe vers l’extérieur du visage.", "Apply a thin layer where you want to even out your complexion, then blend outward."],
       },
       {
         id: "blush",
-        title: "Blush",
+        title: ["Blush", "Blush"],
         category: "maquillage",
         zone: "joues",
         match: /\b(blush|fard a joues|cheek tint)\b/,
-        note: "Dépose une petite quantité sur les pommettes et estompe par touches légères.",
+        note: ["Dépose une petite quantité sur les pommettes et estompe par touches légères.", "Apply a small amount to your cheekbones and blend with light strokes."],
       },
       {
         id: "lips",
-        title: "Couleur pour les lèvres",
+        title: ["Couleur pour les lèvres", "Lip color"],
         category: "maquillage",
         zone: "levres",
         match: /\b(rouge a levres|baume teinte|lipstick|lip tint|lip gloss|gloss|lip oil|huile a levres)\b/,
-        note: "Applique la couleur au centre des lèvres puis répartis-la vers les coins.",
+        note: ["Applique la couleur au centre des lèvres puis répartis-la vers les coins.", "Apply color to the center of the lips and spread it toward the corners."],
       },
     ],
   },
   {
     id: "evening",
-    title: "Le rituel du soir",
-    description: "Retirer le maquillage, nettoyer la peau et terminer par l’hydratation.",
+    title: ["Le rituel du soir", "Evening routine"],
+    description: ["Retirer le maquillage, nettoyer la peau et terminer par l’hydratation.", "Remove makeup, cleanse and finish with moisturizer."],
     period: "soir",
-    theme: "lilac",
     Icon: Moon,
     steps: [
       {
         id: "remove",
-        title: "Démaquillant",
+        title: ["Démaquillant", "Makeup remover"],
         category: "soin",
         zone: "visage",
         match: /\b(demaquillant\w*|micellaire|micellar|makeup remover|cleansing oil|cleansing balm)\b/,
-        note: "Retire le maquillage selon le mode d’emploi. Utilise le produit autour des yeux uniquement si l’étiquette le prévoit.",
+        note: ["Retire le maquillage selon le mode d’emploi. Utilise le produit autour des yeux uniquement si l’étiquette le prévoit.", "Remove makeup as directed. Use the product around your eyes only if the label says it is intended for that area."],
       },
       {
         id: "cleanse",
-        title: "Nettoyant visage",
+        title: ["Nettoyant visage", "Face cleanser"],
         category: "soin",
         zone: "visage",
         match: /\b(nettoyant\w*|cleanser|face wash|gel lavant|cleansing gel|cleansing foam)\b/,
-        note: "Utilise le nettoyant comme indiqué, puis rince s’il est prévu pour être rincé.",
+        note: ["Utilise le nettoyant comme indiqué, puis rince s’il est prévu pour être rincé.", "Use the cleanser as directed and rinse if the label calls for it."],
       },
       {
         id: "hydrate",
-        title: "Hydratant",
+        title: ["Hydratant", "Moisturizer"],
         category: "soin",
         zone: "visage",
         match: /\b(hydratant\w*|moisturi[sz]\w*|night cream|creme de nuit)\b/,
-        note: "Termine par ton hydratant habituel sur le visage.",
+        note: ["Termine par ton hydratant habituel sur le visage.", "Finish by applying your usual face moisturizer."],
       },
     ],
   },
   {
     id: "hair",
-    title: "Le soin des longueurs",
-    description: "Organiser le lavage et les soins de tes cheveux.",
+    title: ["Le soin des longueurs", "Hair wash and care"],
+    description: ["Organiser le lavage et les soins de tes cheveux.", "Arrange the steps for washing and conditioning your hair."],
     period: "libre",
-    theme: "sage",
-    Icon: Waves,
+    Icon: Droplet,
     steps: [
       {
         id: "shampoo",
-        title: "Shampooing",
+        title: ["Shampooing", "Shampoo"],
         category: "cheveux",
         zone: "cheveux",
         match: /\b(shamp(?:oo|ooing|oing))\b/,
-        note: "Applique le shampooing selon les indications du produit, puis rince.",
+        note: ["Applique le shampooing selon les indications du produit, puis rince.", "Apply and rinse out the shampoo as directed."],
       },
       {
         id: "condition",
-        title: "Après-shampooing ou masque",
+        title: ["Après-shampooing ou masque", "Conditioner or hair mask"],
         category: "cheveux",
         zone: "cheveux",
         match: /\b(apres shamp(?:oo|ooing|oing)|conditioner|masque|mask)\b/,
-        note: "Répartis le soin sur les zones indiquées sur l’étiquette. Respecte le temps de pose et les consignes de rinçage.",
+        note: ["Répartis le soin sur les zones indiquées sur l’étiquette. Respecte le temps de pose et les consignes de rinçage.", "Apply the product where the label directs and follow the timing and rinsing instructions."],
       },
       {
         id: "finish",
-        title: "Soin sans rinçage",
+        title: ["Soin sans rinçage", "Leave-in treatment"],
         category: "cheveux",
         zone: "cheveux",
         match: /\b(sans rincage|leave in|hair oil|huile capillaire|serum capillaire)\b/,
-        note: "Applique le soin sans rinçage sur les longueurs, sur cheveux humides ou secs selon les indications du produit.",
+        note: ["Applique le soin sans rinçage sur les longueurs, sur cheveux humides ou secs selon les indications du produit.", "Apply the leave-in treatment to the lengths of your hair, damp or dry as directed."],
       },
     ],
   },
@@ -183,12 +181,13 @@ type TutorialCardProps = {
 };
 
 function TutorialCard({ tutorial, products, onCreateRoutine }: TutorialCardProps) {
+  const { t, locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [created, setCreated] = useState(false);
   const panelId = useId();
   const sortedProducts = [...products].sort((first, second) =>
-    first.name.localeCompare(second.name, "fr") || first.id.localeCompare(second.id),
+    first.name.localeCompare(second.name, locale) || first.id.localeCompare(second.id),
   );
 
   // Reserve explicit choices before matching the remaining steps in tutorial order.
@@ -212,14 +211,14 @@ function TutorialCard({ tutorial, products, onCreateRoutine }: TutorialCardProps
       id: crypto.randomUUID(),
       productId: chosen.id,
       zone: step.zone,
-      note: step.note,
+      note: t(...step.note),
     }] : []);
 
     if (!steps.length) return;
 
     const createdRoutine = onCreateRoutine({
       id: crypto.randomUUID(),
-      name: tutorial.title,
+      name: t(...tutorial.title),
       period: tutorial.period,
       steps,
     });
@@ -227,23 +226,23 @@ function TutorialCard({ tutorial, products, onCreateRoutine }: TutorialCardProps
   }
 
   return (
-    <article className={styles.card} data-theme={tutorial.theme} aria-labelledby={`${panelId}-title`}>
+    <article className={styles.card} aria-labelledby={`${panelId}-title`}>
       <div className={styles.cardTop}>
-        <span className={styles.icon}><Icon size={25} strokeWidth={1.5} aria-hidden="true" /></span>
-        <p className={styles.stepCount}>{tutorial.steps.length} étapes</p>
+        <Icon className={styles.icon} size={21} strokeWidth={1.7} aria-hidden="true" />
+        <p className={styles.stepCount}>{tutorial.steps.length} {t("étapes", "steps")}</p>
       </div>
-      <h2 id={`${panelId}-title`}>{tutorial.title}</h2>
-      <p className={styles.description}>{tutorial.description}</p>
+      <h2 id={`${panelId}-title`}>{t(...tutorial.title)}</h2>
+      <p className={styles.description}>{t(...tutorial.description)}</p>
       <div className={styles.cardAction}>
-        <span className={styles.matchCount}>{selectedCount} étape{selectedCount > 1 ? "s" : ""} avec ton vanity</span>
-        <button type="button" className={styles.expand} aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Replier" : "Adapter"}
+        <span className={styles.matchCount}>{selectedCount === 1 ? t("1 étape avec ton vanity", "1 step with your products") : t(`${selectedCount} étapes avec ton vanity`, `${selectedCount} steps with your products`)}</span>
+        <button type="button" className={`${styles.expand} button button-secondary`} aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(!expanded)}>
+          {expanded ? t("Replier", "Collapse") : t("Adapter", "Customize")}
           <ChevronDown size={16} aria-hidden="true" />
         </button>
       </div>
       <div id={panelId} hidden={!expanded} className={styles.panel}>
         <p className={styles.help}>
-          La suggestion se base sur le nom du produit. Tu peux choisir un autre produit de la même catégorie si son usage correspond.
+          {t("La suggestion se base sur le nom du produit. Tu peux choisir un autre produit de la même catégorie si son usage correspond.", "Suggestions are based on product names. You can choose another product in the category if it serves the same purpose.")}
         </p>
         <ol className={styles.steps}>
           {selectedSteps.map(({ step, available, chosen }) => {
@@ -254,8 +253,8 @@ function TutorialCard({ tutorial, products, onCreateRoutine }: TutorialCardProps
 
             return (
               <li className={styles.step} key={step.id}>
-                <label className={styles.stepTitle} htmlFor={`${panelId}-${step.id}`}>{step.title}</label>
-                <p className={styles.stepNote} id={`${panelId}-${step.id}-note`}>{step.note}</p>
+                <label className={styles.stepTitle} htmlFor={`${panelId}-${step.id}`}>{t(...step.title)}</label>
+                <p className={styles.stepNote} id={`${panelId}-${step.id}-note`}>{t(...step.note)}</p>
                 <div className={styles.select}>
                   <select
                     id={`${panelId}-${step.id}`}
@@ -268,7 +267,7 @@ function TutorialCard({ tutorial, products, onCreateRoutine }: TutorialCardProps
                       setCreated(false);
                     }}
                   >
-                    <option value="">{options.length ? "Aucun produit sélectionné" : "Aucun produit disponible"}</option>
+                    <option value="">{options.length ? t("Aucun produit sélectionné", "No product selected") : t("Aucun produit disponible", "No product available")}</option>
                     {options.map((product) => (
                       <option key={product.id} value={product.id}>
                         {product.brand ? `${product.name} · ${product.brand}` : product.name}
@@ -282,11 +281,11 @@ function TutorialCard({ tutorial, products, onCreateRoutine }: TutorialCardProps
           })}
         </ol>
         <button className="button button-primary" type="button" disabled={selectedCount === 0 || created} onClick={createRoutine}>
-          {created ? <Check size={17} aria-hidden="true" /> : <CirclePlus size={17} aria-hidden="true" />}
-          {created ? "Routine créée" : `Créer ma routine (${selectedCount})`}
+          {created ? <Check size={17} aria-hidden="true" /> : <Plus size={17} aria-hidden="true" />}
+          {created ? t("Routine créée", "Routine created") : t(`Créer ma routine (${selectedCount})`, `Create my routine (${selectedCount})`)}
         </button>
         <p className={styles.status} role="status">
-          {created ? "Routine ajoutée à Mes routines." : selectedCount < tutorial.steps.length ? "La routine inclura les étapes avec un produit sélectionné." : ""}
+          {created ? t("Routine ajoutée à Mes routines.", "Added to My routines.") : selectedCount < tutorial.steps.length ? t("La routine inclura les étapes avec un produit sélectionné.", "Your routine will include the steps with a selected product.") : ""}
         </p>
       </div>
     </article>
@@ -297,13 +296,14 @@ export function Tutorials({ products, onCreateRoutine }: {
   products: Product[];
   onCreateRoutine: (routine: Routine) => boolean;
 }) {
+  const { t } = useLocale();
   const heading = useId();
 
   return (
     <section className={styles.section} aria-labelledby={heading}>
       <div className={styles.intro}>
-        <h1 id={heading}>Tutoriels</h1>
-        <p>Choisis un tutoriel, puis adapte chaque étape aux produits de ton vanity.</p>
+        <h1 id={heading}>{t("Tutoriels", "Tutorials")}</h1>
+        <p>{t("Choisis un tutoriel, puis adapte chaque étape aux produits de ton vanity.", "Choose a tutorial and tailor each step to the products in your vanity.")}</p>
       </div>
       <div className={styles.grid}>
         {tutorials.map((tutorial) => (

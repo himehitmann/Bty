@@ -1,6 +1,6 @@
 .page {
   display: grid;
-  gap: 1.75rem;
+  gap: 1.4rem;
   min-width: 0;
   color: var(--ink, #2e2432);
 }
@@ -15,11 +15,11 @@
 
 .title {
   margin: 0;
-  font-family: var(--serif, Georgia, serif);
-  font-size: clamp(2.5rem, 5vw, 4rem);
-  font-weight: 400;
-  line-height: 1.03;
-  letter-spacing: -0.049em;
+  font-family: var(--sans, system-ui, sans-serif);
+  font-size: clamp(1.9rem, 3.5vw, 2.6rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -.035em;
   overflow-wrap: anywhere;
 }
 
@@ -48,7 +48,7 @@
 .guidePanel {
   min-width: 0;
   border: 1px solid var(--line, #e9e0eb);
-  border-radius: 1.25rem;
+  border-radius: .85rem;
   background: var(--surface, #fff);
 }
 
@@ -79,36 +79,23 @@
   justify-content: space-between;
 }
 
-.periodIcon,
 .emptyIcon {
   display: grid;
   width: 2.85rem;
   height: 2.85rem;
   flex: none;
   place-items: center;
-  border-radius: 0.875rem;
-  color: #754884;
-  background: #f0e6f6;
-}
-
-.periodIcon[data-period="matin"] {
-  color: #8b4d37;
-  background: #fbe8de;
-}
-
-.periodIcon[data-period="libre"] {
-  color: #884c65;
-  background: #f8e5ed;
+  border-radius: .65rem;
+  color: var(--brand-dark);
+  background: var(--background);
 }
 
 .periodLabel,
 .zonePill {
   display: inline-flex;
   align-items: center;
-  padding: 0.28rem 0.6rem;
-  border-radius: 100vw;
-  color: #5a4663;
-  background: #f1eaf5;
+  gap: .45rem;
+  color: var(--muted);
   font-size: 0.875rem;
   line-height: 1.35;
 }
@@ -117,9 +104,9 @@
 .empty h2,
 .stepDetails h2 {
   margin: 1rem 0 0.25rem;
-  font-family: var(--serif, Georgia, serif);
-  font-size: 1.8rem;
-  font-weight: 400;
+  font-family: var(--sans, system-ui, sans-serif);
+  font-size: 1.35rem;
+  font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.035em;
   overflow-wrap: anywhere;
@@ -171,8 +158,8 @@
 }
 
 .iconButton:hover:not(:disabled) {
-  border-color: #c6accf;
-  background: #f9f4fb;
+  border-color: var(--brand);
+  background: var(--background);
 }
 
 .iconButton:disabled,
@@ -200,10 +187,10 @@
   display: grid;
   justify-items: center;
   padding: clamp(2rem, 8vw, 4.25rem) 1.25rem;
-  border: 1px solid #e9ddeb;
-  border-radius: 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: .85rem;
   color: var(--ink, #2e2432);
-  background: #f9f3fa;
+  background: var(--surface);
   text-align: center;
 }
 
@@ -285,9 +272,9 @@
 
 .editorHeading h2 {
   margin: 0;
-  font-family: var(--serif, Georgia, serif);
-  font-size: 1.7rem;
-  font-weight: 400;
+  font-family: var(--sans, system-ui, sans-serif);
+  font-size: 1.35rem;
+  font-weight: 600;
 }
 
 .editorSteps,
@@ -305,7 +292,7 @@
   padding: 0.8rem;
   border: 1px solid var(--line, #e9e0eb);
   border-radius: 0.875rem;
-  background: #fbf8fc;
+  background: var(--background);
 }
 
 .formHint {
@@ -343,23 +330,23 @@
   border: 0;
   border-radius: 100vw;
   appearance: none;
-  color: #9154a3;
-  background: #eee5f2;
+  color: var(--brand);
+  background: var(--line);
 }
 
 .progress::-webkit-progress-bar {
   border-radius: 100vw;
-  background: #eee5f2;
+  background: var(--line);
 }
 
 .progress::-webkit-progress-value {
   border-radius: 100vw;
-  background: #9154a3;
+  background: var(--brand);
 }
 
 .progress::-moz-progress-bar {
   border-radius: 100vw;
-  background: #9154a3;
+  background: var(--brand);
 }
 
 .stepDetails {
@@ -369,7 +356,7 @@
 
 .stepDetails h2 {
   margin: 0 0 0.5rem;
-  font-size: clamp(1.9rem, 4vw, 2.55rem);
+  font-size: clamp(1.45rem, 2.6vw, 2rem);
 }
 
 .stepDetails p {
@@ -381,7 +368,7 @@
 
 .stepDetails .productBrand {
   margin-bottom: 0.32rem;
-  color: #714d7c;
+  color: var(--muted);
   font-size: 0.875rem;
   font-weight: 650;
 }
@@ -432,15 +419,15 @@
   border: 1px solid transparent;
   border-radius: 0.625rem;
   color: var(--ink, #2e2432);
-  background: #f8f4f9;
+  background: var(--background);
   text-align: left;
   overflow-wrap: anywhere;
   cursor: pointer;
 }
 
 .guideSteps button[aria-current="step"] {
-  border-color: #dbc6e5;
-  background: #f1e6f5;
+  border-color: var(--brand);
+  background: var(--surface);
   font-weight: 650;
 }
 
@@ -451,8 +438,8 @@
   flex: none;
   place-items: center;
   border-radius: 50%;
-  color: #653773;
-  background: #fefbfe;
+  color: var(--muted);
+  background: var(--surface);
   font-size: 0.875rem;
 }
 
@@ -468,8 +455,8 @@
   gap: 0.6rem;
   padding: clamp(0.9rem, 4vw, 1.4rem);
   border: 1px solid var(--line, #dce3eb);
-  border-radius: 1.25rem;
-  background: radial-gradient(ellipse at center, #fff8f0 0%, #eaf0f5 88%);
+  border-radius: .85rem;
+  background: var(--surface);
 }
 
 .chartTitle {
@@ -496,14 +483,14 @@
 }
 
 .silhouette {
-  fill: #fff5f0;
-  stroke: #9c7288;
+  fill: #fbfaf7;
+  stroke: #7b7d7b;
   stroke-width: 1.2;
 }
 
 .hair {
-  fill: #f3dedc;
-  stroke: #9c7288;
+  fill: #edebe4;
+  stroke: #7b7d7b;
   stroke-width: 1.2;
 }
 
@@ -541,13 +528,13 @@
 
 .faceDetails {
   fill: none;
-  stroke: #855772;
+  stroke: #6a6e70;
   stroke-width: 1.05;
   pointer-events: none;
 }
 
 .faceDetails circle {
-  fill: #855772;
+  fill: #6a6e70;
   stroke: none;
 }
 
@@ -559,7 +546,7 @@
 
 .chartHint {
   max-width: 33ch;
-  color: #46576b;
+  color: var(--muted);
   font-size: 0.875rem;
   line-height: 1.5;
   text-align: center;
@@ -569,10 +556,10 @@
   width: min(100%, 30rem);
   margin-top: 0.2rem;
   padding: 0.62rem 0.72rem;
-  border: 1px solid #d7dfe7;
+  border: 1px solid var(--line);
   border-radius: 0.6rem;
-  background: #fffdf8;
-  color: #46576b;
+  background: var(--background);
+  color: var(--muted);
   text-align: left;
   font-size: 0.875rem;
 }
@@ -610,18 +597,18 @@
 .zoneControls button {
   min-height: 2.75rem;
   padding: 0.4rem 0.65rem;
-  border: 1px solid #cbd8e3;
-  border-radius: 100vw;
-  color: #334c64;
-  background: #fffdf9;
+  border: 1px solid var(--line);
+  border-radius: .55rem;
+  color: var(--muted);
+  background: var(--surface);
   font-size: 0.875rem;
   cursor: pointer;
 }
 
 .zoneControls button[aria-pressed="true"] {
-  border-color: #6687a5;
-  color: #263f57;
-  background: #e7eff6;
+  border-color: var(--brand);
+  color: var(--ink);
+  background: var(--background);
   font-weight: 650;
 }
 

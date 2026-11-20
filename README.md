@@ -1,6 +1,10 @@
 # Navier
 
-Navier est une PWA de gestion du vanity et de routines beauté. L’interface est en français et s’adapte aux écrans mobiles. Le mode local permet de démarrer sans compte avec des produits et routines fictifs, que l’on peut retirer dans les préférences.
+Navier est une application web installable pour gérer tes produits et tes routines beauté. Elle s’adapte aux écrans mobiles. Un nouvel espace démarre vide. La langue de l’interface se change dans **Paramètres**.
+
+## Ouvrir Navier par double-clic
+
+Télécharge **Navier.html** dans la [dernière version GitHub](https://github.com/himehitmann/Bty/releases/latest) et double-clique sur le fichier. L’édition portable utilise un catalogue embarqué et conserve tes données dans le navigateur. Pour mettre à jour le fichier tout en gardant les données enregistrées dans le navigateur, remplace l’ancien fichier au même emplacement. **Paramètres → Exporter mon espace** permet de conserver une copie JSON des données.
 
 ## Démarrer
 
@@ -19,6 +23,8 @@ npm run build
 npm start
 ```
 
+Pour générer le fichier portable à partir de cette branche, exécute `npm run build:portable`. Le résultat se trouve dans `out/Navier.html`.
+
 Le service worker s’active dans la version de production sur HTTPS ou sur localhost. Après une première ouverture en ligne, il conserve l’interface et les ressources publiques pour le mode hors connexion. La recherche distante, l’authentification et les opérations Storage utilisent le réseau.
 
 ## Activer Supabase
@@ -32,17 +38,17 @@ Chaque compte démarre avec un espace vide. L’espace invité reste sur le navi
 
 ## Fonctionnement
 
-- **Vanity** · ajout par code-barres, nom ou saisie manuelle, filtres par catégorie, édition et suppression. Les routines perdent les étapes d’un produit supprimé.
-- **INCI** · affichage de la liste et de sa provenance. La recherche combine [Open Beauty Facts](https://world.openbeautyfacts.org/) avec un catalogue local de formules illustratives. `OPEN_BEAUTY_FACTS_CONTACT` permet de renseigner le contact envoyé dans le User-Agent.
+- **Mes produits** · recherche par nom, marque ou code-barres depuis l’accueil ou **Rechercher**, ajout dans la page ou saisie manuelle, filtres par catégorie, édition et suppression. Les routines perdent les étapes d’un produit supprimé.
+- **INCI** · affichage de la liste et de sa provenance. La version web interroge [Open Beauty Facts](https://world.openbeautyfacts.org/). Le catalogue embarqué contient quelques références réelles issues d’Open Beauty Facts sous [licence ODbL](https://opendatacommons.org/licenses/odbl/1-0/), avec un lien par fiche, ainsi que des formules clairement signalées comme indicatives. `OPEN_BEAUTY_FACTS_CONTACT` permet de renseigner le contact envoyé dans le User-Agent.
 - **Routines** · création, réorganisation et suivi des étapes, Face Chart SVG utilisable au clavier et points de vigilance sur les listes et leur ordre.
-- **Palette** · prélèvement précis sur une photo via Canvas, aperçu des couleurs dominantes et sauvegarde des codes hexadécimaux. L’éclairage et l’écran influencent les résultats.
+- **Mes teintes** · prélèvement précis sur une photo via Canvas, aperçu des couleurs dominantes et sauvegarde des codes hexadécimaux. Une teinte enregistrée peut être sélectionnée pour une étape de maquillage teinté et affichée sur le Face Chart. L’éclairage et l’écran influencent les résultats.
 - **Tutoriels** · suggestions à partir du nom et de la catégorie des produits possédés, puis personnalisation avant la création d’une routine.
 
 Les repères INCI concernent les ingrédients déclarés et quelques superpositions. Les données communautaires peuvent être incomplètes ou obsolètes. Les noms seuls ne permettent pas de déterminer une concentration, un pH ou une tolérance. Navier ne fournit aucun diagnostic ni garantie d’innocuité, d’efficacité ou de résultat esthétique.
 
 ## Architecture
 
-Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. Les ressources créées pour Navier et les polices [DM Sans](public/fonts/dm-sans-OFL.txt) et [Playfair Display](public/fonts/playfair-OFL.txt) sont hébergées avec l’application.
+Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. La police [Geist](public/fonts/geist-OFL.txt) est hébergée avec l’application et intégrée au fichier portable.
 
 Références techniques · [Next.js App Router](https://nextjs.org/docs/app), [Proxy](https://nextjs.org/docs/app/api-reference/file-conventions/proxy), [PWA](https://nextjs.org/docs/app/guides/progressive-web-apps), [Tailwind CSS](https://tailwindcss.com/docs/installation/framework-guides/nextjs), [Supabase Auth SSR](https://supabase.com/docs/guides/auth/server-side/nextjs), [Supabase Storage](https://supabase.com/docs/reference/javascript/storage-from-createsignedurl), [Zod](https://zod.dev/api) et [API Open Facts](https://openfoodfacts.github.io/openfoodfacts-server/api/).
 

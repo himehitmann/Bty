@@ -11,11 +11,12 @@ const initialStatus: BillingSnapshot = { available: false, plus: false, manageab
 
 export type BillingStatus = BillingSnapshot & { refresh: () => Promise<void> };
 
-export function useBillingStatus(userId?: string | null): BillingStatus {
+export function useBillingStatus(userId?: string | null, enabled = true): BillingStatus {
   const [checked, setChecked] = useState({ userId, ...initialStatus });
   const requestRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!enabled) return;
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -29,9 +30,10 @@ export function useBillingStatus(userId?: string | null): BillingStatus {
     } catch {
       if (!controller.signal.aborted) setChecked({ userId, ...initialStatus, loading: false, error: true });
     }
-  }, [userId]);
+  }, [enabled, userId]);
 
   useEffect(() => {
+    if (!enabled) return;
     void refresh();
     const check = () => { void refresh(); };
     window.addEventListener("focus", check);
@@ -39,7 +41,7 @@ export function useBillingStatus(userId?: string | null): BillingStatus {
       requestRef.current?.abort();
       window.removeEventListener("focus", check);
     };
-  }, [refresh]);
+  }, [enabled, refresh]);
 
   return { ...(checked.userId === userId ? checked : initialStatus), refresh };
 }

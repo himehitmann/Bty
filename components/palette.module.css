@@ -1,7 +1,7 @@
 .palette {
   display: grid;
   gap: 1.3rem;
-  color: var(--ink, #2d2140);
+  color: var(--ink, #1a1a1a);
 }
 
 .panelHeader h2 {
@@ -23,7 +23,7 @@
 .panel {
   min-width: 0;
   padding: clamp(1rem, 2.3vw, 1.45rem);
-  border: 1px solid var(--line, #e8e0eb);
+  border: 1px solid var(--line, #e3e3e3);
   border-radius: 1.3rem;
   background: var(--surface, #fff);
 }
@@ -41,8 +41,8 @@
   min-width: 2rem;
   padding: .3rem .55rem;
   border-radius: 999px;
-  background: #f0e9f6;
-  color: #4c3764;
+  background: #eeeeee;
+  color: #282828;
   text-align: center;
   font-size: .875rem;
   font-weight: 600;
@@ -54,18 +54,15 @@
   place-items: center;
   min-height: 16rem;
   padding: .7rem;
-  border: 1px dashed #cab8da;
+  border: 1px dashed #b8b8b8;
   border-radius: 1rem;
-  background:
-    radial-gradient(ellipse at 20% 25%, #fbe7e4 0, transparent 55%),
-    radial-gradient(ellipse at 87% 74%, #efe5f8 0, transparent 65%),
-    #faf6fb;
+  background: #f8f8f8;
   transition: border-color .15s, box-shadow .15s;
 }
 
 .dragging {
-  border-color: var(--brand, #6d4d83);
-  box-shadow: inset 0 0 0 1px var(--brand, #6d4d83);
+  border-color: var(--brand, #333333);
+  box-shadow: inset 0 0 0 1px var(--brand, #333333);
 }
 
 .emptyPhoto {
@@ -84,7 +81,7 @@
 .emptyPhoto span,
 .canvasHelp,
 .note {
-  color: var(--muted, #675c72);
+  color: var(--muted, #5b5b5b);
   font-size: .875rem;
   line-height: 1.55;
 }
@@ -94,10 +91,10 @@
   place-items: center;
   width: 3.35rem;
   height: 3.35rem;
-  border: 1px solid #e7d9e7;
+  border: 1px solid #dedede;
   border-radius: 1.05rem;
-  background: #fff9fc;
-  color: #754d87;
+  background: #fcfcfc;
+  color: #353535;
 }
 
 .canvasFrame {
@@ -105,7 +102,7 @@
   width: min(100%, calc(min(52vh, 32rem) * var(--photo-ratio)));
   aspect-ratio: var(--photo-ratio);
   max-width: 100%;
-  background: repeating-conic-gradient(#dccee2 0% 25%, #f6edf7 0% 50%) 0 0 / 1rem 1rem;
+  background: repeating-conic-gradient(#d5d5d5 0% 25%, #eeeeee 0% 50%) 0 0 / 1rem 1rem;
 }
 
 .canvas {
@@ -116,7 +113,7 @@
 }
 
 .canvas:focus-visible {
-  outline: 2px solid var(--brand, #6d4d83);
+  outline: 2px solid var(--brand, #333333);
   outline-offset: 3px;
 }
 
@@ -126,7 +123,7 @@
   height: 1.35rem;
   border: 2px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 0 0 1px #211a2d;
+  box-shadow: 0 0 0 1px #1d1d1d;
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -151,17 +148,17 @@
   display: grid;
   place-items: center;
   min-height: 7.25rem;
-  border: 1px solid #1e132814;
+  border: 1px solid #15151514;
   border-radius: 1rem;
-  background: linear-gradient(135deg, #f8e8ed, #eee5f6);
-  color: #714c80;
+  background: #f2f2f2;
+  color: #454545;
 }
 
 .sample code {
   padding: .3rem .55rem;
   border-radius: .45rem;
   background: #fff;
-  color: #332241;
+  color: #292929;
   font-size: .9rem;
 }
 
@@ -187,19 +184,19 @@
 .suggestion {
   width: 2.55rem;
   height: 2.55rem;
-  border: 1px solid #1e132815;
+  border: 1px solid #15151515;
   border-radius: .65rem;
   cursor: pointer;
 }
 
 .suggestion[aria-pressed="true"] {
-  outline: 2px solid var(--brand, #6d4d83);
+  outline: 2px solid var(--brand, #333333);
   outline-offset: 2px;
 }
 
 .suggestion:focus-visible,
 .iconButton:focus-visible {
-  outline: 2px solid var(--brand, #6d4d83);
+  outline: 2px solid var(--brand, #333333);
   outline-offset: 2px;
 }
 
@@ -218,16 +215,16 @@
   width: 100%;
   min-width: 0;
   padding: .67rem .8rem;
-  border: 1px solid var(--line, #e8e0eb);
+  border: 1px solid var(--line, #e3e3e3);
   border-radius: .65rem;
   background: var(--surface, #fff);
-  color: var(--ink, #2d2140);
+  color: var(--ink, #1a1a1a);
   font: inherit;
 }
 
 .sampleForm input:focus,
 .editForm input:focus {
-  outline: 2px solid var(--brand, #6d4d83);
+  outline: 2px solid var(--brand, #333333);
   outline-offset: 1px;
 }
 
@@ -246,7 +243,7 @@
 .photoOption input {
   width: 1.05rem;
   height: 1.05rem;
-  accent-color: var(--brand, #6d4d83);
+  accent-color: var(--brand, #333333);
 }
 
 .palette button:disabled {
@@ -259,8 +256,8 @@
   margin: 0;
   padding: .65rem .8rem;
   border-radius: .7rem;
-  background: #f1eaf7;
-  color: #4e3764;
+  background: #f2f2f2;
+  color: #333333;
   font-size: .9rem;
   line-height: 1.45;
 }
@@ -275,8 +272,8 @@
 }
 
 .error {
-  background: #f9e8eb;
-  color: #832b46;
+  background: #f3f3f3;
+  color: #272727;
 }
 
 .colors {
@@ -291,13 +288,13 @@
 .colorCard {
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--line, #e8e0eb);
+  border: 1px solid var(--line, #e3e3e3);
   border-radius: .95rem;
 }
 
 .colorBlock {
   height: 4rem;
-  border-bottom: 1px solid #1e132818;
+  border-bottom: 1px solid #15151518;
 }
 
 .colorInfo {
@@ -316,7 +313,7 @@
 }
 
 .colorName code {
-  color: var(--muted, #675c72);
+  color: var(--muted, #5b5b5b);
   font-size: .82rem;
   white-space: nowrap;
 }
@@ -337,12 +334,12 @@
   border: 0;
   border-radius: .55rem;
   background: transparent;
-  color: var(--ink, #2d2140);
+  color: var(--ink, #1a1a1a);
   cursor: pointer;
 }
 
 .iconButton:hover:not(:disabled) {
-  background: #f0e9f6;
+  background: #eeeeee;
 }
 
 .editForm {

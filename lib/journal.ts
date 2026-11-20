@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 export const journalComfort = {
-  comfortable: "Confortable",
-  mixed: "Mitigé",
-  uncomfortable: "Inconfortable",
+  comfortable: { fr: "Confortable", en: "Comfortable" },
+  mixed: { fr: "Mitigé", en: "Mixed" },
+  uncomfortable: { fr: "Inconfortable", en: "Uncomfortable" },
 } as const;
 
 export const maxJournalProducts = 12;
@@ -30,10 +30,6 @@ export type JournalEntry = z.infer<typeof journalEntrySchema>;
 export type StoredJournalEntry = z.infer<typeof storedJournalEntrySchema>;
 export type JournalComfort = JournalEntry["comfort"];
 
-const longDate = new Intl.DateTimeFormat("fr-FR", { dateStyle: "full", timeZone: "UTC" });
-const shortDate = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
-const dayOfWeek = new Intl.DateTimeFormat("fr-FR", { weekday: "short", timeZone: "UTC" });
-
 export function localDateKey(date = new Date()): string {
   return [
     String(date.getFullYear()).padStart(4, "0"),
@@ -42,11 +38,17 @@ export function localDateKey(date = new Date()): string {
   ].join("-");
 }
 
-export function journalDateLabel(date: string): string {
-  return longDate.format(new Date(date + "T12:00:00Z"));
+const longDateOptions = { dateStyle: "full", timeZone: "UTC" } as const;
+const longDates = new Map(["fr-FR", "en-GB"].map((locale) => [locale, new Intl.DateTimeFormat(locale, longDateOptions)]));
+
+export function journalDateLabel(date: string, locale = "fr-FR"): string {
+  const formatter = longDates.get(locale) ?? new Intl.DateTimeFormat(locale, longDateOptions);
+  return formatter.format(new Date(date + "T12:00:00Z"));
 }
 
-export function makeJournalDays(today: string) {
+export function makeJournalDays(today: string, locale = "fr-FR") {
+  const shortDate = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
+  const dayOfWeek = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
   return Array.from({ length: 14 }, (_, index) => {
     const date = new Date(today + "T12:00:00Z");
     date.setUTCDate(date.getUTCDate() - (13 - index));

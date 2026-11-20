@@ -2,12 +2,18 @@
 
 import type { User } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { emptyState, starterState, stateSchema, type State } from "./model";
+import { emptyState, stateSchema, type State } from "./model";
+import { withoutUnchangedExamples } from "./guest-state";
+import { readBrowserLocale } from "./i18n";
 import { getSupabaseBrowserClient, loadRemoteState, RemoteStateConflict, removePalettePhoto, saveRemoteState } from "./supabase/browser";
 
 type Sync = "loading" | "local" | "saving" | "synced" | "error" | "conflict";
 type Draft = { state: State; version: string | null; dirty: boolean };
 const keyFor = (id: string | null) => `navier.v1.${id ?? "guest"}`;
+
+function draftMessage(draft: Draft | undefined, french: string, english: string) {
+  return (draft?.state.preferences.locale ?? readBrowserLocale()) === "en" ? english : french;
+}
 
 function readDraft(id: string | null): Draft | null {
   try {
@@ -30,14 +36,14 @@ function matchesDraft(remote: unknown, draft: State) {
   return validated.success && JSON.stringify(validated.data) === JSON.stringify(draft);
 }
 
-export function useWorkspaceState() {
-  const [state, setState] = useState<State>(starterState);
+export function useWorkspaceState(localOnly = false) {
+  const [state, setState] = useState<State>(emptyState);
   const [user, setUser] = useState<User | null>(null);
   const [sync, setSync] = useState<Sync>("loading");
   const [ready, setReady] = useState(false);
   const [notice, setNotice] = useState("");
   const scope = useRef<{ id: string | null; draft: Draft; running: boolean; writable: boolean; confirmed: State | null } | null>(null);
-  const client = getSupabaseBrowserClient();
+  const client = localOnly ? null : getSupabaseBrowserClient();
 
   const flush = useCallback(async () => {
     const current = scope.current;
@@ -65,7 +71,8 @@ export function useWorkspaceState() {
         for (const path of previousPhotos) {
           if (!currentPhotos.has(path) && path.startsWith(`${current.id}/`)) {
             void removePalettePhoto(client, path).catch(() => {
-              if (scope.current === current) setNotice("Une ancienne photo privée n’a pas pu être supprimée du stockage.");
+              if (scope.current === current) setNotice(draftMessage(current.draft,
+                "Une ancienne photo privée n’a pas pu être supprimée du stockage.", "An older private photo could not be removed from storage."));
             });
           }
         }
@@ -86,9 +93,16 @@ export function useWorkspaceState() {
 
   const activate = useCallback(async (id: string | null, discardDraft = false) => {
     const local = readDraft(id);
+    if (!id && local) {
+      const cleaned = withoutUnchangedExamples(local.state);
+      if (cleaned !== local.state) {
+        local.state = cleaned;
+        writeDraft(id, local);
+      }
+    }
     const saved = discardDraft ? null : local;
     const current = {
-      id, draft: local ?? { state: id ? emptyState : starterState, version: null, dirty: false },
+      id, draft: local ?? { state: emptyState, version: null, dirty: false },
       running: false, writable: false, confirmed: null as State | null,
     };
     scope.current = current;
@@ -124,8 +138,8 @@ export function useWorkspaceState() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get("auth") === "confirmed") setNotice("Ton adresse e-mail est confirmée.");
-    if (params.get("auth") === "error") setNotice("Le lien de confirmation est invalide ou a expiré.");
+    if (params.get("auth") === "confirmed") setNotice(draftMessage(undefined, "Ton adresse e-mail est confirmée.", "Your email address is confirmed."));
+    if (params.get("auth") === "error") setNotice(draftMessage(undefined, "Le lien de confirmation est invalide ou a expiré.", "The confirmation link is invalid or has expired."));
     if (params.has("auth")) history.replaceState(null, "", location.pathname + location.hash);
     if (!client) {
       void activate(null);
@@ -164,16 +178,18 @@ export function useWorkspaceState() {
     if (!current || (expectedId !== undefined && expectedId !== current.id)) return false;
     const validated = stateSchema.safeParse(recipe(current.draft.state));
     if (!validated.success) {
-      setNotice("Cette modification dépasse les limites de l’espace. Vérifie la longueur des champs ou le nombre d’éléments.");
+      setNotice(draftMessage(current.draft, "Cette modification dépasse les limites de l’espace. Vérifie la longueur des champs ou le nombre d’éléments.",
+        "This change exceeds the workspace limits. Check the field lengths or the number of entries."));
       return false;
     }
     if (new TextEncoder().encode(JSON.stringify(validated.data)).length > 490_000) {
-      setNotice("L’espace a atteint sa taille maximale. Réduis le volume des compositions ou de l’historique.");
+      setNotice(draftMessage(current.draft, "L’espace a atteint sa taille maximale. Réduis le volume des compositions ou de l’historique.",
+        "Your workspace is full. Shorten some ingredient lists or reduce your history."));
       return false;
     }
     current.draft = { ...current.draft, state: validated.data, dirty: Boolean(current.id) };
     setState(current.draft.state);
-    if (!writeDraft(current.id, current.draft)) setNotice("Le navigateur n’a pas pu enregistrer une copie locale.");
+    if (!writeDraft(current.id, current.draft)) setNotice(draftMessage(current.draft, "Le navigateur n’a pas pu enregistrer une copie locale.", "The browser could not save a local copy."));
     void flush();
     return true;
   }, [flush]);

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Aperture,
   ArrowDown,
   ArrowUp,
   Check,
@@ -12,7 +13,6 @@ import {
   Pencil,
   Play,
   Plus,
-  Sparkles,
   Sun,
   Trash2,
   X,
@@ -20,24 +20,25 @@ import {
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { analyzeRoutine } from "@/lib/analysis";
 import { defaultApplicationZone, faceMakeupLayers, makeupAppearance, type PigmentLayer } from "@/lib/face-makeup";
+import { useLocale } from "@/lib/i18n";
 import { emptyState, type FaceZone, type PaletteColor, type Preferences, type Product, type Routine, type RoutineStep } from "@/lib/model";
 import styles from "./routines.module.css";
 
 const periods = {
-  matin: { label: "Matin", icon: Sun },
-  soir: { label: "Soir", icon: Moon },
-  libre: { label: "À tout moment", icon: Clock3 },
-} satisfies Record<Routine["period"], { label: string; icon: typeof Sun }>;
+  matin: { label: ["Matin", "Morning"], icon: Sun },
+  soir: { label: ["Soir", "Evening"], icon: Moon },
+  libre: { label: ["À tout moment", "Any time"], icon: Clock3 },
+} satisfies Record<Routine["period"], { label: [string, string]; icon: typeof Sun }>;
 
 const zones = {
-  visage: "Visage",
-  front: "Front",
-  joues: "Joues",
-  yeux: "Yeux",
-  levres: "Lèvres",
-  menton: "Menton",
-  cheveux: "Cheveux",
-} satisfies Record<FaceZone, string>;
+  visage: ["Visage", "Face"],
+  front: ["Front", "Forehead"],
+  joues: ["Joues", "Cheeks"],
+  yeux: ["Yeux", "Eyes"],
+  levres: ["Lèvres", "Lips"],
+  menton: ["Menton", "Chin"],
+  cheveux: ["Cheveux", "Hair"],
+} satisfies Record<FaceZone, [string, string]>;
 
 const faceZones = Object.keys(zones) as FaceZone[];
 
@@ -80,6 +81,7 @@ interface RoutinesProps {
 }
 
 export function Routines({ products, routines, palette = emptyState.palette, preferences = emptyState.preferences, onChange, onComplete, startRoutineId, onStartGuide, onExitGuide }: RoutinesProps) {
+  const { t } = useLocale();
   const [draft, setDraft] = useState<Routine | null>(null);
   const [guideId, setGuideId] = useState<string | undefined>(undefined);
   const [dismissedStartId, setDismissedStartId] = useState<string | undefined>(undefined);
@@ -113,22 +115,24 @@ export function Routines({ products, routines, palette = emptyState.palette, pre
     <section className={styles.page} aria-labelledby="routines-title">
       <div className={styles.heading}>
         <div>
-          <h1 id="routines-title" className={styles.title}>Mes routines</h1>
-          <p className={styles.subtitle}>Organise tes gestes et retrouve leur ordre au quotidien.</p>
+          <h1 id="routines-title" className={styles.title}>{t("Mes routines", "My routines")}</h1>
+          <p className={styles.subtitle}>{t("Organise tes gestes et retrouve leur ordre au quotidien.", "Organize your steps and follow them day to day.")}</p>
         </div>
         <button type="button" className="button button-primary" disabled={routines.length >= 100} onClick={() => {
           setDraft({ id: crypto.randomUUID(), name: "", period: "libre", steps: [] });
         }}>
-          <Plus size={18} aria-hidden="true" /> Créer une routine
+          <Plus size={18} aria-hidden="true" /> {t("Créer une routine", "Create a routine")}
         </button>
       </div>
-      {routines.length >= 100 && <p className={styles.formHint}>Ton espace peut contenir jusqu’à 100 routines.</p>}
+      {routines.length >= 100 && <p className={styles.formHint}>{t("Ton espace peut contenir jusqu’à 100 routines.", "Your workspace can hold up to 100 routines.")}</p>}
 
       {routines.length === 0 ? (
         <div className={styles.empty}>
           <div className={styles.emptyIcon}><Layers3 aria-hidden="true" size={24} /></div>
-          <h2>Ton premier rituel</h2>
-          <p>{products.length ? "Choisis les produits à utiliser et place-les dans l’ordre qui te convient." : "Ajoute des produits à ton vanity pour pouvoir les utiliser dans une routine."}</p>
+          <h2>{t("Ta première routine", "Your first routine")}</h2>
+          <p>{products.length
+            ? t("Choisis les produits à utiliser et place-les dans l’ordre qui te convient.", "Choose your products and arrange them in the order you use them.")
+            : t("Ajoute des produits à ton vanity pour pouvoir les utiliser dans une routine.", "Add products to your vanity to use them in a routine.")}</p>
         </div>
       ) : (
         <ul className={styles.grid}>
@@ -137,26 +141,25 @@ export function Routines({ products, routines, palette = emptyState.palette, pre
             return (
               <li className={styles.card} key={routine.id}>
                 <div className={styles.cardHeader}>
-                  <div className={styles.periodIcon} data-period={routine.period}><PeriodIcon size={22} aria-hidden="true" /></div>
-                  <span className={styles.periodLabel}>{label}</span>
+                  <span className={styles.periodLabel}><PeriodIcon size={16} strokeWidth={1.7} aria-hidden="true" />{t(...label)}</span>
                 </div>
                 <h2>{routine.name}</h2>
-                <p className={styles.stepCount}>{routine.steps.length} étape{routine.steps.length > 1 ? "s" : ""}</p>
+                <p className={styles.stepCount}>{routine.steps.length} {routine.steps.length === 1 ? t("étape", "step") : t("étapes", "steps")}</p>
                 {routine.steps.length > 0 && (
                   <ol className={styles.previewSteps}>
                     {routine.steps.slice(0, 3).map((step) => (
-                      <li key={step.id}>{products.find((product) => product.id === step.productId)?.name ?? "Produit retiré du vanity"}</li>
+                      <li key={step.id}>{products.find((product) => product.id === step.productId)?.name ?? t("Produit retiré du vanity", "Product removed from vanity")}</li>
                     ))}
                   </ol>
                 )}
                 {pendingDelete === routine.id ? (
                   <div className={styles.confirm}>
-                    <p>Supprimer cette routine ?</p>
+                    <p>{t("Supprimer cette routine ?", "Delete this routine?")}</p>
                     <div className={styles.actions}>
-                      <button type="button" className="button button-secondary" onClick={() => setPendingDelete(null)}>Annuler</button>
+                      <button type="button" className="button button-secondary" onClick={() => setPendingDelete(null)}>{t("Annuler", "Cancel")}</button>
                       <button type="button" className={`${styles.danger} button button-secondary`} onClick={() => {
                         if (onChange(routines.filter((item) => item.id !== routine.id))) setPendingDelete(null);
-                      }}>Supprimer</button>
+                      }}>{t("Supprimer", "Delete")}</button>
                     </div>
                   </div>
                 ) : (
@@ -164,9 +167,9 @@ export function Routines({ products, routines, palette = emptyState.palette, pre
                     <button type="button" className="button button-primary" disabled={routine.steps.length === 0} onClick={() => {
                       if (onStartGuide) onStartGuide(routine.id);
                       else setGuideId(routine.id);
-                    }}><Play size={16} aria-hidden="true" /> Lancer</button>
-                    <button type="button" className={styles.iconButton} aria-label={`Modifier ${routine.name}`} onClick={() => setDraft(routine)}><Pencil size={18} aria-hidden="true" /></button>
-                    <button type="button" className={styles.iconButton} aria-label={`Supprimer ${routine.name}`} onClick={() => setPendingDelete(routine.id)}><Trash2 size={18} aria-hidden="true" /></button>
+                    }}><Play size={16} aria-hidden="true" /> {t("Lancer", "Start")}</button>
+                    <button type="button" className={styles.iconButton} aria-label={t(`Modifier ${routine.name}`, `Edit ${routine.name}`)} onClick={() => setDraft(routine)}><Pencil size={18} aria-hidden="true" /></button>
+                    <button type="button" className={styles.iconButton} aria-label={t(`Supprimer ${routine.name}`, `Delete ${routine.name}`)} onClick={() => setPendingDelete(routine.id)}><Trash2 size={18} aria-hidden="true" /></button>
                   </div>
                 )}
               </li>
@@ -186,6 +189,7 @@ function RoutineEditor({ initial, products, palette, preferences, onSave, onCanc
   onSave: (routine: Routine) => void;
   onCancel: () => void;
 }) {
+  const { t, locale } = useLocale();
   const [routine, setRoutine] = useState(initial);
   const heading = useRef<HTMLHeadingElement>(null);
   const id = useId();
@@ -237,29 +241,29 @@ function RoutineEditor({ initial, products, palette, preferences, onSave, onCanc
     <section className={styles.page} aria-labelledby={`${id}-title`}>
       <div className={styles.heading}>
         <div>
-          <h1 id={`${id}-title`} ref={heading} tabIndex={-1} className={styles.title}>{initial.name ? "Modifier la routine" : "Nouvelle routine"}</h1>
-          <p className={styles.subtitle}>Compose ton rituel avec les produits de ton vanity.</p>
+          <h1 id={`${id}-title`} ref={heading} tabIndex={-1} className={styles.title}>{initial.name ? t("Modifier la routine", "Edit routine") : t("Nouvelle routine", "New routine")}</h1>
+          <p className={styles.subtitle}>{t("Compose ton rituel avec les produits de ton vanity.", "Build a routine with the products in your vanity.")}</p>
         </div>
-        <button type="button" className="button button-secondary" onClick={onCancel}><X size={18} aria-hidden="true" /> Annuler</button>
+        <button type="button" className="button button-secondary" onClick={onCancel}><X size={18} aria-hidden="true" /> {t("Annuler", "Cancel")}</button>
       </div>
       <form className={styles.form} onSubmit={submit}>
         <div className={styles.fields}>
           <label>
-            Nom de la routine
-            <input required maxLength={140} value={routine.name} onChange={(event) => setRoutine({ ...routine, name: event.target.value })} placeholder="Ex. Mon rituel du soir" />
+            {t("Nom de la routine", "Routine name")}
+            <input required maxLength={140} value={routine.name} onChange={(event) => setRoutine({ ...routine, name: event.target.value })} placeholder={t("Ex. Mon rituel du soir", "E.g. My evening routine")} />
           </label>
           <label>
-            Moment
+            {t("Moment", "Time of day")}
             <select value={routine.period} onChange={(event) => setRoutine({ ...routine, period: event.target.value as Routine["period"] })}>
-              {Object.entries(periods).map(([value, period]) => <option key={value} value={value}>{period.label}</option>)}
+              {Object.entries(periods).map(([value, period]) => <option key={value} value={value}>{t(...period.label)}</option>)}
             </select>
           </label>
         </div>
         <div className={styles.editorHeading}>
-          <h2>Étapes</h2>
-          <button type="button" className="button button-secondary" onClick={addStep} disabled={products.length === 0 || routine.steps.length >= 40}><Plus size={17} aria-hidden="true" /> Ajouter une étape</button>
+          <h2>{t("Étapes", "Steps")}</h2>
+          <button type="button" className="button button-secondary" onClick={addStep} disabled={products.length === 0 || routine.steps.length >= 40}><Plus size={17} aria-hidden="true" /> {t("Ajouter une étape", "Add a step")}</button>
         </div>
-        {!routine.steps.length && <p className={styles.formHint}>{products.length ? "Ajoute une étape pour commencer." : "Ajoute d’abord un produit à ton vanity."}</p>}
+        {!routine.steps.length && <p className={styles.formHint}>{products.length ? t("Ajoute une étape pour commencer.", "Add a step to get started.") : t("Ajoute d’abord un produit à ton vanity.", "Add a product to your vanity first.")}</p>}
         <ol className={styles.editorSteps}>
           {routine.steps.map((step, index) => {
             const product = products.find((item) => item.id === step.productId);
@@ -269,16 +273,16 @@ function RoutineEditor({ initial, products, palette, preferences, onSave, onCanc
             return (
               <li key={step.id} className={styles.editorStep}>
                 <div className={styles.editorStepHeader}>
-                  <strong>Étape {index + 1}</strong>
+                  <strong>{t("Étape", "Step")} {index + 1}</strong>
                   <div className={styles.actions}>
-                    <button type="button" className={styles.iconButton} disabled={index === 0} onClick={() => moveStep(index, -1)} aria-label={`Monter l’étape ${index + 1}`}><ArrowUp size={17} aria-hidden="true" /></button>
-                    <button type="button" className={styles.iconButton} disabled={index === routine.steps.length - 1} onClick={() => moveStep(index, 1)} aria-label={`Descendre l’étape ${index + 1}`}><ArrowDown size={17} aria-hidden="true" /></button>
-                    <button type="button" className={styles.iconButton} onClick={() => setRoutine((current) => ({ ...current, steps: current.steps.filter((item) => item.id !== step.id) }))} aria-label={`Retirer l’étape ${index + 1}`}><Trash2 size={17} aria-hidden="true" /></button>
+                    <button type="button" className={styles.iconButton} disabled={index === 0} onClick={() => moveStep(index, -1)} aria-label={t(`Monter l’étape ${index + 1}`, `Move step ${index + 1} up`)}><ArrowUp size={17} aria-hidden="true" /></button>
+                    <button type="button" className={styles.iconButton} disabled={index === routine.steps.length - 1} onClick={() => moveStep(index, 1)} aria-label={t(`Descendre l’étape ${index + 1}`, `Move step ${index + 1} down`)}><ArrowDown size={17} aria-hidden="true" /></button>
+                    <button type="button" className={styles.iconButton} onClick={() => setRoutine((current) => ({ ...current, steps: current.steps.filter((item) => item.id !== step.id) }))} aria-label={t(`Retirer l’étape ${index + 1}`, `Remove step ${index + 1}`)}><Trash2 size={17} aria-hidden="true" /></button>
                   </div>
                 </div>
                 <div className={styles.fields}>
                   <label>
-                    Produit
+                    {t("Produit", "Product")}
                     <select value={step.productId} onChange={(event) => {
                       const product = products.find((item) => item.id === event.target.value);
                       if (!product) return;
@@ -289,34 +293,34 @@ function RoutineEditor({ initial, products, palette, preferences, onSave, onCanc
                         applicationsPerWeek: undefined,
                       });
                     }}>
-                      {!products.some((product) => product.id === step.productId) && <option value={step.productId}>Produit retiré du vanity</option>}
+                      {!products.some((product) => product.id === step.productId) && <option value={step.productId}>{t("Produit retiré du vanity", "Product removed from vanity")}</option>}
                       {products.map((product) => <option key={product.id} value={product.id}>{product.name}{product.brand && ` · ${product.brand}`}</option>)}
                     </select>
                   </label>
                   <label>
-                    Zone d’application
+                    {t("Zone d’application", "Application area")}
                     <select value={step.zone} onChange={(event) => updateStep(step.id, { zone: event.target.value as FaceZone })}>
-                      {faceZones.map((zone) => <option key={zone} value={zone}>{zones[zone]}</option>)}
+                      {faceZones.map((zone) => <option key={zone} value={zone}>{t(...zones[zone])}</option>)}
                     </select>
                   </label>
                 </div>
                 <div className={styles.fields}>
                   <label>
-                    <span>Fréquence par semaine <span className={styles.optional}>(facultative)</span></span>
+                    <span>{t("Fréquence par semaine", "Weekly frequency")} <span className={styles.optional}>{t("(facultative)", "(optional)")}</span></span>
                     <select value={step.applicationsPerWeek ?? ""} onChange={(event) => updateStep(step.id, {
                       applicationsPerWeek: event.target.value ? Number(event.target.value) : undefined,
                     })}>
-                      <option value="">Selon la notice</option>
-                      {[1, 2, 3, 4, 5, 6, 7].map((count) => <option key={count} value={count}>{count} fois par semaine</option>)}
+                      <option value="">{t("Selon la notice", "Follow product instructions")}</option>
+                      {[1, 2, 3, 4, 5, 6, 7].map((count) => <option key={count} value={count}>{t(`${count} fois par semaine`, `${count} ${count === 1 ? "time" : "times"} per week`)}</option>)}
                     </select>
                   </label>
                   {canChooseSwatch && palette.length > 0 && (
                     <label>
-                      <span>Teinte du Face Chart <span className={styles.optional}>(facultative)</span></span>
+                      <span>{t("Teinte du Face Chart", "Face Chart shade")} <span className={styles.optional}>{t("(facultative)", "(optional)")}</span></span>
                       <select value={step.swatchId ?? ""} onChange={(event) => updateStep(step.id, { swatchId: event.target.value || undefined })}>
-                        <option value="">{product?.shadeHex ? "Teinte de la fiche" : "Aucune teinte choisie"}</option>
+                        <option value="">{product?.shadeHex ? t("Teinte de la fiche", "Product shade") : t("Aucune teinte choisie", "No shade selected")}</option>
                         {step.swatchId && !palette.some((color) => color.id === step.swatchId) && (
-                          <option value={step.swatchId}>Teinte retirée de la palette</option>
+                          <option value={step.swatchId}>{t("Teinte retirée de la palette", "Shade removed from palette")}</option>
                         )}
                         {palette.map((color) => <option key={color.id} value={color.id}>{color.name} · {color.hex.toUpperCase()}</option>)}
                       </select>
@@ -324,17 +328,17 @@ function RoutineEditor({ initial, products, palette, preferences, onSave, onCanc
                   )}
                 </div>
                 <label>
-                  Consigne <span className={styles.optional}>(facultative)</span>
-                  <textarea rows={2} maxLength={800} value={step.note} onChange={(event) => updateStep(step.id, { note: event.target.value })} placeholder="Ex. Appliquer en fine couche." />
+                  {t("Consigne", "Note")} <span className={styles.optional}>{t("(facultative)", "(optional)")}</span>
+                  <textarea rows={2} maxLength={800} value={step.note} onChange={(event) => updateStep(step.id, { note: event.target.value })} placeholder={t("Ex. Appliquer en fine couche.", "E.g. Apply a thin layer.")} />
                 </label>
               </li>
             );
           })}
         </ol>
-        <Vigilance notes={analyzeRoutine(routine, products, preferences)} />
+        <Vigilance notes={analyzeRoutine(routine, products, preferences, locale)} />
         <div className={styles.formActions}>
-          <button type="button" className="button button-secondary" onClick={onCancel}>Annuler</button>
-          <button type="submit" className="button button-primary" disabled={!routine.name.trim()}><Check size={18} aria-hidden="true" /> Enregistrer</button>
+          <button type="button" className="button button-secondary" onClick={onCancel}>{t("Annuler", "Cancel")}</button>
+          <button type="submit" className="button button-primary" disabled={!routine.name.trim()}><Check size={18} aria-hidden="true" /> {t("Enregistrer", "Save")}</button>
         </div>
       </form>
     </section>
@@ -342,17 +346,19 @@ function RoutineEditor({ initial, products, palette, preferences, onSave, onCanc
 }
 
 function Vigilance({ notes }: { notes: string[] }) {
+  const { t } = useLocale();
   if (!notes.length) return null;
   return (
     <details className={styles.watch}>
-      <summary>Points de vigilance ({notes.length})</summary>
+      <summary>{t("Points de vigilance", "Things to check")} ({notes.length})</summary>
       <ul>{notes.map((note, index) => <li key={`${index}-${note}`}>{note}</li>)}</ul>
-      <p>Ces repères reposent sur les listes INCI disponibles et les préférences de ton profil.</p>
+      <p>{t("Ces repères reposent sur les listes INCI disponibles et les préférences de ton profil.", "These notes use the available ingredient lists and your profile preferences.")}</p>
     </details>
   );
 }
 
 function FaceChart({ selected, layers, onSelect }: { selected: FaceZone; layers: PigmentLayer[]; onSelect: (zone: FaceZone) => void }) {
+  const { t } = useLocale();
   const id = useId();
 
   function activate(event: KeyboardEvent<SVGGElement>, zone: FaceZone) {
@@ -364,7 +370,7 @@ function FaceChart({ selected, layers, onSelect }: { selected: FaceZone; layers:
   function region(zone: FaceZone) {
     return (
       <g key={zone} className={styles.faceZone} data-active={zone === selected} data-zone={zone} role="button" tabIndex={0}
-        aria-label={zones[zone]} aria-pressed={zone === selected}
+        aria-label={t(...zones[zone])} aria-pressed={zone === selected}
         onClick={() => onSelect(zone)} onKeyDown={(event) => activate(event, zone)}>
         {zonePaths[zone].map((path) => <path key={path} d={path} />)}
       </g>
@@ -373,7 +379,7 @@ function FaceChart({ selected, layers, onSelect }: { selected: FaceZone; layers:
 
   return (
     <svg className={styles.face} viewBox="0 0 260 302" role="group" aria-labelledby={id}>
-      <title id={id}>Carte interactive des zones du visage</title>
+      <title id={id}>{t("Carte interactive des zones du visage", "Interactive face chart")}</title>
       <defs>
         {layers.map((layer, index) => (
           <radialGradient key={layer.stepId} id={`${id}-pigment-${index}`}>
@@ -424,28 +430,29 @@ function FaceChart({ selected, layers, onSelect }: { selected: FaceZone; layers:
 }
 
 const previewMessages = {
-  none: "Zone d’application indiquée par le contour.",
-  unknown: "Renseigne un type et un effet de maquillage dans le vanity pour afficher une teinte.",
-  transparent: "Fini transparent. Le contour indique où l’appliquer.",
-  mattifying: "Fini matifiant représenté sans pigment supplémentaire.",
-  "wrong-zone": "Aperçu indisponible pour ce type de maquillage sur cette zone.",
-  "no-shade": "Sélectionne une teinte dans la fiche produit ou dans cette étape pour voir la couleur.",
-};
+  none: ["Zone d’application indiquée par le contour.", "The outline marks where to apply the product."],
+  unknown: ["Renseigne un type et un effet de maquillage dans le vanity pour afficher une teinte.", "Add a makeup type and finish in the vanity to preview a shade."],
+  transparent: ["Fini transparent. Le contour indique où l’appliquer.", "Transparent finish. The outline marks where to apply it."],
+  mattifying: ["Fini matifiant représenté sans pigment supplémentaire.", "Matte finish shown without added pigment."],
+  "wrong-zone": ["Aperçu indisponible pour ce type de maquillage sur cette zone.", "This makeup type has no preview for the selected area."],
+  "no-shade": ["Sélectionne une teinte dans la fiche produit ou dans cette étape pour voir la couleur.", "Choose a shade in the product details or in this step to preview it."],
+} satisfies Record<string, [string, string]>;
 
 function MakeupLegend({ layers }: { layers: PigmentLayer[] }) {
+  const { t } = useLocale();
   if (!layers.length) return null;
   return (
     <details className={styles.makeupLegend}>
-      <summary>Teintes visibles ({layers.length})</summary>
+      <summary>{t("Teintes visibles", "Visible shades")} ({layers.length})</summary>
       <ul>
         {layers.map(({ stepId, name, hex, productName, zone }) => (
           <li key={stepId}>
             <svg width={16} height={16} viewBox="0 0 16 16" aria-hidden="true"><circle cx={8} cy={8} r={6} fill={hex} /></svg>
-            <span>{productName} · {zones[zone]} · {name}</span>
+            <span>{productName} · {t(...zones[zone])} · {name}</span>
           </li>
         ))}
       </ul>
-      <p>Aperçu indicatif du placement des couleurs. Le rendu réel varie selon le produit, la carnation et la lumière.</p>
+      <p>{t("Aperçu indicatif du placement des couleurs. Le rendu réel varie selon le produit, la carnation et la lumière.", "The preview shows color placement. The finished look depends on the product, skin tone and lighting.")}</p>
     </details>
   );
 }
@@ -458,6 +465,7 @@ function RoutineGuide({ routine, products, palette, preferences, onExit, onCompl
   onExit: () => void;
   onComplete?: (routine: Routine) => boolean;
 }) {
+  const { t, locale } = useLocale();
   const [index, setIndex] = useState(0);
   const [furthest, setFurthest] = useState(0);
   const [zone, setZone] = useState<FaceZone | null>(null);
@@ -483,16 +491,16 @@ function RoutineGuide({ routine, products, palette, preferences, onExit, onCompl
     return (
       <section className={styles.complete} aria-labelledby="routine-complete-title">
         <div className={styles.emptyIcon}><Check size={29} aria-hidden="true" /></div>
-        <h1 id="routine-complete-title" ref={heading} tabIndex={-1} className={styles.title}>Routine terminée</h1>
-        <p role="status">Tu as suivi toutes les étapes de « {routine.name} ».</p>
+        <h1 id="routine-complete-title" ref={heading} tabIndex={-1} className={styles.title}>{t("Routine terminée", "Routine complete")}</h1>
+        <p role="status">{t(`Tu as suivi toutes les étapes de « ${routine.name} ».`, `You finished every step of “${routine.name}”.`)}</p>
         {layers.length > 0 && (
           <div className={styles.chartPanel}>
-            <h2 className={styles.chartTitle}>Aperçu final du Face Chart</h2>
+            <h2 className={styles.chartTitle}>{t("Aperçu final du Face Chart", "Final Face Chart preview")}</h2>
             <FaceChart selected={selectedZone} layers={layers} onSelect={setZone} />
             <MakeupLegend layers={layers} />
           </div>
         )}
-        <button type="button" className="button button-primary" onClick={onExit}>Revenir aux routines</button>
+        <button type="button" className="button button-primary" onClick={onExit}>{t("Revenir aux routines", "Back to routines")}</button>
       </section>
     );
   }
@@ -500,52 +508,55 @@ function RoutineGuide({ routine, products, palette, preferences, onExit, onCompl
   if (!step) return null;
   const preview = makeupAppearance(product, step, palette);
   const instructions = product?.usageInstructions;
-  const instructionSource = instructions?.source === "packaging" ? "Emballage" : instructions?.source === "manufacturer" ? "Fabricant" : "Open Beauty Facts";
+  const instructionSource = instructions?.source === "packaging" ? t("Emballage", "Packaging") : instructions?.source === "manufacturer" ? t("Fabricant", "Manufacturer") : "Open Beauty Facts";
+  const frequency = step.applicationsPerWeek;
 
   return (
     <section className={styles.page} aria-labelledby="routine-guide-title">
-      <button type="button" className={`${styles.backButton} button button-secondary`} onClick={onExit}><ChevronLeft size={17} aria-hidden="true" /> Mes routines</button>
+      <button type="button" className={`${styles.backButton} button button-secondary`} onClick={onExit}><ChevronLeft size={17} aria-hidden="true" /> {t("Mes routines", "My routines")}</button>
       <div className={styles.heading}>
         <div>
           <h1 id="routine-guide-title" ref={heading} tabIndex={-1} className={styles.title}>{routine.name}</h1>
-          <p className={styles.subtitle}>Applique tes produits à ton rythme.</p>
+          <p className={styles.subtitle}>{t("Applique tes produits à ton rythme.", "Use your products at your own pace.")}</p>
         </div>
       </div>
-      <Vigilance notes={analyzeRoutine(routine, products, preferences)} />
+      <Vigilance notes={analyzeRoutine(routine, products, preferences, locale)} />
       <div className={styles.guide}>
         <div className={styles.guidePanel}>
           <div className={styles.progressText}>
-            <span>Étape {index + 1} sur {routine.steps.length}</span>
-            <span className={styles.zonePill}>{zones[step.zone]}</span>
+            <span>{t(`Étape ${index + 1} sur ${routine.steps.length}`, `Step ${index + 1} of ${routine.steps.length}`)}</span>
+            <span className={styles.zonePill}>{t(...zones[step.zone])}</span>
           </div>
-          <progress className={styles.progress} value={index + 1} max={routine.steps.length} aria-label="Progression de la routine" />
+          <progress className={styles.progress} value={index + 1} max={routine.steps.length} aria-label={t("Progression de la routine", "Routine progress")} />
           <div className={styles.stepDetails} aria-live="polite" aria-atomic="true">
             {product?.brand && <p className={styles.productBrand}>{product.brand}</p>}
-            <h2>{product?.name ?? "Produit retiré du vanity"}</h2>
+            <h2>{product?.name ?? t("Produit retiré du vanity", "Product removed from vanity")}</h2>
             {(step.note || !instructions) && (
-              <p>{step.note || (product ? "Suis les consignes d’application inscrites sur le produit." : "Tu peux passer à l’étape suivante ou mettre à jour ta routine.")}</p>
+              <p>{step.note || (product
+                ? t("Suis les consignes d’application inscrites sur le produit.", "Follow the directions on the product packaging.")
+                : t("Tu peux passer à l’étape suivante ou mettre à jour ta routine.", "Skip to the next step or edit your routine."))}</p>
             )}
             {instructions && (
               <details className={styles.instructions} open={!step.note || undefined}>
-                <summary>Consignes du produit · {instructionSource}</summary>
+                <summary>{t("Consignes du produit", "Product directions")} · {instructionSource}</summary>
                 <p>{instructions.text}</p>
-                {"url" in instructions && <a href={instructions.url} target="_blank" rel="noreferrer">Voir la source</a>}
+                {"url" in instructions && <a href={instructions.url} target="_blank" rel="noreferrer">{t("Voir la source", "View source")}</a>}
               </details>
             )}
-            <p className={styles.frequency}><strong>Fréquence</strong> · {step.applicationsPerWeek ? `${step.applicationsPerWeek} fois par semaine` : "selon la notice"}</p>
+            <p className={styles.frequency}><strong>{t("Fréquence", "Frequency")}</strong> · {frequency ? t(`${frequency} fois par semaine`, `${frequency} ${frequency === 1 ? "time" : "times"} per week`) : t("selon la notice", "follow product instructions")}</p>
           </div>
-          <ol className={styles.guideSteps} aria-label="Étapes de la routine">
+          <ol className={styles.guideSteps} aria-label={t("Étapes de la routine", "Routine steps")}>
             {routine.steps.map((item, itemIndex) => (
               <li key={item.id}>
                 <button type="button" disabled={itemIndex > furthest} aria-current={itemIndex === index ? "step" : undefined} onClick={() => goTo(itemIndex)}>
                   <span className={styles.guideStepNumber}>{itemIndex + 1}</span>
-                  {products.find((candidate) => candidate.id === item.productId)?.name ?? "Produit retiré"}
+                  {products.find((candidate) => candidate.id === item.productId)?.name ?? t("Produit retiré", "Product removed")}
                 </button>
               </li>
             ))}
           </ol>
           <div className={styles.guideActions}>
-            <button type="button" className="button button-secondary" disabled={index === 0} onClick={() => goTo(index - 1)}><ChevronLeft size={17} aria-hidden="true" /> Précédente</button>
+            <button type="button" className="button button-secondary" disabled={index === 0} onClick={() => goTo(index - 1)}><ChevronLeft size={17} aria-hidden="true" /> {t("Précédente", "Previous")}</button>
             <button type="button" className="button button-primary" onClick={() => {
               if (!last) {
                 goTo(index + 1);
@@ -553,18 +564,18 @@ function RoutineGuide({ routine, products, palette, preferences, onExit, onCompl
               }
               if (onComplete?.(routine) === false) return;
               setFinished(true);
-            }}>{last ? <Check size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}{last ? "Terminer" : "Suivante"}</button>
+            }}>{last ? <Check size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}{last ? t("Terminer", "Finish") : t("Suivante", "Next")}</button>
           </div>
         </div>
         <div className={styles.chartPanel}>
-          <div className={styles.chartTitle}><Sparkles size={17} aria-hidden="true" /> Face Chart</div>
+          <div className={styles.chartTitle}><Aperture size={17} aria-hidden="true" /> Face Chart</div>
           <FaceChart selected={selectedZone} layers={layers} onSelect={setZone} />
-          <p className={styles.chartSelection} aria-live="polite">{zones[selectedZone]}</p>
+          <p className={styles.chartSelection} aria-live="polite">{t(...zones[selectedZone])}</p>
           <p className={styles.chartHint} aria-live="polite">
-            {preview.effect === "tinted" ? `${zones[step.zone]} · ${preview.name}` : previewMessages[preview.effect]}
+            {preview.effect === "tinted" ? `${t(...zones[step.zone])} · ${preview.name}` : t(...previewMessages[preview.effect])}
           </p>
-          <div className={styles.zoneControls} aria-label="Zones d’application" role="group">
-            {faceZones.map((item) => <button type="button" key={item} aria-pressed={item === selectedZone} onClick={() => setZone(item)}>{zones[item]}</button>)}
+          <div className={styles.zoneControls} aria-label={t("Zones d’application", "Application areas")} role="group">
+            {faceZones.map((item) => <button type="button" key={item} aria-pressed={item === selectedZone} onClick={() => setZone(item)}>{t(...zones[item])}</button>)}
           </div>
           <MakeupLegend layers={layers} />
         </div>

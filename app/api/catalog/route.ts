@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { normalizeCatalogText, searchLocalCatalog } from "@/lib/catalog";
+import {
+  catalogBarcode, matchesCatalogBrand, normalizeCatalogQuery, normalizeCatalogText, rankCatalogProducts, searchLocalCatalog,
+  type CatalogSearchMode,
+} from "@/lib/catalog";
 import { declaredProductText, productSchema, type Product } from "@/lib/model";
 
 const externalOrigin = "https://world.openbeautyfacts.org";
@@ -20,6 +23,7 @@ const fieldNames = [
   "product_name_fr",
   "product_name",
   "brands",
+  "brands_tags",
   "ingredients_text_fr",
   "ingredients_text",
   "image_front_small_url",
@@ -35,12 +39,14 @@ const fieldNames = [
 
 const searchQuery = z.string().trim().max(120).refine((query) => !/\p{Cc}/u.test(query))
   .transform((query) => query.normalize("NFC").replace(/\s+/g, " "));
+const searchMode = z.enum(["all", "brand"]);
 const optionalExternalText = z.string().nullish().catch(undefined);
 const externalProduct = z.object({
   code: z.string().regex(/^\d{8,14}$/),
   product_name_fr: z.string().nullish(),
   product_name: z.string().nullish(),
   brands: z.string().nullish(),
+  brands_tags: z.array(z.string()).nullish().catch(undefined),
   ingredients_text_fr: z.string().nullish(),
   ingredients_text: z.string().nullish(),
   image_front_small_url: z.string().nullish(),
@@ -119,11 +125,14 @@ function getImageUrl(value: string | null | undefined): string | undefined {
   }
 }
 
-function normalizeProduct(product: unknown): Product | null {
+function normalizeProduct(product: unknown, brandQuery?: string): Product | null {
   const parsed = externalProduct.safeParse(product);
   if (!parsed.success) return null;
 
   const data = parsed.data;
+  if (brandQuery && !matchesCatalogBrand([
+    ...(data.brands?.split(/[,;|]/) ?? []), ...(data.brands_tags ?? []),
+  ], brandQuery)) return null;
   const name = (data.product_name_fr?.trim() || data.product_name?.trim())?.slice(0, 140);
   if (!name) return null;
 
@@ -152,27 +161,31 @@ function normalizeProduct(product: unknown): Product | null {
   return normalized.success ? normalized.data : null;
 }
 
-function externalUrl(query: string, barcode: string): URL {
-  const path = barcode ? `/api/v2/product/${barcode}.json` : "/cgi/search.pl";
+function externalUrl(query: string, mode: CatalogSearchMode, barcode: string | undefined): URL {
+  const path = barcode ? `/api/v2/product/${barcode}.json`
+    : mode === "brand" ? `/facets/brands/${encodeURIComponent(query.replaceAll(" ", "-"))}.json`
+      : "/cgi/search.pl";
   const url = new URL(path, externalOrigin);
   url.searchParams.set("fields", fieldNames);
 
   if (!barcode) {
-    url.searchParams.set("search_terms", query);
-    url.searchParams.set("search_simple", "1");
-    url.searchParams.set("action", "process");
-    url.searchParams.set("json", "1");
     url.searchParams.set("page_size", "12");
+    if (mode === "all") {
+      url.searchParams.set("search_terms", query);
+      url.searchParams.set("search_simple", "1");
+      url.searchParams.set("action", "process");
+      url.searchParams.set("json", "1");
+    }
   }
 
   return url;
 }
 
-async function searchExternalCatalog(query: string, barcode: string): Promise<Product[]> {
+async function searchExternalCatalog(query: string, mode: CatalogSearchMode, barcode: string | undefined): Promise<Product[]> {
   const contact = process.env.OPEN_BEAUTY_FACTS_CONTACT?.trim();
   const site = "https://github.com/himehitmann/Bty";
   const userAgent = `Navier/1.0 (${contact || site})`;
-  const response = await fetch(externalUrl(query, barcode), {
+  const response = await fetch(externalUrl(query, mode, barcode), {
     headers: { Accept: "application/json", "User-Agent": userAgent },
     redirect: "error",
     signal: AbortSignal.timeout(4000),
@@ -181,14 +194,14 @@ async function searchExternalCatalog(query: string, barcode: string): Promise<Pr
 
   if (!response.ok) {
     void response.body?.cancel().catch(() => undefined);
-    if (barcode && response.status === 404) return [];
+    if ((barcode || mode === "brand") && response.status === 404) return [];
     throw new Error("Open Beauty Facts indisponible");
   }
 
   const payload = await readExternalResponse(response);
   const products = barcode ? [externalLookup.parse(payload).product] : externalSearch.parse(payload).products;
   return products.slice(0, 12).flatMap((product) => {
-    const normalized = normalizeProduct(product);
+    const normalized = normalizeProduct(product, mode === "brand" ? query : undefined);
     return normalized ? [normalized] : [];
   });
 }
@@ -223,8 +236,8 @@ async function readExternalResponse(response: Response): Promise<unknown> {
   return JSON.parse(json + decoder.decode());
 }
 
-async function cachedExternalSearch(query: string, barcode: string): Promise<Product[]> {
-  const key = barcode ? `barcode:${barcode}` : `name:${query.toLocaleLowerCase("fr-FR")}`;
+async function cachedExternalSearch(query: string, mode: CatalogSearchMode, barcode: string | undefined): Promise<Product[]> {
+  const key = barcode ? `barcode:${barcode}` : `${mode}:${query.toLocaleLowerCase("fr-FR")}`;
   const now = Date.now();
   const cached = resultCache.get(key);
   if (cached && cached.expires > now) return cached.products;
@@ -243,7 +256,7 @@ async function cachedExternalSearch(query: string, barcode: string): Promise<Pro
   }
   budget.used += 1;
 
-  const operation = searchExternalCatalog(query, barcode).then((products) => {
+  const operation = searchExternalCatalog(query, mode, barcode).then((products) => {
     resultCache.set(key, { products, expires: Date.now() + cacheLifetime });
     if (resultCache.size > maxCacheEntries) {
       const oldest = resultCache.keys().next();
@@ -256,21 +269,25 @@ async function cachedExternalSearch(query: string, barcode: string): Promise<Pro
 }
 
 export async function GET(request: NextRequest) {
-  const query = searchQuery.safeParse(request.nextUrl.searchParams.get("q") ?? "");
-  if (!query.success) return NextResponse.json({ error: "Recherche invalide." }, { status: 400 });
+  const params = request.nextUrl.searchParams;
+  const query = searchQuery.safeParse(params.get("q") ?? "");
+  const mode = searchMode.safeParse(params.get("mode") ?? "all");
+  if (!query.success || !mode.success) return NextResponse.json({ error: "Recherche invalide." }, { status: 400 });
 
-  const digits = query.data.replace(/[\s-]/g, "");
-  const barcode = /^\d{8,14}$/.test(digits) ? digits : "";
-  const localResults = searchLocalCatalog(barcode || query.data);
+  const barcode = mode.data === "all" ? catalogBarcode(query.data) : undefined;
+  const normalizedQuery = normalizeCatalogQuery(query.data);
+  const localResults = searchLocalCatalog(query.data, mode.data);
 
-  if (query.data.length < 2) {
+  if (normalizedQuery.length < 2) {
     return NextResponse.json({ products: localResults, externalStatus: "not-requested" });
   }
 
   try {
-    const externalResults = await cachedExternalSearch(query.data, barcode);
+    // Open Beauty Facts distinguishes some hyphenated brand names in combined searches.
+    const providerQuery = mode.data === "brand" ? normalizedQuery : query.data.replace(/[\u2010-\u2015]/g, "-").replace(/[‘’]/g, "'");
+    const externalResults = await cachedExternalSearch(providerQuery, mode.data, barcode);
     return NextResponse.json({
-      products: [...externalResults, ...localResults],
+      products: rankCatalogProducts([...externalResults, ...localResults], query.data, mode.data),
       externalStatus: "ok",
     });
   } catch {

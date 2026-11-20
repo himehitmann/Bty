@@ -44,7 +44,7 @@
   gap: .75rem;
   min-height: 14rem;
   align-content: center;
-  background: linear-gradient(140deg, color-mix(in srgb, var(--brand) 8%, var(--surface)), var(--surface) 75%);
+  background: var(--surface);
 }
 
 .locked h2, .panel h2 {
@@ -140,10 +140,10 @@
 .day[aria-pressed="true"], .day:hover { background: color-mix(in srgb, var(--brand) 12%, var(--surface)); }
 .day[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--brand); }
 .day i { min-height: .27rem; width: .27rem; border-radius: 50%; background: var(--journal-dot, transparent); }
-.day i[data-comfort], .comfortTag, .comfortChoice { --journal-bg: #e8edf5; --journal-dot: #566f96; }
-.day i[data-comfort="comfortable"], [data-comfort="comfortable"].comfortTag, [data-comfort="comfortable"].comfortChoice { --journal-bg: #e6efe6; --journal-dot: #365b3e; }
-.day i[data-comfort="mixed"], [data-comfort="mixed"].comfortTag, [data-comfort="mixed"].comfortChoice { --journal-bg: #f5ebd6; --journal-dot: #775525; }
-.day i[data-comfort="uncomfortable"], [data-comfort="uncomfortable"].comfortTag, [data-comfort="uncomfortable"].comfortChoice { --journal-bg: #f2e4e6; --journal-dot: #844859; }
+.day i[data-comfort], .comfortTag, .comfortChoice { --journal-bg: #f1f1f1; --journal-dot: #4a4a4a; }
+.day i[data-comfort="comfortable"], [data-comfort="comfortable"].comfortTag, [data-comfort="comfortable"].comfortChoice { --journal-bg: #ededed; --journal-dot: #222222; }
+.day i[data-comfort="mixed"], [data-comfort="mixed"].comfortTag, [data-comfort="mixed"].comfortChoice { --journal-bg: #f7f7f7; --journal-dot: #545454; }
+.day i[data-comfort="uncomfortable"], [data-comfort="uncomfortable"].comfortTag, [data-comfort="uncomfortable"].comfortChoice { --journal-bg: #e8e8e8; --journal-dot: #383838; }
 
 .entryForm {
   display: grid;
@@ -326,18 +326,18 @@
   width: 1.9rem;
   height: 1.9rem;
   border-radius: .4rem;
-  color: #824452;
+  color: #383838;
 }
 
-.trashButton:hover { background: #f2e4e6; }
+.trashButton:hover { background: #e8e8e8; }
 
 .warning, .notice {
   padding: .65rem .8rem;
   border-radius: .55rem;
   font-size: .87rem;
 }
-.warning { color: #793d4c; background: #f7eaed; }
-.notice { color: #315940; background: #e6efe7; }
+.warning { color: #2d2d2d; background: #f2f2f2; }
+.notice { color: #2f2f2f; background: #ededed; }
 
 .dialogActions {
   display: flex;

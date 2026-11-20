@@ -102,6 +102,7 @@ export const skinFeels = ["seche", "brillante", "mixte", "equilibree", "incertai
 export const skinConcerns = ["tiraillements", "brillance", "rougeurs", "imperfections", "texture"] as const;
 export const undertones = ["froid", "chaud", "neutre", "olive", "incertain"] as const;
 export const preferenceSchema = z.object({
+  locale: z.enum(["fr", "en"]).optional(),
   fragranceFree: z.boolean(),
   sensitive: z.boolean(),
   avoid: z.string().trim().max(600),
