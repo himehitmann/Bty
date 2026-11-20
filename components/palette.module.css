@@ -1,0 +1,367 @@
+.palette {
+  display: grid;
+  gap: 1.3rem;
+  color: var(--ink, #2d2140);
+}
+
+.panelHeader h2 {
+  margin: 0;
+  font-family: var(--serif, Georgia, serif);
+  font-weight: 500;
+  letter-spacing: -.035em;
+  line-height: 1.1;
+  font-size: 1.75rem;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 1.3rem;
+  align-items: start;
+}
+
+.panel {
+  min-width: 0;
+  padding: clamp(1rem, 2.3vw, 1.45rem);
+  border: 1px solid var(--line, #e8e0eb);
+  border-radius: 1.3rem;
+  background: var(--surface, #fff);
+}
+
+.panelHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+  margin-bottom: 1rem;
+}
+
+.count {
+  min-width: 2rem;
+  padding: .3rem .55rem;
+  border-radius: 999px;
+  background: #f0e9f6;
+  color: #4c3764;
+  text-align: center;
+  font-size: .875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.photoStage {
+  display: grid;
+  place-items: center;
+  min-height: 16rem;
+  padding: .7rem;
+  border: 1px dashed #cab8da;
+  border-radius: 1rem;
+  background:
+    radial-gradient(ellipse at 20% 25%, #fbe7e4 0, transparent 55%),
+    radial-gradient(ellipse at 87% 74%, #efe5f8 0, transparent 65%),
+    #faf6fb;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.dragging {
+  border-color: var(--brand, #6d4d83);
+  box-shadow: inset 0 0 0 1px var(--brand, #6d4d83);
+}
+
+.emptyPhoto {
+  display: grid;
+  justify-items: center;
+  gap: .8rem;
+  padding: 1.35rem .35rem;
+  text-align: center;
+}
+
+.emptyPhoto p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.emptyPhoto span,
+.canvasHelp,
+.note {
+  color: var(--muted, #675c72);
+  font-size: .875rem;
+  line-height: 1.55;
+}
+
+.photoIcon {
+  display: grid;
+  place-items: center;
+  width: 3.35rem;
+  height: 3.35rem;
+  border: 1px solid #e7d9e7;
+  border-radius: 1.05rem;
+  background: #fff9fc;
+  color: #754d87;
+}
+
+.canvasFrame {
+  position: relative;
+  width: min(100%, calc(min(52vh, 32rem) * var(--photo-ratio)));
+  aspect-ratio: var(--photo-ratio);
+  max-width: 100%;
+  background: repeating-conic-gradient(#dccee2 0% 25%, #f6edf7 0% 50%) 0 0 / 1rem 1rem;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.canvas:focus-visible {
+  outline: 2px solid var(--brand, #6d4d83);
+  outline-offset: 3px;
+}
+
+.cursor {
+  position: absolute;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #211a2d;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.canvasHelp {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  margin-top: .85rem;
+}
+
+.canvasHelp svg {
+  flex: 0 0 auto;
+  margin-top: .12rem;
+}
+
+.note {
+  margin: .75rem 0 0;
+}
+
+.sample {
+  display: grid;
+  place-items: center;
+  min-height: 7.25rem;
+  border: 1px solid #1e132814;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #f8e8ed, #eee5f6);
+  color: #714c80;
+}
+
+.sample code {
+  padding: .3rem .55rem;
+  border-radius: .45rem;
+  background: #fff;
+  color: #332241;
+  font-size: .9rem;
+}
+
+.suggestions {
+  display: grid;
+  gap: .45rem;
+  margin-top: 1rem;
+}
+
+.suggestions p,
+.sampleForm label {
+  margin: 0;
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.suggestionList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.suggestion {
+  width: 2.55rem;
+  height: 2.55rem;
+  border: 1px solid #1e132815;
+  border-radius: .65rem;
+  cursor: pointer;
+}
+
+.suggestion[aria-pressed="true"] {
+  outline: 2px solid var(--brand, #6d4d83);
+  outline-offset: 2px;
+}
+
+.suggestion:focus-visible,
+.iconButton:focus-visible {
+  outline: 2px solid var(--brand, #6d4d83);
+  outline-offset: 2px;
+}
+
+.sampleForm,
+.editForm {
+  display: grid;
+  gap: .55rem;
+}
+
+.sampleForm {
+  margin-top: 1rem;
+}
+
+.sampleForm input:not([type="checkbox"]),
+.editForm input {
+  width: 100%;
+  min-width: 0;
+  padding: .67rem .8rem;
+  border: 1px solid var(--line, #e8e0eb);
+  border-radius: .65rem;
+  background: var(--surface, #fff);
+  color: var(--ink, #2d2140);
+  font: inherit;
+}
+
+.sampleForm input:focus,
+.editForm input:focus {
+  outline: 2px solid var(--brand, #6d4d83);
+  outline-offset: 1px;
+}
+
+.sampleForm button {
+  justify-content: center;
+}
+
+.sampleForm .photoOption {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  gap: .55rem;
+  font-weight: 400;
+}
+
+.photoOption input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--brand, #6d4d83);
+}
+
+.palette button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.status,
+.error {
+  margin: 0;
+  padding: .65rem .8rem;
+  border-radius: .7rem;
+  background: #f1eaf7;
+  color: #4e3764;
+  font-size: .9rem;
+  line-height: 1.45;
+}
+
+.status:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  clip-path: inset(50%);
+}
+
+.error {
+  background: #f9e8eb;
+  color: #832b46;
+}
+
+.colors {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+  gap: .85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.colorCard {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line, #e8e0eb);
+  border-radius: .95rem;
+}
+
+.colorBlock {
+  height: 4rem;
+  border-bottom: 1px solid #1e132818;
+}
+
+.colorInfo {
+  padding: .55rem .65rem;
+}
+
+.colorName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .25rem .5rem;
+  min-width: 0;
+  padding: .2rem .15rem;
+  overflow-wrap: anywhere;
+}
+
+.colorName code {
+  color: var(--muted, #675c72);
+  font-size: .82rem;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .2rem;
+  margin-top: .3rem;
+}
+
+.iconButton {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: .55rem;
+  background: transparent;
+  color: var(--ink, #2d2140);
+  cursor: pointer;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: #f0e9f6;
+}
+
+.editForm {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: .15rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

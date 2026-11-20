@@ -1,0 +1,605 @@
+.page {
+  display: grid;
+  gap: 1.75rem;
+  min-width: 0;
+  color: var(--ink, #2e2432);
+}
+
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.875rem 1.5rem;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--serif, Georgia, serif);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 400;
+  line-height: 1.03;
+  letter-spacing: -0.049em;
+  overflow-wrap: anywhere;
+}
+
+.title:focus {
+  outline: none;
+}
+
+.subtitle {
+  margin: 0.7rem 0 0;
+  color: var(--muted, #625769);
+  line-height: 1.55;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16.5rem), 1fr));
+  align-items: stretch;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card,
+.form,
+.guidePanel {
+  min-width: 0;
+  border: 1px solid var(--line, #e9e0eb);
+  border-radius: 1.25rem;
+  background: var(--surface, #fff);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+}
+
+.cardHeader,
+.actions,
+.cardActions,
+.editorHeading,
+.editorStepHeader,
+.formActions,
+.progressText,
+.guideActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.cardHeader,
+.editorHeading,
+.editorStepHeader,
+.progressText {
+  justify-content: space-between;
+}
+
+.periodIcon,
+.emptyIcon {
+  display: grid;
+  width: 2.85rem;
+  height: 2.85rem;
+  flex: none;
+  place-items: center;
+  border-radius: 0.875rem;
+  color: #754884;
+  background: #f0e6f6;
+}
+
+.periodIcon[data-period="matin"] {
+  color: #8b4d37;
+  background: #fbe8de;
+}
+
+.periodIcon[data-period="libre"] {
+  color: #884c65;
+  background: #f8e5ed;
+}
+
+.periodLabel,
+.zonePill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.6rem;
+  border-radius: 100vw;
+  color: #5a4663;
+  background: #f1eaf5;
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.card h2,
+.empty h2,
+.stepDetails h2 {
+  margin: 1rem 0 0.25rem;
+  font-family: var(--serif, Georgia, serif);
+  font-size: 1.8rem;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+
+.stepCount,
+.previewSteps,
+.formHint,
+.optional,
+.empty p,
+.complete p {
+  color: var(--muted, #625769);
+}
+
+.stepCount {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.previewSteps {
+  display: grid;
+  gap: 0.35rem;
+  margin: 1rem 0 1.25rem;
+  padding-left: 1.25rem;
+  list-style: decimal;
+  overflow-wrap: anywhere;
+}
+
+.cardActions {
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+
+.cardActions > :first-child {
+  margin-right: auto;
+}
+
+.iconButton {
+  display: inline-grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--line, #e9e0eb);
+  border-radius: 0.65rem;
+  color: var(--ink, #2e2432);
+  background: var(--surface, #fff);
+  cursor: pointer;
+}
+
+.iconButton:hover:not(:disabled) {
+  border-color: #c6accf;
+  background: #f9f4fb;
+}
+
+.iconButton:disabled,
+.page button:disabled {
+  opacity: 0.46;
+  cursor: default;
+}
+
+.confirm {
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+
+.confirm p {
+  margin: 0 0 0.55rem;
+  font-size: 0.875rem;
+}
+
+.danger {
+  color: #942c4e;
+}
+
+.empty,
+.complete {
+  display: grid;
+  justify-items: center;
+  padding: clamp(2rem, 8vw, 4.25rem) 1.25rem;
+  border: 1px solid #e9ddeb;
+  border-radius: 1.4rem;
+  color: var(--ink, #2e2432);
+  background: #f9f3fa;
+  text-align: center;
+}
+
+.empty p,
+.complete p {
+  max-width: 32rem;
+  margin: 0.5rem 0 0;
+  line-height: 1.55;
+}
+
+.complete {
+  gap: 1rem;
+}
+
+.complete p {
+  margin: 0 0 0.25rem;
+}
+
+.form,
+.guidePanel {
+  display: grid;
+  gap: 1.15rem;
+  padding: clamp(1rem, 4vw, 1.65rem);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+}
+
+.fields label,
+.editorStep > label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.editorStep > label {
+  display: block;
+}
+
+.form input,
+.form select,
+.form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line, #e9e0eb);
+  border-radius: 0.6rem;
+  color: var(--ink, #2e2432);
+  background: var(--surface, #fff);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.form select {
+  appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23625769' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+}
+
+.form textarea {
+  display: block;
+  margin-top: 0.4rem;
+  resize: vertical;
+}
+
+.optional {
+  font-weight: 400;
+}
+
+.editorHeading h2 {
+  margin: 0;
+  font-family: var(--serif, Georgia, serif);
+  font-size: 1.7rem;
+  font-weight: 400;
+}
+
+.editorSteps,
+.guideSteps {
+  display: grid;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.editorStep {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line, #e9e0eb);
+  border-radius: 0.875rem;
+  background: #fbf8fc;
+}
+
+.formHint {
+  margin: 0;
+}
+
+.formActions {
+  justify-content: flex-end;
+}
+
+.backButton {
+  width: max-content;
+}
+
+.guide {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 1rem;
+}
+
+.guidePanel {
+  gap: 0.9rem;
+}
+
+.progressText {
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.progress {
+  width: 100%;
+  height: 0.5rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 100vw;
+  appearance: none;
+  color: #9154a3;
+  background: #eee5f2;
+}
+
+.progress::-webkit-progress-bar {
+  border-radius: 100vw;
+  background: #eee5f2;
+}
+
+.progress::-webkit-progress-value {
+  border-radius: 100vw;
+  background: #9154a3;
+}
+
+.progress::-moz-progress-bar {
+  border-radius: 100vw;
+  background: #9154a3;
+}
+
+.stepDetails {
+  padding: 0.75rem 0;
+  overflow-wrap: anywhere;
+}
+
+.stepDetails h2 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.9rem, 4vw, 2.55rem);
+}
+
+.stepDetails p {
+  margin: 0;
+  color: var(--muted, #625769);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.stepDetails .productBrand {
+  margin-bottom: 0.32rem;
+  color: #714d7c;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.guideSteps {
+  gap: 0.4rem;
+  max-height: 14rem;
+  overflow: auto;
+  padding: 0.15rem;
+}
+
+.guideSteps button {
+  display: flex;
+  width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.625rem;
+  color: var(--ink, #2e2432);
+  background: #f8f4f9;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.guideSteps button[aria-current="step"] {
+  border-color: #dbc6e5;
+  background: #f1e6f5;
+  font-weight: 650;
+}
+
+.guideStepNumber {
+  display: inline-grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  color: #653773;
+  background: #fefbfe;
+  font-size: 0.875rem;
+}
+
+.guideActions {
+  justify-content: space-between;
+  margin-top: 0.2rem;
+}
+
+.chartPanel {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 0.6rem;
+  padding: clamp(0.9rem, 4vw, 1.4rem);
+  border: 1px solid #e8d9e9;
+  border-radius: 1.25rem;
+  background: radial-gradient(ellipse at center, #fff7f1 0%, #f5e9f5 80%);
+}
+
+.chartTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #653773;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.face {
+  display: block;
+  width: min(100%, 14rem);
+  height: auto;
+  overflow: visible;
+}
+
+.face path,
+.face circle {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.silhouette {
+  fill: #fff5f0;
+  stroke: #9c7288;
+  stroke-width: 1.2;
+}
+
+.faceZone {
+  outline: none;
+  cursor: pointer;
+}
+
+.faceZone path {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 1.6;
+  transition: fill 150ms ease-out, stroke 150ms ease-out;
+}
+
+.faceZone[data-zone="visage"] path {
+  fill: #fff5f0;
+  stroke: #9c7288;
+  stroke-width: 1.2;
+}
+
+.faceZone[data-zone="cheveux"] path {
+  fill: #f3dedc;
+  stroke: #9c7288;
+  stroke-width: 1.2;
+}
+
+.faceZone[data-active="true"] path {
+  fill: #f3bfd5;
+  stroke: #a64c77;
+  stroke-width: 1.5;
+}
+
+.faceZone:hover path,
+.faceZone:focus-visible path {
+  stroke: #733c85;
+  stroke-width: 2;
+}
+
+.faceZone:focus-visible path {
+  stroke-dasharray: 4 3;
+}
+
+.faceDetails {
+  fill: none;
+  stroke: #855772;
+  stroke-width: 1.05;
+  pointer-events: none;
+}
+
+.faceDetails circle {
+  fill: #855772;
+  stroke: none;
+}
+
+.chartSelection {
+  margin: 0;
+  color: #683871;
+  font-weight: 700;
+}
+
+.zoneControls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.36rem;
+}
+
+.zoneControls button {
+  min-height: 2.75rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #decee5;
+  border-radius: 100vw;
+  color: #594060;
+  background: #fffcff;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.zoneControls button[aria-pressed="true"] {
+  border-color: #9662a6;
+  color: #592d67;
+  background: #f2dff5;
+  font-weight: 650;
+}
+
+.watch {
+  padding: 0.7rem 0.875rem;
+  border: 1px solid #efdaca;
+  border-radius: 0.65rem;
+  color: #683f31;
+  background: #fff6ed;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.watch summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.watch ul {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.45rem 0;
+  padding-left: 1.2rem;
+  list-style: disc;
+}
+
+.watch p {
+  margin: 0;
+}
+
+@media (min-width: 721px) {
+  .guide {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+
+  .face {
+    width: min(100%, 19rem);
+  }
+}
+
+@media (min-width: 461px) {
+  .fields {
+    grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faceZone path {
+    transition: none;
+  }
+}
