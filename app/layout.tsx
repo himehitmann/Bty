@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import "./globals.css";
+import { InstallPromptProvider } from "@/components/install-control";
 
 export const metadata: Metadata = {
   title: "Navier — Ton espace beauté",
@@ -8,8 +10,9 @@ export const metadata: Metadata = {
   icons: { icon: "/icons/navier-192.png", apple: "/icons/navier-192.png" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Navier" },
 };
-export const viewport: Viewport = { themeColor: "#faf8fc" };
+export const viewport: Viewport = { themeColor: "#f7f5ef" };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="fr"><body>{children}</body></html>;
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  await connection();
+  return <html lang="fr"><body><InstallPromptProvider>{children}</InstallPromptProvider></body></html>;
 }

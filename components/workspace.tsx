@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowUpRight, BookOpen, Check, ChevronRight, CircleHelp, Clock3, Droplets, FlaskConical, House, LogIn, LogOut, Menu, Moon, Palette as PaletteIcon, Plus, Settings2, Sparkle, Sparkles, Sun, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, BookOpenCheck, Crown, Download, Smartphone, Check, ChevronRight, CircleHelp, Clock3, Droplets, FlaskConical, House, LogIn, LogOut, Menu, Moon, Palette as PaletteIcon, Plus, Settings2, Sparkles, Sun, X } from "lucide-react";
 import { Inventory, ProductDialog, ProductTile } from "./inventory";
 import { Palette } from "./palette";
 import { Routines } from "./routines";
 import { Tutorials } from "./tutorials";
+import { Journal } from "./journal";
+import { Plans } from "./plans";
+import { useBillingStatus } from "@/lib/billing-client";
 import { emptyState, preferenceSchema, type Product, type Routine, type State } from "@/lib/model";
 import { getPalettePhotoUrl, removePalettePhoto, uploadPalettePhoto } from "@/lib/supabase/browser";
 import { useWorkspaceState } from "@/lib/use-workspace";
@@ -16,7 +19,9 @@ const navigation = [
   { id: "routines", label: "Mes routines", icon: Sparkles },
   { id: "palette", label: "Palette", icon: PaletteIcon },
   { id: "tutoriels", label: "Tutoriels", icon: BookOpen },
+  { id: "journal", label: "Journal", icon: BookOpenCheck },
   { id: "preferences", label: "Préférences", icon: Settings2 },
+  { id: "offres", label: "Offres", icon: Crown },
 ] as const;
 type View = (typeof navigation)[number]["id"];
 
@@ -38,6 +43,7 @@ const syncLabels = { loading: "Chargement…", local: "Espace local", saving: "E
 export function Workspace() {
   const data = useWorkspaceState();
   const { state, user, client, ready, update, sync, notice, setNotice } = data;
+  const billing = useBillingStatus(user?.id);
   const [view, setView] = useState<View>("accueil");
   const [mobileNav, setMobileNav] = useState(false);
   const [productEditor, setProductEditor] = useState<Product | "add" | null>(null);
@@ -175,7 +181,7 @@ export function Workspace() {
       }}>
         <button ref={menuClose} className="mobile-menu-close icon-button" type="button" onClick={dismissMobileNav} aria-label="Fermer le menu"><X size={21}/></button>
         <a className="brand" href="#" onClick={(event) => { event.preventDefault(); navigate("accueil"); }}>
-          <span className="brand-mark"><Sparkle size={23} strokeWidth={1.35}/></span><span>Navier<span className="brand-dot">.</span></span>
+          <span>NAVIER</span>
         </a>
         <nav aria-label="Navigation principale" className="navigation">
           {navigation.map(({ id, label, icon: Icon }) => (
@@ -187,6 +193,7 @@ export function Workspace() {
           ))}
         </nav>
         <div className="sidebar-bottom">
+          <a className="nav-link install-link" href="/installer"><Smartphone size={17}/> Installer Navier</a>
           <div className="account-card">
             <span className="avatar" aria-hidden="true">{firstName[0]?.toUpperCase() ?? "N"}</span>
             <span className="account-label"><strong>{firstName || "Mon espace"}</strong><small>{user ? "Compte Navier" : "Espace personnel"}</small></span>
@@ -241,6 +248,10 @@ export function Workspace() {
                   onResolvePhoto={client && user ? (path) => getPalettePhotoUrl(client, path) : undefined}
                 />}
                 {view === "tutoriels" && <Tutorials products={state.products} onCreateRoutine={createFromTutorial}/>}
+                {view === "journal" && <Journal key={user?.id ?? "guest"} userId={user?.id} client={client}
+                  plus={billing.plus} entitlementLoading={billing.loading} products={state.products} routines={state.routines}
+                  completed={state.completed} onOpenPlans={() => navigate("offres")}/>}
+                {view === "offres" && <Plans signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth(true)}/>}
                 {view === "preferences" && <PreferencesForm state={state}
                   onClearSamples={() => sampleDialog.current?.showModal()}
                   onSave={(preferences) => {
@@ -359,6 +370,20 @@ function Dashboard({ state, date, firstName, ready, onAdd, onNavigate, onGuide, 
   );
 }
 
+function exportWorkspace(state: State) {
+  const palette = state.palette.map(({ id, hex, name }) => ({ id, hex, name }));
+  const exported = { version: 1, exportedAt: new Date().toISOString(), ...state, palette };
+  const file = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(file);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "navier-mes-donnees.json";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function PreferencesForm({ state, onSave, onClearSamples }: {
   state: State; onSave: (preferences: State["preferences"]) => void; onClearSamples: () => void;
 }) {
@@ -386,6 +411,9 @@ function PreferencesForm({ state, onSave, onClearSamples }: {
       <h2><CircleHelp size={20}/> À propos des repères</h2>
       <p>Navier compare les listes d’ingrédients et les étapes de ta routine avec tes critères. Vérifie les notices et les emballages en cas de doute.</p>
       <p>Les repères sont informatifs. Ils ne donnent ni diagnostic ni garantie d’innocuité, d’efficacité ou de résultat esthétique.</p>
+      <button className="button button-secondary" type="button" onClick={() => exportWorkspace(state)}><Download size={16}/> Exporter mon espace</button>
+      <p className="muted">Le fichier inclut le vanity, les routines, les teintes et les préférences. Les photos et le journal sont séparés.</p>
+      <a href="/confidentialite">Confidentialité et données</a>
       {state.products.some((product) => product.id.startsWith("example-")) && (
         <button className="button button-secondary" type="button" onClick={onClearSamples}>Retirer les exemples</button>
       )}

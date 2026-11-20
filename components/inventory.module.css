@@ -1,0 +1,157 @@
+.dateFilter {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.dateFilter select {
+  min-width: 0;
+  min-height: 2.65rem;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.dateBadge[data-status] {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+  padding: 0.19rem 0.4rem;
+  border-radius: 0.4rem;
+  color: #704427;
+  background: #faeee2;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+}
+
+.dateBadge[data-status="past"] {
+  color: #732d46;
+  background: #f7e6ed;
+}
+
+.dateBadge[data-status] svg {
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.tracking {
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: #fbf7fc;
+}
+
+section.tracking {
+  margin-bottom: 0.7rem;
+}
+
+.tracking summary {
+  color: var(--ink);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.tracking summary:focus-visible {
+  outline: 2px solid var(--brand-dark);
+  outline-offset: 3px;
+}
+
+.tracking p,
+.trackingHint {
+  margin: 0.5rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.tracking .trackingHint {
+  margin: 0.65rem 0 0;
+}
+
+.tracking dl {
+  display: grid;
+  gap: 0.45rem 1rem;
+  margin: 0.65rem 0 0;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  align-items: baseline;
+  font-size: 0.9rem;
+}
+
+.tracking dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tracking .deadline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.45rem;
+  margin: 0.75rem 0 0;
+  color: var(--ink);
+}
+
+.tracking h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.compareDialog:modal {
+  width: min(730px, calc(100% - 26px));
+}
+
+.compareColumns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: start;
+}
+
+.compareColumns section {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.compareStatus {
+  margin: 0.85rem 0 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.sharedIngredient {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.27rem;
+  border-radius: 0.25rem;
+  color: var(--brand-dark);
+  background: var(--lavender);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+@media (min-width: 580px) {
+  .compareColumns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 500px) {
+  .dateFilter {
+    width: 100%;
+  }
+
+  .dateFilter select {
+    flex: 1;
+  }
+}

@@ -1,0 +1,150 @@
+.shell {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.heading {
+  max-width: 42rem;
+  display: grid;
+  gap: .4rem;
+}
+
+.heading h1 {
+  font: 500 clamp(2rem, 4.2vw, 3.3rem)/1.1 var(--serif, Georgia, serif);
+  color: var(--ink, #1f314a);
+  margin: 0;
+}
+
+.heading p, .card p {
+  color: var(--muted, #4d5d71);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.heading .eyebrow {
+  color: var(--brand-dark, #29486b);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.card {
+  align-content: start;
+  display: grid;
+  gap: .9rem;
+  padding: clamp(1rem, 3vw, 1.65rem);
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #d9e1ed);
+  border-radius: 1.15rem;
+  min-width: 0;
+}
+
+.plus {
+  border-top: 3px solid var(--brand, #34597c);
+}
+
+.cardTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+
+.card h2 {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font: 600 1.45rem/1.2 var(--serif, Georgia, serif);
+  margin: 0;
+}
+
+.badge {
+  padding: .2rem .65rem;
+  color: var(--brand-dark, #29486b);
+  background: var(--background, #f2f5f9);
+  border: 1px solid var(--line, #d9e1ed);
+  border-radius: 2rem;
+  font-weight: 650;
+  font-size: .85rem;
+}
+
+.card ul {
+  display: grid;
+  gap: .65rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.card li {
+  display: flex;
+  align-items: flex-start;
+  gap: .55rem;
+  font-size: .92rem;
+}
+
+.card li svg {
+  flex: none;
+  margin-top: .12rem;
+  color: var(--brand-dark, #29486b);
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+}
+
+.choice {
+  display: grid;
+  gap: .35rem;
+  align-content: space-between;
+  border: 1px solid var(--line, #d9e1ed);
+  border-radius: .85rem;
+  padding: .7rem;
+}
+
+.choice strong {
+  font-size: 1.35rem;
+}
+
+.choice small, .note {
+  color: var(--muted, #4d5d71);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.choice button {
+  margin-top: .3rem;
+}
+
+.notice {
+  padding: .6rem .85rem;
+  border: 1px solid var(--line, #d9e1ed);
+  border-radius: .75rem;
+  background: var(--surface, #fff);
+  color: var(--brand-dark, #29486b);
+}
+
+.note svg {
+  display: inline;
+  margin-right: .2rem;
+  vertical-align: text-bottom;
+}
+
+@media (max-width: 850px) {
+  .cards { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 400px) {
+  .choices { grid-template-columns: 1fr; }
+}

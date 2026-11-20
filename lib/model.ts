@@ -15,6 +15,9 @@ export const productInput = z.object({
   category: z.enum(categories),
   ingredients: z.string().trim().max(6500),
   barcode: z.string().trim().regex(/^\d{8,14}$/).optional(),
+  openedOn: z.iso.date().optional(),
+  paoMonths: z.number().int().min(1).max(60).optional(),
+  expiresOn: z.iso.date().optional(),
 });
 
 export const productSchema = productInput.extend({

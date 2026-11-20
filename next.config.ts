@@ -19,7 +19,14 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/sw.js",
-        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'none'; connect-src 'self'" },
+        ],
+      },
+      {
+        source: "/offline.html",
+        headers: [{ key: "Content-Security-Policy", value: "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'" }],
       },
     ];
   },

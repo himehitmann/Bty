@@ -4,12 +4,11 @@ import { z } from "zod";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 
 const confirmationType = z.enum(["email", "signup", "magiclink"]);
+const credential = z.string().min(16).max(512).regex(/^[a-z0-9._~-]+$/i);
 
 export async function GET(request: NextRequest) {
   const config = getSupabaseConfig();
-  const code = request.nextUrl.searchParams.get("code");
-  const tokenHash = request.nextUrl.searchParams.get("token_hash");
-  const type = confirmationType.safeParse(request.nextUrl.searchParams.get("type"));
+  const params = request.nextUrl.searchParams;
   const response = new NextResponse(null, {
     status: 303,
     headers: {
@@ -18,9 +17,17 @@ export async function GET(request: NextRequest) {
       "Referrer-Policy": "no-referrer",
     },
   });
-  if (!config) return response;
+  if (!config || ["code", "token_hash", "type"].some((name) => params.getAll(name).length > 1)) return response;
+
+  const code = credential.safeParse(params.get("code"));
+  const tokenHash = credential.safeParse(params.get("token_hash"));
+  const type = confirmationType.safeParse(params.get("type"));
+  if ((params.has("code") && params.has("token_hash")) || (!code.success && (!tokenHash.success || !type.success))) {
+    return response;
+  }
 
   const client = createServerClient(config.url, config.key, {
+    cookieOptions: { secure: request.nextUrl.protocol === "https:" },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet, headers) {
@@ -32,13 +39,17 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const result = code
-    ? await client.auth.exchangeCodeForSession(code)
-    : tokenHash && type.success
-      ? await client.auth.verifyOtp({ token_hash: tokenHash, type: type.data })
-      : null;
+  try {
+    const result = code.success
+      ? await client.auth.exchangeCodeForSession(code.data)
+      : tokenHash.success && type.success
+        ? await client.auth.verifyOtp({ token_hash: tokenHash.data, type: type.data })
+        : null;
 
-  if (result && !result.error) response.headers.set("Location", "/?auth=confirmed");
+    if (result && !result.error) response.headers.set("Location", "/?auth=confirmed");
+  } catch {
+    return response;
+  }
 
   return response;
 }

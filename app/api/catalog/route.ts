@@ -4,6 +4,17 @@ import { normalizeCatalogText, searchLocalCatalog } from "@/lib/catalog";
 import { productSchema, type Product } from "@/lib/model";
 
 const externalOrigin = "https://world.openbeautyfacts.org";
+const maxResponseBytes = 512 * 1024;
+const maxCacheEntries = 64;
+const cacheLifetime = 10 * 60 * 1000;
+const maxPendingSearches = 4;
+const requestWindow = 60 * 1000;
+const resultCache = new Map<string, { products: Product[]; expires: number }>();
+const pendingSearches = new Map<string, Promise<Product[]>>();
+const budgets = {
+  barcode: { used: 0, resets: 0, limit: 90 },
+  name: { used: 0, resets: 0, limit: 10 },
+};
 const fieldNames = [
   "code",
   "product_name_fr",
@@ -15,7 +26,8 @@ const fieldNames = [
   "categories_tags",
 ].join(",");
 
-const searchQuery = z.string().trim().max(120).refine((query) => !/\p{Cc}/u.test(query));
+const searchQuery = z.string().trim().max(120).refine((query) => !/\p{Cc}/u.test(query))
+  .transform((query) => query.normalize("NFC").replace(/\s+/g, " "));
 const externalProduct = z.object({
   code: z.string().regex(/^\d{8,14}$/),
   product_name_fr: z.string().nullish(),
@@ -103,18 +115,83 @@ async function searchExternalCatalog(query: string, barcode: string): Promise<Pr
     headers: { Accept: "application/json", "User-Agent": userAgent },
     redirect: "error",
     signal: AbortSignal.timeout(4000),
-    next: { revalidate: 1800 },
+    cache: "no-store",
   });
 
-  if (barcode && response.status === 404) return [];
-  if (!response.ok) throw new Error("Open Beauty Facts indisponible");
+  if (!response.ok) {
+    void response.body?.cancel().catch(() => undefined);
+    if (barcode && response.status === 404) return [];
+    throw new Error("Open Beauty Facts indisponible");
+  }
 
-  const payload: unknown = await response.json();
+  const payload = await readExternalResponse(response);
   const products = barcode ? [externalLookup.parse(payload).product] : externalSearch.parse(payload).products;
   return products.slice(0, 12).flatMap((product) => {
     const normalized = normalizeProduct(product);
     return normalized ? [normalized] : [];
   });
+}
+
+async function readExternalResponse(response: Response): Promise<unknown> {
+  const contentType = response.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
+  const contentLength = Number(response.headers.get("content-length"));
+  if (!response.body || contentType !== "application/json" || contentLength > maxResponseBytes) {
+    void response.body?.cancel().catch(() => undefined);
+    throw new Error("Réponse Open Beauty Facts non valide");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let size = 0;
+  let json = "";
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      size += value.byteLength;
+      if (size > maxResponseBytes) {
+        void reader.cancel().catch(() => undefined);
+        throw new Error("Réponse Open Beauty Facts trop volumineuse");
+      }
+      json += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return JSON.parse(json + decoder.decode());
+}
+
+async function cachedExternalSearch(query: string, barcode: string): Promise<Product[]> {
+  const key = barcode ? `barcode:${barcode}` : `name:${query.toLocaleLowerCase("fr-FR")}`;
+  const now = Date.now();
+  const cached = resultCache.get(key);
+  if (cached && cached.expires > now) return cached.products;
+  if (cached) resultCache.delete(key);
+
+  const pending = pendingSearches.get(key);
+  if (pending) return pending;
+
+  const budget = barcode ? budgets.barcode : budgets.name;
+  if (now >= budget.resets) {
+    budget.resets = now + requestWindow;
+    budget.used = 0;
+  }
+  if (budget.used >= budget.limit || pendingSearches.size >= maxPendingSearches) {
+    throw new Error("Recherche Open Beauty Facts temporairement limitée");
+  }
+  budget.used += 1;
+
+  const operation = searchExternalCatalog(query, barcode).then((products) => {
+    resultCache.set(key, { products, expires: Date.now() + cacheLifetime });
+    if (resultCache.size > maxCacheEntries) {
+      const oldest = resultCache.keys().next();
+      if (!oldest.done) resultCache.delete(oldest.value);
+    }
+    return products;
+  }).finally(() => pendingSearches.delete(key));
+  pendingSearches.set(key, operation);
+  return operation;
 }
 
 export async function GET(request: NextRequest) {
@@ -130,7 +207,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const externalResults = await searchExternalCatalog(query.data, barcode);
+    const externalResults = await cachedExternalSearch(query.data, barcode);
     return NextResponse.json({
       products: [...externalResults, ...localResults],
       externalStatus: "ok",

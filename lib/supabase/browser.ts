@@ -18,7 +18,9 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
   const config = getSupabaseConfig();
   if (!config || typeof window === "undefined") return null;
 
-  browserClient ??= createBrowserClient(config.url, config.key);
+  browserClient ??= createBrowserClient(config.url, config.key, {
+    cookieOptions: { secure: window.location.protocol === "https:" },
+  });
   return browserClient;
 }
 

@@ -45,3 +45,20 @@ Les repères INCI concernent les ingrédients déclarés et quelques superpositi
 Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. Les ressources créées pour Navier et les polices [DM Sans](public/fonts/dm-sans-OFL.txt) et [Playfair Display](public/fonts/playfair-OFL.txt) sont hébergées avec l’application.
 
 Références techniques · [Next.js App Router](https://nextjs.org/docs/app), [Proxy](https://nextjs.org/docs/app/api-reference/file-conventions/proxy), [PWA](https://nextjs.org/docs/app/guides/progressive-web-apps), [Tailwind CSS](https://tailwindcss.com/docs/installation/framework-guides/nextjs), [Supabase Auth SSR](https://supabase.com/docs/guides/auth/server-side/nextjs), [Supabase Storage](https://supabase.com/docs/reference/javascript/storage-from-createsignedurl), [Zod](https://zod.dev/api) et [API Open Facts](https://openfoodfacts.github.io/openfoodfacts-server/api/).
+
+## Site et installation
+
+- `/decouvrir` présente l’application. `/installer` propose le guide et déclenche l’invite native lorsque le navigateur la fournit.
+- Le vanity accepte une date d’ouverture, la PAO imprimée et une date explicite. Le repère affiché est le plus proche parmi les dates connues. Le comparateur affiche côte à côte les listes INCI disponibles.
+- Les préférences permettent d’exporter les données de l’espace. Le journal conserve un export séparé.
+
+## Offres et Stripe
+
+Le [relevé concurrentiel et tarifaire](docs/veille-navier.md) décrit la proposition Essentiel et Plus. Le journal Plus conserve ses entrées côté serveur. Les règles PostgreSQL contrôlent le droit de créer ou de modifier une entrée. L’utilisateur peut continuer à consulter, exporter ou supprimer les siennes après l’arrêt de Plus.
+
+1. Applique toutes les migrations dans l’ordre. Configure Supabase Auth et ses adresses de retour.
+2. Dans Stripe en mode test, crée les deux prix récurrents en EUR, 3,99 € par mois et 29,99 € par an. Renseigne les identifiants dans `.env.local` d’après `.env.example`. `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` restent strictement côté serveur.
+3. Configure le portail Stripe pour les factures et l’annulation. Configure `/api/billing/webhook` pour les événements `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused` et `customer.subscription.resumed`.
+4. Essaye l’achat, la réception du webhook, l’activation du journal et la fin des droits dans le bac à sable. Les comptes de test et de production doivent utiliser des clés et des prix distincts. La mise en vente requiert des clés live, l’activation explicite de `NAVIER_BILLING_ALLOW_LIVE` et une configuration SQL live dans `billing_settings`. Utilise un projet Supabase séparé pour la production.
+
+Le [dossier de contrôle de sécurité](docs/securite-navier.md) précise les essais locaux et les validations nécessaires avant une mise en vente.
