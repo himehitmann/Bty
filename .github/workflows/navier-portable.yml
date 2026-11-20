@@ -1,0 +1,56 @@
+name: Publier Navier portable
+
+on:
+  push:
+    branches: [codex/navier]
+
+concurrency:
+  group: navier-portable
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run build:portable
+
+      - name: Publier le fichier sur GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          ref="repos/${GITHUB_REPOSITORY}/git/ref/heads/codex/navier"
+          head_sha=$(gh api "$ref" --jq .object.sha)
+          if [[ "$head_sha" != "$GITHUB_SHA" ]]; then
+            echo "Une version plus récente est déjà sur la branche."
+            exit 0
+          fi
+
+          tag="navier-portable-${GITHUB_SHA:0:12}"
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --draft \
+              --target "$GITHUB_SHA" --title "Navier — ${GITHUB_SHA:0:8}" \
+              --notes "Télécharge **Navier.html**, puis double-clique sur le fichier. Pour conserver l’accès aux données locales lors d’une mise à jour, garde le même nom de fichier et le même emplacement."
+          fi
+
+          assets=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+          if ! grep -qxF Navier.html <<< "$assets"; then
+            gh release upload "$tag" out/Navier.html --repo "$GITHUB_REPOSITORY"
+          fi
+
+          head_sha=$(gh api "$ref" --jq .object.sha)
+          if [[ "$head_sha" == "$GITHUB_SHA" ]]; then
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          fi

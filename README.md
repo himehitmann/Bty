@@ -25,6 +25,8 @@ npm start
 
 Pour générer le fichier portable à partir de cette branche, exécute `npm run build:portable`. Le résultat se trouve dans `out/Navier.html`.
 
+GitHub Actions vérifie TypeScript et compile l’application à chaque envoi sur `codex/navier`. Lorsque ces étapes réussissent, le [workflow de publication](.github/workflows/navier-portable.yml) génère le fichier portable et le publie dans [Releases](https://github.com/himehitmann/Bty/releases). Le [lien direct](https://github.com/himehitmann/Bty/releases/latest/download/Navier.html) suit la dernière version publiée.
+
 Le service worker s’active dans la version de production sur HTTPS ou sur localhost. Après une première ouverture en ligne, il conserve l’interface et les ressources publiques pour le mode hors connexion. La recherche distante, l’authentification et les opérations Storage utilisent le réseau.
 
 ## Activer Supabase
