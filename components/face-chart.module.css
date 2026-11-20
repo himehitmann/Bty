@@ -36,13 +36,13 @@
 }
 
 .faceZone[data-highlight="true"] path {
-  stroke: #633b40;
+  stroke: var(--brand-dark, #382375);
   stroke-dasharray: 3 3;
 }
 
 .faceZone:hover path,
 .faceZone:focus-visible path {
-  stroke: #593040;
+  stroke: var(--brand-dark, #382375);
   stroke-width: 2;
   stroke-dasharray: 4 3;
   paint-order: stroke;
@@ -54,7 +54,7 @@
 
 .placementGuide,
 .applicationMarking {
-  stroke: #70424e;
+  stroke: var(--brand-dark, #382375);
   stroke-width: 1.7;
   stroke-dasharray: 4 3.5;
 }

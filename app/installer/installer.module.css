@@ -16,8 +16,8 @@
 }
 
 .intro h1 {
-  font: 400 clamp(2.15rem, 4.2vw, 3.2rem)/1.04 var(--display, Georgia, serif);
-  letter-spacing: -.035em;
+  font: 750 clamp(2.15rem, 4.2vw, 3.2rem)/1.04 var(--display);
+  letter-spacing: -.05em;
 }
 
 .description {

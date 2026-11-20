@@ -1,9 +1,9 @@
 .studio {
-  --studio-ink: var(--ink, #302521);
-  --studio-line: var(--line, #e7d9cc);
-  --studio-wash: #f3e5dc;
-  --studio-blush: #edd7cb;
-  --studio-muted: #70584f;
+  --studio-ink: var(--ink);
+  --studio-line: var(--line);
+  --studio-wash: var(--lavender);
+  --studio-blush: #eae0fd;
+  --studio-muted: var(--muted);
   display: grid;
   min-width: 0;
   gap: 1rem;
@@ -16,7 +16,7 @@
 }
 
 .header h1 {
-  font: 400 clamp(2.5rem, 5vw, 4.35rem) / 0.98 var(--display, Georgia, serif);
+  font: 720 clamp(2.2rem, 4.5vw, 3.85rem) / 1.03 var(--display);
   letter-spacing: -0.035em;
 }
 
@@ -41,7 +41,7 @@
   padding: 0.24rem;
   border: 1px solid var(--studio-line);
   border-radius: 0.75rem;
-  background: #f7efe6;
+  background: var(--background);
 }
 
 .tabs button,
@@ -67,7 +67,7 @@
 .tabs button[aria-selected="true"] {
   border-color: var(--studio-line);
   background: #fff;
-  box-shadow: 0 1px 3px #30252113;
+  box-shadow: 0 1px 3px #20182613;
 }
 
 .zones button,
@@ -83,12 +83,12 @@
 .tools button:hover,
 .mixToggle:hover,
 .apply:hover {
-  border-color: #b8937f;
+  border-color: #9c89c5;
 }
 
 .zones button[aria-pressed="true"],
 .mixToggle[aria-pressed="true"] {
-  border-color: #a77769;
+  border-color: var(--brand);
   background: var(--studio-wash);
 }
 
@@ -99,7 +99,7 @@
 }
 
 .tools button[aria-pressed="true"] {
-  border-color: #b17c6d;
+  border-color: var(--brand);
   color: var(--studio-ink);
   background: var(--studio-blush);
 }
@@ -134,11 +134,11 @@
   display: grid;
   justify-items: center;
   gap: 0.55rem;
-  background: radial-gradient(ellipse at 52% 40%, #fff9ef 12%, #f6e7dc 62%, #efddd0 100%);
+  background: radial-gradient(ellipse at 52% 40%, #fdfcfe 12%, #f2edf8 65%, #e9e0f5 100%);
 }
 
 .preview h2 {
-  font: 400 clamp(1.7rem, 4vw, 2.25rem) / 1 var(--display, Georgia, serif);
+  font: 660 clamp(1.5rem, 4vw, 2rem) / 1.08 var(--display);
 }
 
 .preview h2:focus {
@@ -191,7 +191,7 @@
 .skinTone::before {
   width: 100%;
   height: 100%;
-  border: 1px solid #30252138;
+  border: 1px solid #20182638;
   border-radius: inherit;
   background: var(--swatch);
   content: "";
@@ -199,19 +199,19 @@
 
 .skinTone:hover,
 .skinTone[aria-pressed="true"] {
-  border-color: #8d554d;
+  border-color: var(--brand-dark);
   background: #fff9;
 }
 
 .customSkinTone {
-  border-color: #ad8273;
+  border-color: var(--brand);
   background: #fff9;
   cursor: pointer;
 }
 
 .customSkinTone::-webkit-color-swatch-wrapper { padding: 0; }
-.customSkinTone::-webkit-color-swatch { border: 1px dashed #8d554d; border-radius: 50%; }
-.customSkinTone::-moz-color-swatch { border: 1px dashed #8d554d; border-radius: 50%; }
+.customSkinTone::-webkit-color-swatch { border: 1px dashed var(--brand-dark); border-radius: 50%; }
+.customSkinTone::-moz-color-swatch { border: 1px dashed var(--brand-dark); border-radius: 50%; }
 
 .portraitOptions {
   text-align: center;
@@ -219,7 +219,7 @@
 
 .portraitOptions summary {
   padding: 0.35rem;
-  color: #793c3e;
+  color: var(--brand-dark);
   font-size: 0.82rem;
   font-weight: 650;
   cursor: pointer;
@@ -250,7 +250,7 @@
   cursor: pointer;
 }
 
-.portraitOptions input[type="checkbox"] { accent-color: #793c3e; }
+.portraitOptions input[type="checkbox"] { accent-color: var(--brand-dark); }
 
 .layerList {
   display: flex;
@@ -275,14 +275,14 @@
 }
 
 .layerList button[aria-pressed="true"] {
-  border-color: #a77268;
+  border-color: var(--brand);
   background: #fff;
 }
 
 .layerList span {
   width: 0.7rem;
   height: 0.7rem;
-  border: 1px solid #30252124;
+  border: 1px solid #20182624;
   border-radius: 50%;
 }
 
@@ -342,14 +342,14 @@
 
 .shade:hover,
 .shade[aria-pressed="true"] {
-  border-color: #ad8273;
-  background: #f7ece1;
+  border-color: var(--brand);
+  background: var(--background);
 }
 
 .shade span {
   width: 1.8rem;
   height: 1.8rem;
-  border: 1px solid #30252125;
+  border: 1px solid #20182625;
   border-radius: 0.5rem;
   background: var(--swatch);
 }
@@ -411,7 +411,7 @@
   min-height: 2.75rem;
   align-items: center;
   gap: 0.4rem;
-  color: #793c3e;
+  color: var(--brand-dark);
   font-size: 0.875rem;
   font-weight: 650;
   text-align: left;
@@ -452,7 +452,7 @@
 .range input {
   width: 100%;
   min-height: 1.95rem;
-  accent-color: #793c3e;
+  accent-color: var(--brand-dark);
   cursor: pointer;
 }
 
@@ -463,7 +463,7 @@
 .mixControls {
   padding: 0.75rem;
   border-radius: 0.6rem;
-  background: #f8eee6;
+  background: var(--background);
 }
 
 .actions {
@@ -476,7 +476,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.7rem;
-  background: #f6e9df;
+  background: var(--studio-wash);
 }
 
 @media (min-width: 770px) {
@@ -517,19 +517,19 @@
   border: 1px solid var(--studio-line);
   border-radius: .55rem;
   color: var(--studio-ink);
-  background: var(--surface, #fffdf9);
+  background: var(--surface);
   font-size: .83rem;
   font-weight: 650;
   line-height: 1.2;
 }
 
 .guideToggle:hover,
-.placements button:hover { border-color: #b8937f; }
+.placements button:hover { border-color: #9c89c5; }
 
 .guideToggle[aria-pressed="true"],
 .placements button[aria-pressed="true"] {
-  border-color: #a77769;
-  color: var(--brand-dark, #5d292c);
+  border-color: var(--brand);
+  color: var(--brand-dark);
   background: var(--studio-wash);
 }
 
@@ -541,7 +541,7 @@
   padding: .65rem .75rem;
   border: 1px solid var(--studio-line);
   border-radius: .65rem;
-  background: #fbf4ec;
+  background: var(--background);
 }
 
 .placementPanel legend {
@@ -579,18 +579,18 @@
   padding: .46rem .55rem;
   border: 1px solid var(--studio-line);
   border-radius: .55rem;
-  background: var(--surface, #fffdf9);
+  background: var(--surface);
   color: var(--studio-ink);
 }
 
 .settingPanel .settingStatus {
-  color: var(--brand-dark, #5d292c);
+  color: var(--brand-dark);
   overflow-wrap: anywhere;
   font-weight: 650;
 }
 
 .layerList .settingMarker {
-  border: 1px dashed #8d554d;
+  border: 1px dashed var(--brand-dark);
   background: transparent;
 }
 
@@ -642,7 +642,7 @@
 
 .savedChip:hover,
 .savedChip[aria-pressed="true"] {
-  border-color: #a77769;
+  border-color: var(--brand);
   background: var(--studio-wash);
 }
 
@@ -650,10 +650,10 @@
   flex-shrink: 0;
   width: 1.2rem;
   height: 1.2rem;
-  border: 1px solid #30252155;
+  border: 1px solid #20182655;
   border-radius: .35rem;
   background: var(--swatch);
-  box-shadow: 0 0 0 1px #fffdf9;
+  box-shadow: 0 0 0 1px var(--surface);
 }
 
 .savedChip small {

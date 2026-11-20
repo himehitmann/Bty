@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   icons: { icon: "/icons/navier-192.png", apple: "/icons/navier-192.png" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Navier" },
 };
-export const viewport: Viewport = { themeColor: "#fffdf9" };
+export const viewport: Viewport = { themeColor: "#ffffff" };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   await connection();

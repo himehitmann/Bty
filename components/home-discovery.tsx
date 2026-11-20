@@ -1,16 +1,20 @@
 "use client";
 
+import type { StaticImageData } from "next/image";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { BookOpen, Check, ChevronLeft, ChevronRight, Circle, Droplet, ListChecks, ScanLine, ShoppingBag, Sun, SwatchBook } from "lucide-react";
+import { BookOpen, Check, ChevronLeft, ChevronRight, ListChecks, ScanLine, ShoppingBag, SwatchBook } from "lucide-react";
 import { useLocale } from "@/lib/i18n";
-import { FaceChart } from "./face-chart";
+import studioArt from "@/public/images/navier-carousel-studio.webp";
+import routineArt from "@/public/images/navier-carousel-routine.webp";
+import listsArt from "@/public/images/navier-carousel-listes.webp";
 import type { Routine, State } from "@/lib/model";
 import styles from "./home-discovery.module.css";
 
 type DiscoveryRoute = "studio" | "routines" | "listes" | "catalogue" | "vanity" | "tutoriels";
 type Copy = readonly [string, string];
 type Slide = {
-  route: "studio" | "routines" | "listes" | "catalogue";
+  route: "studio" | "routines" | "listes";
+  art: StaticImageData | string;
   name: Copy;
   title: Copy;
   description: Copy;
@@ -20,31 +24,27 @@ type Slide = {
 const slides: readonly Slide[] = [
   {
     route: "studio",
+    art: studioArt,
     name: ["Simulation maquillage", "Makeup simulator"],
     title: ["Simule un maquillage", "Try a makeup look"],
-    description: ["Place un blush ou un rouge à lèvres sur le visage interactif et vois les couleurs ensemble.", "Place blush or lipstick on the interactive face chart and see how the colors look together."],
+    description: ["Essaie tes teintes sur un visage interactif.", "Try your shades on an interactive face chart."],
     action: ["Ouvrir le studio", "Open the studio"],
   },
   {
     route: "routines",
+    art: routineArt,
     name: ["Mes routines", "My routines"],
     title: ["Compose ta routine", "Build your routine"],
-    description: ["Choisis les produits que tu utilises et organise tes gestes dans l’ordre qui te convient.", "Choose the products you use and arrange the steps in an order that works for you."],
+    description: ["Prépare et suis tes gestes, étape par étape.", "Plan and follow your routine, step by step."],
     action: ["Ouvrir mes routines", "Open my routines"],
   },
   {
     route: "listes",
+    art: listsArt,
     name: ["Mes listes", "My lists"],
     title: ["Crée tes listes", "Create your lists"],
-    description: ["Garde tes favoris, tes achats à prévoir et les raisons de tes déceptions.", "Keep your favourites, planned purchases and the reasons for your disappointments."],
+    description: ["Retrouve tes favoris et prépare tes prochains achats.", "Find your favourites and plan your next purchases."],
     action: ["Ouvrir mes listes", "Open my lists"],
-  },
-  {
-    route: "catalogue",
-    name: ["Catalogue", "Catalog"],
-    title: ["Retrouve un produit", "Find a product"],
-    description: ["Cherche par nom, marque ou code-barres et ajoute le produit à ta collection.", "Search by name, brand or barcode and save products to your collection."],
-    action: ["Voir le catalogue", "Open the catalog"],
   },
 ];
 
@@ -63,59 +63,6 @@ interface HomeDiscoveryProps {
   onProduct: (id: string) => void;
   onRoutine: (routine: Routine) => void;
 }
-
-function ShadeArt() {
-  return (
-    <div className={styles.shadeArt} aria-hidden="true">
-      <div className={styles.faceCard}>
-        <FaceChart className={styles.faceSketch} selected="joues" availableZones={[]} onSelect={() => {}}
-          layers={[
-            { effect: "tinted", kind: "blush", placement: "blush-lifted", hex: "#B45E62", opacity: .7, stepId: "preview-blush", productName: "", name: "", zone: "joues" },
-            { effect: "tinted", kind: "lip", hex: "#954950", opacity: .84, stepId: "preview-lips", productName: "", name: "", zone: "levres" },
-          ]}/>
-      </div>
-      <span className={styles.swatches}><i/><i/><i/></span>
-    </div>
-  );
-}
-
-function RoutineArt() {
-  const { t } = useLocale();
-  return (
-    <ol className={styles.routineArt} aria-hidden="true">
-      <li><Droplet size={19} /><strong>{t("Nettoyer", "Cleanse")}</strong><Check size={14}/></li>
-      <li><Droplet size={19} fill="currentColor" fillOpacity={.14} /><strong>{t("Hydrater", "Moisturize")}</strong><Check size={14}/></li>
-      <li><Sun size={19} /><strong>{t("Protéger", "Protect")}</strong><Circle size={13}/></li>
-    </ol>
-  );
-}
-
-function ListArt() {
-  const { t } = useLocale();
-  return (
-    <div className={styles.listArt} aria-hidden="true">
-      <div className={styles.listPaper}>
-        <div className={styles.paperTitle}><ShoppingBag size={17}/><strong>{t("Mes achats", "My shopping")}</strong></div>
-        <div><Check size={15}/><span>{t("À retrouver", "Find again")}</span></div>
-        <div><Circle size={12}/><span>{t("À essayer", "Try next")}</span></div>
-      </div>
-    </div>
-  );
-}
-
-function CatalogArt() {
-  return (
-    <div className={styles.catalogArt} aria-hidden="true">
-      <div className={styles.catalogPaper}>
-        <ScanLine size={18}/>
-        <span/>
-      </div>
-      <div className={styles.catalogProduct}><Droplet size={22} strokeWidth={1.35}/></div>
-    </div>
-  );
-}
-
-const artwork = { studio: ShadeArt, routines: RoutineArt, listes: ListArt, catalogue: CatalogArt };
 
 function nearestSlide(track: HTMLDivElement) {
   const start = track.getBoundingClientRect().left;
@@ -151,8 +98,9 @@ export function HomeDiscovery({ state, onNavigate, onProduct, onRoutine }: HomeD
     if (!track) return;
     function measure() {
       if (!track) return;
-      const columns = Number(getComputedStyle(track).getPropertyValue("--slides-visible"));
-      setVisible(columns >= 1 && columns <= slides.length ? columns : 1);
+      const count = getComputedStyle(track).getPropertyValue("--slides-visible").trim() === "2" ? 2 : 1;
+      setVisible(count);
+      setActive(Math.min(nearestSlide(track), slides.length - count));
     }
     measure();
     const observer = new ResizeObserver(measure);
@@ -179,9 +127,15 @@ export function HomeDiscovery({ state, onNavigate, onProduct, onRoutine }: HomeD
   }
 
   function handleKeys(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.target !== event.currentTarget || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+    if (event.target !== event.currentTarget) return;
+    switch (event.key) {
+      case "ArrowLeft": moveSlide(-1); break;
+      case "ArrowRight": moveSlide(1); break;
+      case "Home": selectSlide(0); break;
+      case "End": selectSlide(lastPage); break;
+      default: return;
+    }
     event.preventDefault();
-    moveSlide(event.key === "ArrowLeft" ? -1 : 1);
   }
 
   return (
@@ -191,29 +145,31 @@ export function HomeDiscovery({ state, onNavigate, onProduct, onRoutine }: HomeD
         <div className={styles.carousel}>
           <div className={styles.rail} ref={rail} onScroll={observeSlide} onKeyDown={handleKeys} tabIndex={0}
             role="group" aria-label={t("Outils à découvrir", "Tools to explore")}>
-            {slides.map(({ route, name, title, description, action }, index) => {
-              const Artwork = artwork[route];
-              return (
-                <article key={route} className={styles.slide} data-theme={route}
-                  aria-roledescription={t("diapositive", "slide")}
-                  aria-label={t(`${t(...name)}, ${index + 1} sur ${slides.length}`, `${t(...name)}, ${index + 1} of ${slides.length}`)}>
-                  <div className={styles.slideCopy}>
-                    <h2>{t(...title)}</h2>
-                    <p>{t(...description)}</p>
-                    <button type="button" className={styles.slideAction} tabIndex={index >= current && index < current + visible ? 0 : -1}
-                      onClick={() => onNavigate(route)}>{t(...action)}</button>
-                  </div>
-                  <div className={styles.artwork}><Artwork/></div>
-                </article>
-              );
-            })}
+            {slides.map(({ route, name, title, description, action, art }, index) => (
+              <article key={route} className={styles.slide} data-theme={route}
+                data-preview={index === current + visible ? "true" : undefined}
+                aria-roledescription={t("diapositive", "slide")}
+                aria-label={t(`${t(...name)}, ${index + 1} sur ${slides.length}`, `${t(...name)}, ${index + 1} of ${slides.length}`)}>
+                <div className={styles.slideCopy}>
+                  <h2>{t(...title)}</h2>
+                  <p>{t(...description)}</p>
+                  <button type="button" className={styles.slideAction} tabIndex={index >= current && index < current + visible ? 0 : -1}
+                    onClick={() => onNavigate(route)}>{t(...action)}</button>
+                </div>
+                <div className={styles.artwork} aria-hidden="true">
+                  <img alt="" src={typeof art === "string" ? art : art.src} decoding="async"
+                    fetchPriority={index === 0 ? "high" : "low"}/>
+                </div>
+              </article>
+            ))}
           </div>
           <div className={styles.carouselControls}>
             <div className={styles.dots} role="group" aria-label={t("Choisir un outil", "Choose a tool")}>
               {slides.slice(0, lastPage + 1).map(({ route, name }, index) => {
-                const lastName = slides[index + visible - 1].name;
-                const label = visible === 1 ? t(`Afficher ${name[0]}`, `Show ${name[1]}`) :
-                  t(`Afficher de ${name[0]} à ${lastName[0]}`, `Show ${name[1]} through ${lastName[1]}`);
+                const firstName = t(...name);
+                const lastName = t(...slides[index + visible - 1].name);
+                const label = visible === 1 ? t(`Afficher ${firstName}`, `Show ${firstName}`)
+                  : t(`Afficher ${firstName} et ${lastName}`, `Show ${firstName} and ${lastName}`);
                 return <button key={route} type="button" aria-current={index === current ? "true" : undefined}
                   aria-label={label} onClick={() => selectSlide(index)}><span aria-hidden="true"/></button>;
               })}
@@ -223,7 +179,8 @@ export function HomeDiscovery({ state, onNavigate, onProduct, onRoutine }: HomeD
               <button type="button" disabled={current === lastPage} aria-label={t("Carte suivante", "Next slide")} onClick={() => moveSlide(1)}><ChevronRight size={21} strokeWidth={1.8} aria-hidden="true"/></button>
             </div>
             <span className={styles.announcement} aria-live="polite">
-              {visible === 1 ? t(...slides[current].name) : t(`Cartes ${current + 1} à ${current + visible}`, `Slides ${current + 1} to ${current + visible}`)}
+              {visible === 1 ? t(...slides[current].name)
+                : t(`Cartes ${current + 1} à ${current + visible}`, `Slides ${current + 1} to ${current + visible}`)}
             </span>
           </div>
         </div>

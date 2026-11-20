@@ -1,10 +1,10 @@
 # Navier
 
-Navier est une application web installable pour simuler un maquillage, composer des routines et organiser tes produits dans des listes personnelles. L’accueil présente ces outils en cartes à faire défiler. Un nouvel espace démarre vide. Le français, l’anglais, l’espagnol et l’italien se choisissent depuis l’en-tête.
+Navier est une application web installable pour simuler un maquillage, composer des routines et organiser tes produits dans des listes personnelles. L’accueil présente ces outils en slides illustrées. Un nouvel espace démarre vide. Le menu de l’en-tête permet de choisir le français, l’anglais, l’espagnol ou l’italien.
 
 ## Ouvrir Navier par double-clic
 
-Télécharge **Navier.html** dans la [dernière version GitHub](https://github.com/himehitmann/Bty/releases/latest) et double-clique sur le fichier. La recherche portable consulte Open Beauty Facts avec une connexion. Le catalogue embarqué et la saisie manuelle restent disponibles hors ligne. Pour retrouver les données enregistrées lors d’une mise à jour, remplace l’ancien fichier au même emplacement et ouvre-le avec le même navigateur. **Paramètres → Exporter mon espace** permet de conserver une copie JSON des données.
+Télécharge [**Navier.html**](https://github.com/himehitmann/Bty/releases/latest/download/Navier.html) et double-clique sur le fichier. La recherche consulte Open Beauty Facts avec une connexion. La sélection embarquée reste consultable hors ligne. Pour retrouver les données enregistrées lors d’une mise à jour, remplace l’ancien fichier au même emplacement et ouvre-le avec le même navigateur. **Paramètres → Exporter mon espace** permet de conserver une copie JSON des données.
 
 ## Démarrer
 
@@ -40,8 +40,8 @@ Chaque compte démarre avec un espace vide. L’espace invité reste sur le navi
 
 ## Fonctionnement
 
-- **Mes produits** · recherche par nom, marque ou code-barres depuis l’en-tête ou le **Catalogue**, puis ajout dans la page. Tu peux noter un achat, un favori, un avis et les raisons à retenir. Les routines perdent les étapes d’un produit supprimé.
-- **INCI** · affichage de la liste et de sa provenance. La recherche en ligne interroge [Open Beauty Facts](https://world.openbeautyfacts.org/). Le catalogue embarqué contient des références réelles issues d’Open Beauty Facts sous [licence ODbL](https://opendatacommons.org/licenses/odbl/1-0/), avec un lien par fiche, ainsi que des formules signalées comme indicatives. `OPEN_BEAUTY_FACTS_CONTACT` renseigne le contact envoyé par le serveur web.
+- **Catalogue et Mes produits** · lance une recherche par nom, marque ou code-barres depuis l’en-tête. Le catalogue affiche les photos disponibles et permet d’enregistrer un produit en un clic. Les informations déjà enregistrées restent consultables. Les routines perdent les étapes d’un produit supprimé.
+- **INCI et photos** · la recherche interroge [Open Beauty Facts](https://world.openbeautyfacts.org/). Le catalogue embarqué contient des références de cette base sous [licence ODbL](https://opendatacommons.org/licenses/odbl/1.0/), ainsi que des formules signalées comme indicatives. Les photos du catalogue relèvent de la licence [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). Chaque référence renvoie à sa source. `OPEN_BEAUTY_FACTS_CONTACT` renseigne le contact envoyé par le serveur web.
 - **Simulation maquillage** · Face Chart SVG original avec plusieurs placements pour le blush, le contouring, le bronzer, l’enlumineur, la poudre et l’anticernes. Le guide affiche leurs zones. Les palettes de teintes prélevées sur une photo sont réutilisables par clic dans le Studio.
 - **Routines** · création, réorganisation et suivi des étapes, points de vigilance et Face Chart utilisable au clavier. Indique un placement de maquillage, un accessoire, une consigne et, pour les cheveux, la zone et le massage prévu.
 - **Mes listes** · listes à nom libre pour les favoris, les achats, une trousse ou les déceptions. Ajoute un produit ou du texte, note la raison et coche les éléments au fur et à mesure.
@@ -51,14 +51,14 @@ Les repères INCI concernent les ingrédients déclarés et quelques superpositi
 
 ## Architecture
 
-Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. Les polices [Instrument Sans](public/fonts/instrument-sans-OFL.txt) et [Hedvig Letters Serif](public/fonts/hedvig-letters-serif-OFL.txt) sont hébergées avec l’application et intégrées au fichier portable.
+Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. La police [Bricolage Grotesque](public/fonts/bricolage-grotesque-OFL.txt) est hébergée avec l’application et intégrée au fichier portable.
 
 Références techniques · [Next.js App Router](https://nextjs.org/docs/app), [Proxy](https://nextjs.org/docs/app/api-reference/file-conventions/proxy), [PWA](https://nextjs.org/docs/app/guides/progressive-web-apps), [Tailwind CSS](https://tailwindcss.com/docs/installation/framework-guides/nextjs), [Supabase Auth SSR](https://supabase.com/docs/guides/auth/server-side/nextjs), [Supabase Storage](https://supabase.com/docs/reference/javascript/storage-from-createsignedurl), [Zod](https://zod.dev/api) et [API Open Facts](https://openfoodfacts.github.io/openfoodfacts-server/api/).
 
 ## Site et installation
 
 - `/decouvrir` présente l’application. `/installer` propose le guide et déclenche l’invite native lorsque le navigateur la fournit.
-- Le vanity accepte une date d’ouverture, la PAO imprimée et une date explicite. Le repère affiché est le plus proche parmi les dates connues. Le comparateur affiche côte à côte les listes INCI disponibles.
+- Les dates de conservation déjà enregistrées restent visibles dans **Mes produits**. Le comparateur affiche côte à côte les listes INCI disponibles.
 - Les préférences permettent d’exporter les données de l’espace. Le journal conserve un export séparé.
 
 ## Offres et Stripe

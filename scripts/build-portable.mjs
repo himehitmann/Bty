@@ -30,7 +30,7 @@ const { outputFiles } = await build({
     "process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "undefined",
     "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": "undefined",
   },
-  loader: { ".woff2": "dataurl" },
+  loader: { ".woff2": "dataurl", ".webp": "dataurl" },
   plugins: [{
     name: "portable-styles",
     setup(plugin) {
@@ -48,9 +48,8 @@ const { outputFiles } = await build({
 const script = outputFiles.find((file) => file.path.endsWith(".js")).text.replace(/<\/script/gi, "<\\/script");
 const css = outputFiles.find((file) => file.path.endsWith(".css")).text;
 const hash = createHash("sha256").update(script).digest("base64");
-const licenses = await Promise.all(["instrument-sans", "hedvig-letters-serif"].map((font) =>
-  readFile(path.join(root, "public", "fonts", `${font}-OFL.txt`), "utf8")));
-const license = licenses.join("\n\n").replaceAll("-->", "--&gt;");
+const license = (await readFile(path.join(root, "public", "fonts", "bricolage-grotesque-OFL.txt"), "utf8"))
+  .replaceAll("-->", "--&gt;");
 
 await mkdir(path.dirname(destination), { recursive: true });
 await writeFile(destination + ".tmp", `<!doctype html>
@@ -58,7 +57,7 @@ await writeFile(destination + ".tmp", `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src https://world.openbeautyfacts.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; img-src data: blob: https://images.openbeautyfacts.org https://images.openbeautyfacts.net https://images.openfoodfacts.org https://images.openfoodfacts.net; font-src data:; connect-src https://world.openbeautyfacts.org; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Navier</title>
 <style>${css}</style>
 </head>

@@ -2,8 +2,8 @@ import type { Product } from "@/lib/model";
 
 export type CatalogSearchMode = "all" | "brand";
 
-// Product identifiers from Open Beauty Facts (ODbL). Keep the source on each entry.
-function offlineProduct(name: string, brand: string, barcode: string, category: Product["category"]): Product {
+// Open Beauty Facts product metadata (ODbL) and links to its community photos (CC BY-SA).
+function offlineProduct(name: string, brand: string, barcode: string, category: Product["category"], frontPhoto?: string): Product {
   return {
     id: `obf-${barcode}`,
     name,
@@ -13,16 +13,20 @@ function offlineProduct(name: string, brand: string, barcode: string, category: 
     ingredients: "",
     source: "open-beauty-facts",
     sourceUrl: `https://world.openbeautyfacts.org/product/${barcode}`,
+    imageUrl: frontPhoto ? `https://images.openbeautyfacts.org/images/products/${frontPhoto}` : undefined,
   };
 }
 
 export const localCatalog: readonly Product[] = [
-  offlineProduct("SA Smoothing Cleanser", "CeraVe", "3337875795456", "soin"),
-  offlineProduct("Skin Renewing Night Cream", "CeraVe", "3337875903509", "soin"),
-  offlineProduct("Effaclar Duo+", "La Roche-Posay", "3337875863377", "soin"),
-  offlineProduct("Cicaplast Baume B5+", "La Roche-Posay", "3337875816847", "soin"),
-  offlineProduct("Rouge Blush", "Dior", "3348901607339", "maquillage"),
-  offlineProduct("Forever Nude Bronze", "Dior", "3348901746687", "maquillage"),
+  offlineProduct("SA Smoothing Cleanser", "CeraVe", "3337875795456", "soin", "333/787/579/5456/front_en.14.200.jpg"),
+  offlineProduct("Skin Renewing Night Cream", "CeraVe", "3337875903509", "soin", "333/787/590/3509/front_fr.3.200.jpg"),
+  offlineProduct("Effaclar Duo+", "La Roche-Posay", "3337875863377", "soin", "333/787/586/3377/front_fr.3.200.jpg"),
+  offlineProduct("Cicaplast Baume B5+", "La Roche-Posay", "3337875816847", "soin", "333/787/581/6847/front_fr.12.200.jpg"),
+  offlineProduct("Rouge Blush", "Dior", "3348901607339", "maquillage", "334/890/160/7339/front_en.5.200.jpg"),
+  offlineProduct("Forever Nude Bronze", "Dior", "3348901746687", "maquillage", "334/890/174/6687/front_en.3.200.jpg"),
+  offlineProduct("Baby Blush Duo", "Huda Beauty", "6294018409120", "maquillage", "629/401/840/9120/front_en.3.200.jpg"),
+  offlineProduct("Blush Filter", "Huda Beauty", "88176321", "maquillage", "000/008/817/6321/front_en.3.200.jpg"),
+  offlineProduct("Desert Dusk Palette", "Huda Beauty", "6291106031454", "maquillage"),
   {
     id: "local-gel-nettoyant",
     name: "Gel nettoyant doux",
@@ -134,6 +138,35 @@ export function catalogBarcode(value: string): string | undefined {
   return /^\d{8,14}$/.test(digits) ? digits : undefined;
 }
 
+export function catalogBrandAlias(query: string): string | undefined {
+  const name = normalizeCatalogQuery(query);
+  return name === "huda" || name === "hudabeauty" || name === "huda beauty" ? "Huda Beauty" : undefined;
+}
+
+const catalogImageOrigins = new Set([
+  "https://images.openbeautyfacts.org",
+  "https://images.openbeautyfacts.net",
+  "https://images.openfoodfacts.org",
+  "https://images.openfoodfacts.net",
+]);
+
+export function catalogImageUrl(value?: string | null, barcode?: string): string | undefined {
+  if (!value || value.length > 700) return undefined;
+  if (/^\/images\/[\w-]+\.webp$/.test(value)) return value;
+
+  try {
+    const url = new URL(value);
+    if (!catalogImageOrigins.has(url.origin) || url.username || url.password || url.search || url.hash) return undefined;
+    const match = /^\/images\/products\/(\d+(?:\/\d+)*)\/front(?:_[\w-]+)?\.\d+\.(?:100|200|400)\.(?:jpe?g|png|webp)$/i.exec(url.pathname);
+    if (!match) return undefined;
+    const imageBarcode = catalogBarcode(match[1].replaceAll("/", ""));
+    if (!imageBarcode || (barcode && imageBarcode.padStart(14, "0") !== barcode.padStart(14, "0"))) return undefined;
+    return url.href;
+  } catch {
+    return undefined;
+  }
+}
+
 function matchWords(words: string[], text: string): boolean {
   const options = text.split(" ");
   return words.every((word) => options.some((option) => option.startsWith(word)));
@@ -179,21 +212,34 @@ export function rankCatalogProducts(
   mode: CatalogSearchMode = "all",
   keepUnmatched = true,
 ): Product[] {
-  const query = normalizeCatalogQuery(search);
+  const query = normalizeCatalogQuery(catalogBrandAlias(search) ?? search);
   const barcode = mode === "all" ? catalogBarcode(search) : undefined;
   const gtin = barcode?.padStart(14, "0");
   const words = query.split(" ");
-  const seen = new Set<string>();
+  const photosByGtin = new Map<string, string>();
+  for (const product of products) {
+    const key = product.barcode?.padStart(14, "0");
+    const photo = catalogImageUrl(product.imageUrl, product.barcode);
+    if (key && photo?.startsWith("https://") && !photosByGtin.has(key)) photosByGtin.set(key, photo);
+  }
 
-  return products.flatMap((product) => {
+  const ranked = products.flatMap((product) => {
     const productGtin = product.barcode?.padStart(14, "0");
     const key = productGtin ? `barcode:${productGtin}` : product.id;
-    if (seen.has(key) || (gtin && productGtin !== gtin)) return [];
+    if (gtin && productGtin !== gtin) return [];
     const score = query && !barcode ? rankProduct(product, query, words, mode) : 0;
     if (query && !barcode && !score && !keepUnmatched) return [];
+    const imageUrl = catalogImageUrl(product.imageUrl, product.barcode) ?? (productGtin ? photosByGtin.get(productGtin) : undefined);
+    const entry = imageUrl === product.imageUrl ? product : { ...product, imageUrl };
+    return [{ product: entry, key, score, hasPhoto: Boolean(imageUrl) }];
+  }).sort((left, right) => right.score - left.score || Number(right.hasPhoto) - Number(left.hasPhoto));
+
+  const seen = new Set<string>();
+  return ranked.flatMap(({ product, key }) => {
+    if (seen.has(key)) return [];
     seen.add(key);
-    return [{ product, score }];
-  }).sort((left, right) => right.score - left.score).map(({ product }) => product);
+    return [product];
+  });
 }
 
 export function searchLocalCatalog(query: string, mode: CatalogSearchMode = "all"): Product[] {

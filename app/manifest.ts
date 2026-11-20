@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/", name: "Navier — Studio et routines beauté", short_name: "Navier",
     description: "Simulation maquillage, routines, listes et catalogue beauté.",
     lang: "fr", start_url: "/", scope: "/", display: "standalone",
-    background_color: "#fffdf9", theme_color: "#fffdf9",
+    background_color: "#ffffff", theme_color: "#ffffff",
     icons: [
       { src: "/icons/navier-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/navier-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

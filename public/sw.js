@@ -1,6 +1,6 @@
 /* Cache the public shell and assets. Account, auth and catalog requests use the network. */
-const CACHE = "navier-shell-v5";
-const SHELL = ["/manifest.webmanifest", "/icons/navier-192.png", "/icons/navier-512.png", "/icons/navier-maskable.png", "/fonts/instrument-sans.woff2", "/fonts/hedvig-letters-serif.woff2", "/offline.html"];
+const CACHE = "navier-shell-v6";
+const SHELL = ["/manifest.webmanifest", "/icons/navier-192.png", "/icons/navier-512.png", "/icons/navier-maskable.png", "/fonts/bricolage-grotesque.woff2", "/offline.html"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));

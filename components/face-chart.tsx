@@ -12,37 +12,48 @@ type HairArea = "scalp" | "lengths" | "ends";
 type Application = { kind: "care" | "hair"; hairArea?: HairArea; massage?: boolean };
 
 const mirror = "translate(320 0) scale(-1 1)";
+const eyeOffset = "translate(0 16)";
 const single = (path: string): Shape[] => [{ path }];
 const pair = (path: string): Shape[] => [{ path }, { path, transform: mirror }];
-const head = "M160 32C118 32 88 52 73 83C62 105 59 131 62 165L64 199C64 229 75 260 92 284C111 312 139 337 160 338C181 337 209 312 228 284C245 260 256 229 256 199L258 165C261 131 258 105 247 83C232 52 202 32 160 32Z";
-const neck = "M112 292C116 319 112 339 98 353C88 363 48 369 23 393H297C272 369 232 363 222 353C208 339 204 319 208 292Z";
-const ear = "M65 156C49 142 36 149 38 170C40 193 52 219 67 218L70 205Z";
-const hairSilhouette = "M160 25C112 22 75 43 57 78C42 108 40 140 42 177C43 224 36 266 44 309C56 302 71 297 83 294C79 263 82 216 75 176C69 144 67 118 81 95C100 64 125 47 160 44C195 47 220 64 239 95C253 118 251 144 245 176C238 216 241 263 237 294C249 297 264 302 276 309C284 266 277 224 278 177C280 140 278 108 263 78C245 43 208 22 160 25Z";
-const hairline = "M60 153C51 116 58 80 79 56C99 33 130 23 160 25C196 25 228 39 246 61C263 82 269 119 260 153C254 115 236 83 207 65C186 54 168 48 157 43C138 57 114 65 91 82C72 99 65 124 60 153Z";
-const eye = "M83 156C95 145 111 141 127 147C133 149 138 154 142 159C125 167 101 172 83 156Z";
-const upperLash = "M83 156C98 144 113 142 127 147C133 150 138 154 142 159";
-const lowerLash = "M85 158C101 170 124 168 140 160";
-const brow = "M79 129C91 115 110 113 124 117C134 120 140 124 143 128C132 124 124 123 115 123C101 123 92 126 79 129Z";
-const lipUpper = "M123 265C139 262 145 250 153 254C157 256 158 259 160 259C162 259 163 256 167 254C175 250 181 262 197 265C183 266 173 269 160 268C147 269 137 266 123 265Z";
-const lipLower = "M123 265C139 267 148 270 160 268C172 270 181 267 197 265C187 278 174 285 160 286C146 285 133 278 123 265Z";
+const eyePair = (path: string): Shape[] => [{ path, transform: eyeOffset }, { path, transform: `${eyeOffset} ${mirror}` }];
+const chartHeight = 350;
+const head = "M160 22C127 21 101 31 81 48C60 67 51 91 50 121C49 140 54 162 56 183C58 212 64 238 77 260C92 285 113 304 136 319C145 325 151 328 160 328C169 328 175 325 184 319C207 304 228 285 243 260C256 238 262 212 264 183C266 162 271 140 270 121C269 91 260 67 239 48C219 31 193 21 160 22Z";
+const ear = "M57 159C48 149 35 150 32 163C28 177 36 194 45 205C50 211 56 214 61 210L64 196Z";
+const hairSilhouette = "M160 15C122 13 86 25 61 49C39 72 32 102 36 141C40 165 41 191 38 225C34 259 29 289 39 318C54 305 66 300 82 300C70 274 73 241 75 205C77 173 71 137 81 101C94 66 126 45 160 42C194 45 226 66 239 101C249 137 243 173 245 205C247 241 250 274 238 300C254 300 266 305 281 318C291 289 286 259 282 225C279 191 280 165 284 141C288 102 281 72 259 49C234 25 198 13 160 15Z";
+const hairline = "M54 153C39 126 44 92 61 67C80 36 121 16 160 15C194 15 226 27 248 47C275 70 287 109 266 155C265 119 244 88 216 72C192 57 174 52 157 39C140 54 115 65 95 79C73 96 58 123 54 153Z";
+const eye = "M76 153C91 142 100 137 112 140C127 141 136 151 145 159C132 164 122 172 108 171C95 171 84 162 76 153Z";
+const upperLash = "M76 153C91 142 100 137 112 140C127 141 136 151 145 159";
+const lowerLash = "M79 156C89 168 101 173 113 170C123 169 137 162 145 159";
+const brow = "M73 129C84 117 98 111 110 112C125 112 137 120 145 127C137 126 130 122 122 120C113 117 105 117 98 119C87 121 79 127 73 129Z";
+const browHairs = "M76 127q2-3 6-5M80 125q3-4 7-6M85 123q4-5 8-7M90 121q3-5 8-7M95 120q4-5 9-7M100 119q3-5 7-7M105 118q3-4 8-5M110 118q3-4 8-4M115 119q4-3 9-3M120 120q4-2 9-2M125 121q4-1 8 0M130 123q4-1 8 1M134 124q4 0 8 2";
+const lipUpper = "M128 266C139 266 145 256 151 257C155 257 157 260 160 260C163 260 165 257 169 257C175 256 181 266 192 266C182 269 172 271 160 269C148 271 138 269 128 266Z";
+const lipLower = "M128 266C141 269 150 272 160 269C170 272 179 269 192 266C183 277 173 282 160 282C147 282 137 277 128 266Z";
+const lipSeam = "M129 266C142 269 151 271 160 269C169 271 178 269 191 266";
 const lips = [...single(lipUpper), ...single(lipLower)];
-const eyeShade = pair("M77 154C86 139 101 134 116 136C126 137 135 144 141 154C121 147 98 147 83 159Z");
-const liner = pair("M77 151C81 152 83 155 87 153C103 142 126 142 142 159C123 146 102 150 87 158C84 158 79 154 77 151Z");
-const lashes = pair("M85 156Q81 152 79 149M93 151Q90 147 89 144M102 147Q100 143 100 140M112 146Q111 141 112 139M122 148Q123 143 125 141");
+const eyeShade = eyePair("M72 152C79 137 94 128 112 130C130 132 140 144 145 157C128 149 113 144 101 145C89 146 83 153 78 157Z");
+const liner = eyePair("M69 145C74 149 78 151 83 148C95 140 104 137 115 140C128 143 139 151 145 159C134 152 126 146 115 144C103 141 91 147 79 155C75 154 71 150 69 145Z");
+const naturalLashes = "M77 153C73 150 71 145 71 142M82 149C77 146 74 142 74 138M88 146C84 143 81 138 81 135M95 142C92 138 90 134 91 132M102 140C100 137 98 134 100 130M110 140C110 137 108 133 110 131M118 142C119 138 118 135 120 133M125 145C127 142 126 139 129 137";
+const lashes = eyePair("M76 154C69 150 67 144 67 140M82 150C75 146 71 139 72 135M89 145C83 141 80 135 81 131M96 142C92 138 89 132 91 128M103 140C100 136 98 131 100 127M111 140C109 136 108 130 110 127M118 142C120 137 118 132 121 129M126 145C129 141 129 136 132 134");
+const irisFibres = Array.from({ length: 31 }, (_, index) => {
+  const angle = index * Math.PI * 2 / 31;
+  const inner = index % 3 === 0 ? 5.2 : 6.25;
+  const outer = index % 4 === 0 ? 10.7 : 11.8;
+  return `M${(Math.cos(angle) * inner).toFixed(2)} ${(Math.sin(angle) * inner).toFixed(2)}L${(Math.cos(angle + .055) * outer).toFixed(2)} ${(Math.sin(angle + .055) * outer).toFixed(2)}`;
+}).join("");
 const forehead = single("M91 103C100 69 128 53 160 53C192 53 220 69 229 103C212 126 108 126 91 103Z");
-const chin = single("M130 304C138 292 182 292 190 304C188 321 176 328 160 329C144 328 132 321 130 304Z");
-const apples = pair("M85 206C93 187 118 183 136 195C145 201 142 215 129 224C109 237 87 226 85 206Z");
-const cheekArea = pair("M71 188C82 170 113 172 144 188C158 204 144 236 122 249C97 256 76 225 71 188Z");
-const underEyes = pair("M90 170C101 175 124 175 142 165C139 181 127 192 111 194C101 193 94 185 90 170Z");
-const noseCenter = single("M155 158C159 154 164 156 166 162C169 178 167 194 171 211C176 221 174 232 165 234C153 238 145 231 149 220C154 206 152 176 155 158Z");
+const chin = single("M129 298C137 288 183 288 191 298C188 312 176 323 160 324C144 323 132 312 129 298Z");
+const apples = pair("M85 216C93 198 118 193 136 205C145 211 142 225 129 234C109 244 87 236 85 216Z");
+const cheekArea = pair("M71 197C82 180 113 183 144 198C158 214 144 242 122 252C97 258 76 234 71 197Z");
+const underEyes = eyePair("M88 170C101 178 124 177 142 166C140 181 128 192 111 195C100 194 93 186 88 170Z");
+const noseCenter = single("M156 167C159 162 164 162 166 169C169 183 166 197 171 212C175 221 168 230 161 231C153 231 147 225 150 215C155 202 153 185 156 167Z");
 const cupid = single("M149 251C152 246 157 249 160 251C163 249 168 246 171 251C169 256 151 256 149 251Z");
 const centerForehead = single("M124 85C133 71 188 71 196 85C200 96 189 114 160 115C131 114 120 96 124 85Z");
-const contourCheeks = pair("M72 208C90 204 103 218 129 232C135 238 132 243 120 243C100 241 80 230 72 218Z");
+const contourCheeks = pair("M62 219C71 218 83 223 95 230C108 237 117 243 125 249C119 251 112 250 103 247C85 241 74 234 66 228C63 225 62 222 62 219Z");
 const contourTemples = pair("M70 115C72 89 88 66 111 56C111 75 98 89 92 109C88 125 83 138 75 142Z");
-const contourJaw = pair("M65 222C72 220 76 238 87 258C106 291 127 314 150 328C135 329 110 314 91 291C74 270 66 245 65 222Z");
+const contourJaw = pair("M59 220C67 222 71 238 83 256C102 285 124 303 151 319C140 324 111 308 88 286C71 269 60 241 59 220Z");
 const contourNose = pair("M145 165C149 164 151 169 149 181C148 196 145 211 140 222C136 228 132 226 134 219C138 199 139 178 145 165Z");
 const sunSweep = single("M85 194C112 185 129 191 158 197C187 191 208 185 235 194C226 211 202 220 180 212C170 209 166 209 160 211C154 209 150 209 140 212C118 220 94 211 85 194Z");
-const highlightCheeks = pair("M87 187C97 177 116 173 136 177C126 179 110 186 94 196C87 198 84 193 87 187Z");
+const highlightCheeks = pair("M87 198C97 188 116 184 136 188C126 190 110 197 94 207C87 209 84 204 87 198Z");
 const highlightNose = [
   ...single("M156 176C158 168 163 168 165 176C167 185 166 199 163 207C161 211 158 210 156 205C154 197 154 183 156 176Z"),
   ...single("M152 224C154 219 166 219 168 224C170 229 165 232 160 232C155 232 150 229 152 224Z"),
@@ -52,7 +63,7 @@ const fullFace = single(head);
 
 const placementShapes = {
   "blush-apples": apples,
-  "blush-lifted": pair("M76 185C93 169 122 178 146 200C139 216 119 218 101 207C85 200 76 194 76 185Z"),
+  "blush-lifted": pair("M76 197C93 181 122 190 146 212C139 228 119 230 101 219C85 212 76 206 76 197Z"),
   "blush-sun-kissed": [...apples, ...sunSweep],
   "blush-under-eyes": underEyes,
   "blush-draped": pair("M66 154C78 146 90 155 92 170C100 187 136 194 142 213C131 228 107 223 91 207C78 194 66 168 66 154Z"),
@@ -82,15 +93,15 @@ const zoneNames = {
 } satisfies Record<FaceZone, [string, string]>;
 const zoneGeometry = {
   visage: fullFace, front: forehead, joues: cheekArea,
-  yeux: pair("M75 153C81 130 108 125 133 138C149 148 153 169 139 177C111 188 83 178 75 153Z"),
+  yeux: eyePair("M69 153C76 130 104 123 132 137C148 145 153 169 138 178C112 190 80 179 69 153Z"),
   levres: single(`${lipUpper} ${lipLower}`), menton: chin,
   cheveux: single(hairSilhouette),
 } satisfies Record<FaceZone, Shape[]>;
 const guideZones: FaceZone[] = ["visage", "cheveux", "front", "joues", "yeux", "levres", "menton"];
 const hairGeometry = {
-  scalp: single("M67 112C75 65 113 38 160 36C207 38 245 69 254 112"),
-  lengths: pair("M52 126C48 145 51 164 52 189C53 214 49 237 49 255"),
-  ends: pair("M48 253C45 272 44 290 47 302C55 295 61 292 69 289"),
+  scalp: single("M62 105C75 58 113 29 160 28C207 29 245 58 258 105"),
+  lengths: pair("M48 113C42 139 48 174 47 202C47 221 42 243 43 263"),
+  ends: pair("M42 254C38 278 36 299 41 311C48 304 56 300 66 298"),
 } satisfies Record<HairArea, Shape[]>;
 
 function tone(value: string | number | undefined, fallback: string) {
@@ -139,11 +150,12 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
   const skin = tone(design?.["--face-skin"], "#DCAF98");
   const iris = tone(design?.["--face-iris"], "#775043");
   const hair = tone(design?.["--face-hair"], "#60443C");
-  const ink = mix(skin, "#39231F", .72);
-  const shade = mix(skin, "#5C342B", .52);
-  const light = mix(skin, "#FFF2DD", .2);
-  const darkLip = mix(skin, "#813B46", .42);
-  const lightLip = mix(darkLip, "#E2AB99", .48);
+  const ink = mix(skin, "#35232F", .76);
+  const shade = mix(skin, "#583847", .46);
+  const warmth = mix(skin, "#B8646F", .38);
+  const light = mix(skin, "#FFF1E8", .26);
+  const darkLip = mix(skin, "#985261", .39);
+  const lightLip = mix(darkLip, "#E4AEAA", .4);
   const hairVisible = showHair || application?.kind === "hair" || (!availableZones && selected === "cheveux");
   const targets = availableZones ?? guideZones;
   const outline = placementGuide ? placementShapes[placementGuide] : undefined;
@@ -157,15 +169,15 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
   }
 
   return <svg className={className ? `${styles.face} ${className}` : styles.face} style={style}
-    viewBox="0 0 320 394" role="group" aria-labelledby={`${id}-title`}>
+    viewBox={`0 0 320 ${chartHeight}`} role="group" aria-labelledby={`${id}-title`}>
     <title id={`${id}-title`}>{t("Carte interactive des zones du visage", "Interactive face chart")}</title>
     <defs>
-      <radialGradient id={`${id}-skin`} cx="47%" cy="36%" r="69%">
-        <stop stopColor={light}/><stop offset="65%" stopColor={skin}/><stop offset="100%" stopColor={shade}/>
+      <radialGradient id={`${id}-skin`} cx="47%" cy="41%" r="68%">
+        <stop stopColor={light}/><stop offset="61%" stopColor={skin}/><stop offset="88%" stopColor={mix(skin, shade, .47)}/><stop offset="100%" stopColor={shade}/>
       </radialGradient>
-      <linearGradient id={`${id}-neck`} x1="0" x2="0" y1="0" y2="100%">
-        <stop stopColor={shade}/><stop offset="63%" stopColor={skin}/><stop offset="100%" stopColor={light}/>
-      </linearGradient>
+      <radialGradient id={`${id}-warm`}>
+        <stop stopColor={warmth} stopOpacity=".47"/><stop offset="100%" stopColor={warmth} stopOpacity="0"/>
+      </radialGradient>
       <radialGradient id={`${id}-shade`}>
         <stop stopColor={shade} stopOpacity=".47"/><stop offset="100%" stopColor={shade} stopOpacity="0"/>
       </radialGradient>
@@ -173,16 +185,24 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
         <stop stopColor={light} stopOpacity=".89"/><stop offset="100%" stopColor={light} stopOpacity="0"/>
       </radialGradient>
       <linearGradient id={`${id}-lip-upper`} x1="0" x2="0" y1="0" y2="100%">
-        <stop stopColor={mix(darkLip, "#472529", .24)}/><stop offset="100%" stopColor={darkLip}/>
+        <stop stopColor={mix(darkLip, skin, .26)}/><stop offset="80%" stopColor={darkLip}/><stop offset="100%" stopColor={mix(darkLip, ink, .13)}/>
       </linearGradient>
       <linearGradient id={`${id}-lip-lower`} x1="0" x2="0" y1="0" y2="100%">
-        <stop stopColor={darkLip}/><stop offset="58%" stopColor={lightLip}/><stop offset="100%" stopColor={darkLip}/>
+        <stop stopColor={darkLip}/><stop offset="54%" stopColor={lightLip}/><stop offset="100%" stopColor={mix(lightLip, skin, .44)}/>
       </linearGradient>
-      <radialGradient id={`${id}-iris`} cx="46%" cy="46%" r="65%">
-        <stop stopColor="#312420"/><stop offset="42%" stopColor={iris}/><stop offset="79%" stopColor={mix(iris, "#211D1B", .34)}/><stop offset="100%" stopColor="#241B19"/>
+      <radialGradient id={`${id}-iris`} cx="45%" cy="62%" r="57%">
+        <stop stopColor={mix(iris, "#EBBC9A", .33)}/><stop offset="47%" stopColor={iris}/><stop offset="79%" stopColor={mix(iris, "#25182A", .53)}/><stop offset="100%" stopColor="#251B25"/>
       </radialGradient>
       <linearGradient id={`${id}-sclera`} x1="0" x2="0" y1="0" y2="100%">
-        <stop stopColor="#D3B4A8"/><stop offset="44%" stopColor="#FBF4EA"/><stop offset="100%" stopColor="#E5CCC0"/>
+        <stop stopColor="#BD9CA1"/><stop offset="47%" stopColor="#F8ECEA"/><stop offset="100%" stopColor="#E2C4C4"/>
+      </linearGradient>
+      <linearGradient id={`${id}-lid-shadow`} x1="0" x2="0" y1="0" y2="100%">
+        <stop stopColor="#342631" stopOpacity=".45"/><stop offset="75%" stopColor="#342631" stopOpacity="0"/>
+      </linearGradient>
+      <linearGradient id={`${id}-brow`}>
+        <stop stopColor={mix(hair, skin, .55)} stopOpacity=".28"/>
+        <stop offset="41%" stopColor={mix(hair, ink, .22)} stopOpacity=".7"/>
+        <stop offset="100%" stopColor={mix(hair, skin, .41)} stopOpacity=".29"/>
       </linearGradient>
       <linearGradient id={`${id}-hair`} x1="0" x2="100%" y1="0" y2="100%">
         <stop stopColor={mix(hair, light, .3)}/><stop offset="48%" stopColor={hair}/><stop offset="100%" stopColor={mix(hair, "#271D1C", .35)}/>
@@ -190,16 +210,16 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
       <clipPath id={`${id}-head`}><path d={head}/></clipPath>
       <clipPath id={`${id}-eye-left`}><path d={eye}/></clipPath>
       <clipPath id={`${id}-eye-right`}><path d={eye} transform={mirror}/></clipPath>
-      <mask id={`${id}-complexion`} maskUnits="userSpaceOnUse" x="0" y="0" width="320" height="394">
+      <mask id={`${id}-complexion`} maskUnits="userSpaceOnUse" x="0" y="0" width="320" height={chartHeight}>
         <path d={head} fill="white"/>
-        <path d={eye} fill="black"/><path d={eye} fill="black" transform={mirror}/>
+        <path d={eye} fill="black" transform={eyeOffset}/><path d={eye} fill="black" transform={`${eyeOffset} ${mirror}`}/>
         <path d={lipUpper} fill="black"/><path d={lipLower} fill="black"/>
       </mask>
       <filter id={`${id}-feather`} x="-35%" y="-45%" width="170%" height="190%">
         <feGaussianBlur stdDeviation="2.4"/>
       </filter>
       <filter id={`${id}-diffuse`} x="-50%" y="-60%" width="200%" height="220%">
-        <feGaussianBlur stdDeviation="4.1"/>
+        <feGaussianBlur stdDeviation="5.1"/>
       </filter>
       {layers.map((layer, index) => layer.kind === "lip" ?
         <linearGradient id={`${id}-colour-${index}`} key={layer.stepId} x1="0" x2="0" y1="0" y2="100%">
@@ -207,31 +227,40 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
           <stop offset="65%" stopColor={mix(layer.hex, "#FFE4CC", .17)}/><stop offset="100%" stopColor={mix(layer.hex, "#3E202D", .24)}/>
         </linearGradient> :
         <radialGradient id={`${id}-colour-${index}`} key={layer.stepId}>
-          <stop offset="3%" stopColor={layer.hex} stopOpacity="1"/><stop offset="64%" stopColor={layer.hex} stopOpacity={layer.kind === "contour" ? ".5" : ".66"}/>
+          <stop stopColor={layer.hex} stopOpacity={layer.kind === "contour" ? ".7" : layer.kind === "blush" ? ".92" : "1"}/>
+          <stop offset="58%" stopColor={layer.hex} stopOpacity={layer.kind === "contour" ? ".44" : ".62"}/>
+          <stop offset="89%" stopColor={layer.hex} stopOpacity=".12"/>
           <stop offset="100%" stopColor={layer.hex} stopOpacity="0"/>
         </radialGradient>)}
     </defs>
 
     <g aria-hidden="true" className={styles.artwork}>
-      {hairVisible && <path d={hairSilhouette} fill={`url(#${id}-hair)`}/>}
-      <path d={neck} fill={`url(#${id}-neck)`} stroke={ink} strokeWidth=".55" strokeOpacity=".28"/>
-      <path d="M95 364C116 360 141 370 150 379M225 364C204 360 179 370 170 379" stroke={shade} strokeWidth=".9" strokeOpacity=".52" fill="none"/>
+      {hairVisible && <path d={hairSilhouette} fill={`url(#${id}-hair)`} data-hair-illustration="true"/>}
       {pair(ear).map(({ path, transform }, index) => <g key={index} transform={transform}>
-        <path d={path} fill={`url(#${id}-skin)`} stroke={ink} strokeWidth=".7" strokeOpacity=".49"/>
-        <path d="M56 159C44 152 43 171 48 184C51 194 56 207 64 206C57 197 55 189 55 182C53 176 56 171 61 173C61 165 58 160 56 159Z" fill={shade} opacity=".33"/>
-        <path d="M53 169C49 171 50 179 53 184M61 193C55 197 59 204 62 205" fill="none" stroke={ink} strokeWidth=".7" strokeOpacity=".5"/>
+        <path d={path} fill={`url(#${id}-skin)`} stroke={ink} strokeWidth=".75" strokeOpacity=".5"/>
+        <path d="M50 166C40 158 36 163 40 178C44 190 49 198 57 201C53 194 50 187 51 181C49 176 51 173 55 175C54 171 52 168 50 166Z" fill={warmth} opacity=".48"/>
+        <path d="M49 167C44 165 43 171 46 178M53 185C49 188 52 194 56 196" fill="none" stroke={shade} strokeWidth=".85" strokeOpacity=".73"/>
+        <path d="M37 166C36 172 38 178 41 182" fill="none" stroke={light} strokeWidth=".75" strokeOpacity=".85"/>
       </g>)}
-      <path d={head} fill={`url(#${id}-skin)`} stroke={ink} strokeWidth=".78" strokeOpacity=".54"/>
+      <path d={head} fill={`url(#${id}-skin)`} stroke={ink} strokeWidth=".74" strokeOpacity=".46"/>
       <g clipPath={`url(#${id}-head)`} mask={`url(#${id}-complexion)`}>
-        <ellipse cx="160" cy="92" rx="58" ry="44" fill={`url(#${id}-light)`} opacity=".6"/>
-        <ellipse cx="104" cy="211" rx="32" ry="49" transform="rotate(-27 104 211)" fill={`url(#${id}-light)`} opacity=".44"/>
-        <ellipse cx="221" cy="215" rx="35" ry="48" transform="rotate(28 221 215)" fill={`url(#${id}-shade)`} opacity=".37"/>
-        <ellipse cx="160" cy="313" rx="38" ry="19" fill={`url(#${id}-light)`} opacity=".56"/>
-        <ellipse cx="148" cy="206" rx="10" ry="44" transform="rotate(8 148 206)" fill={`url(#${id}-shade)`} opacity=".69"/>
-        <ellipse cx="172" cy="204" rx="10" ry="42" transform="rotate(-8 172 204)" fill={`url(#${id}-shade)`} opacity=".51"/>
-        <ellipse cx="159" cy="209" rx="12" ry="44" fill={`url(#${id}-light)`} opacity=".68"/>
-        <ellipse cx="160" cy="244" rx="22" ry="9" fill={`url(#${id}-shade)`} opacity=".36"/>
-        <ellipse cx="160" cy="291" rx="29" ry="9" fill={`url(#${id}-shade)`} opacity=".53"/>
+        <ellipse cx="153" cy="92" rx="82" ry="63" fill={`url(#${id}-light)`} opacity=".66"/>
+        <ellipse cx="71" cy="136" rx="25" ry="60" transform="rotate(14 71 136)" fill={`url(#${id}-shade)`} opacity=".34"/>
+        <ellipse cx="249" cy="135" rx="26" ry="61" transform="rotate(-14 249 135)" fill={`url(#${id}-shade)`} opacity=".56"/>
+        <ellipse cx="100" cy="213" rx="34" ry="39" transform="rotate(-27 100 213)" fill={`url(#${id}-light)`} opacity=".66"/>
+        <ellipse cx="219" cy="209" rx="31" ry="38" transform="rotate(27 219 209)" fill={`url(#${id}-light)`} opacity=".39"/>
+        <ellipse cx="108" cy="197" rx="37" ry="14" transform="rotate(12 108 197)" fill={`url(#${id}-warm)`} opacity=".42"/>
+        <ellipse cx="212" cy="197" rx="37" ry="14" transform="rotate(-12 212 197)" fill={`url(#${id}-warm)`} opacity=".45"/>
+        <ellipse cx="84" cy="239" rx="28" ry="43" transform="rotate(-29 84 239)" fill={`url(#${id}-shade)`} opacity=".44"/>
+        <ellipse cx="234" cy="240" rx="28" ry="43" transform="rotate(29 234 240)" fill={`url(#${id}-shade)`} opacity=".5"/>
+        <ellipse cx="160" cy="308" rx="35" ry="19" fill={`url(#${id}-light)`} opacity=".6"/>
+        <ellipse cx="150" cy="193" rx="8" ry="31" transform="rotate(9 150 193)" fill={`url(#${id}-shade)`} opacity=".53"/>
+        <ellipse cx="171" cy="192" rx="9" ry="30" transform="rotate(-9 171 192)" fill={`url(#${id}-shade)`} opacity=".58"/>
+        <ellipse cx="159" cy="199" rx="8" ry="29" fill={`url(#${id}-light)`} opacity=".74"/>
+        <ellipse cx="160" cy="222" rx="17" ry="10" fill={`url(#${id}-warm)`} opacity=".62"/>
+        <ellipse cx="160" cy="221" rx="11" ry="7" fill={`url(#${id}-light)`} opacity=".79"/>
+        <ellipse cx="160" cy="241" rx="19" ry="9" fill={`url(#${id}-shade)`} opacity=".32"/>
+        <ellipse cx="160" cy="287" rx="28" ry="8" fill={`url(#${id}-shade)`} opacity=".47"/>
       </g>
       <path d={lipUpper} fill={`url(#${id}-lip-upper)`}/>
       <path d={lipLower} fill={`url(#${id}-lip-lower)`}/>
@@ -256,34 +285,40 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
         </g>}
       </g>
       <g fill="none" stroke={ink} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M151 175C149 188 147 203 143 216M170 176C172 194 174 207 177 216" strokeWidth=".78" opacity=".29"/>
-        <path d="M143 220C137 224 137 231 143 233M177 220C183 224 183 231 177 233M150 230C155 230 156 235 160 235C164 235 165 230 170 230" strokeWidth=".9" opacity=".58"/>
-        <path d="M143 230C145 227 148 227 150 229M177 230C175 227 172 227 170 229" strokeWidth="1.38" opacity=".62"/>
-        <path d="M124 265C140 266 148 269 160 268C172 269 183 266 196 265" strokeWidth=".96" opacity=".72"/>
-        <path d="M143 276C151 280 168 280 178 276" stroke={mix(lightLip, "#FAE4D7", .45)} strokeWidth="1.04" opacity=".53"/>
+        <path d="M151 183C150 195 149 204 146 211M169 185C170 195 172 206 175 212" strokeWidth=".59" opacity=".25"/>
+        <path d="M145 217C140 221 140 227 145 229M175 217C179 221 180 226 175 229" strokeWidth=".72" opacity=".46"/>
+        <path d="M152 226C155 227 157 230 160 230C163 230 165 227 168 226" strokeWidth=".8" opacity=".62"/>
+        <path d={lipSeam} strokeWidth=".84" opacity=".66"/>
+        <path d="M144 275C151 278 160 279 169 277M173 276L177 275" stroke={mix(lightLip, "#FBE6EB", .42)} strokeWidth=".86" opacity=".61"/>
       </g>
-      {[false, true].map((rightEye) => {
-        const centre = rightEye ? 207 : 113;
+      {pair("M145 224C147 221 152 220 154 223C152 225 149 226 145 224Z").map(({ path, transform }, index) =>
+        <path d={path} transform={transform} fill={ink} opacity=".74" key={index}/>)}
+      <g transform={eyeOffset}>{[false, true].map((rightEye) => {
+        const centre = rightEye ? 207.8 : 112.2;
         const transform = rightEye ? mirror : undefined;
         return <g key={String(rightEye)}>
-          <path d={brow} transform={transform} fill={mix(hair, ink, .34)} opacity=".93"/>
-          <path d="M88 125L92 122M95 123L99 119M102 122L105 118M109 122L112 118M116 122L119 119M123 123L126 121M130 124L133 123" transform={transform}
-            fill="none" stroke={mix(hair, light, .32)} strokeWidth=".58" opacity=".7"/>
-          <path d="M83 148C96 134 122 134 139 150" transform={transform} fill="none" stroke={ink} strokeWidth=".69" opacity=".46"/>
+          <ellipse cx={centre} cy="129" rx="31" ry="8.5" fill={`url(#${id}-shade)`} opacity=".37"/>
+          <path d={brow} transform={transform} fill={`url(#${id}-brow)`}/>
+          <path d={browHairs} transform={transform} fill="none" stroke={mix(hair, ink, .3)} strokeWidth=".56" opacity=".65"/>
+          <path d="M79 141C93 128 109 124 124 132C133 135 141 143 145 150" transform={transform}
+            fill="none" stroke={ink} strokeWidth=".69" opacity=".43"/>
           <path d={eye} transform={transform} fill={`url(#${id}-sclera)`}/>
           <g clipPath={`url(#${id}-eye-${rightEye ? "right" : "left"})`}>
-            <circle cx={centre} cy="155.5" r="11" fill={`url(#${id}-iris)`}/>
-            <circle cx={centre} cy="155.3" r="4.4" fill="#231A18"/>
-            <circle cx={centre - 3.2} cy="151.2" r="2" fill="#FFFBF3" opacity=".92"/>
-            <circle cx={centre + 3.2} cy="161.4" r=".9" fill="#FFF0DE" opacity=".72"/>
+            <circle cx={centre} cy="154.5" r="13.2" fill={`url(#${id}-iris)`} stroke={mix(iris, "#2B1C2A", .65)} strokeWidth=".9"/>
+            <path d={irisFibres} transform={`translate(${centre} 154.5)`} fill="none" stroke={mix(iris, "#F8D2B5", .48)} strokeOpacity=".59" strokeWidth=".45"/>
+            <circle cx={centre} cy="154.5" r="4.8" fill="#221924"/>
+            <path d={eye} transform={transform} fill={`url(#${id}-lid-shadow)`}/>
+            <ellipse cx={centre - 3.8} cy="149.9" rx="2.25" ry="1.65" transform={`rotate(-20 ${centre - 3.8} 149.9)`} fill="#FFFAF5" opacity=".95"/>
+            <circle cx={centre + 3.9} cy="160.4" r=".85" fill="#FDE7EF" opacity=".78"/>
+            <path d="M141 156L146 159L140 163" transform={transform} fill="#C4858D" opacity=".55"/>
           </g>
-          <path d={upperLash} transform={transform} fill="none" stroke={mix(hair, "#281F1D", .45)} strokeWidth="1.42"/>
-          <path d={lowerLash} transform={transform} fill="none" stroke={ink} strokeWidth=".67" opacity=".58"/>
-          <path d="M85 156Q81 153 80 150M91 152Q87 149 87 147M96 149Q94 147 94 145" transform={transform}
-            fill="none" stroke={mix(hair, "#291F1C", .44)} strokeWidth=".75" opacity=".76"/>
-          <path d="M139 158L142 159L139 161" transform={transform} fill="none" stroke="#AD6D66" strokeWidth=".64" opacity=".76"/>
+          <path d={upperLash} transform={transform} fill="none" stroke={mix(hair, "#211725", .61)} strokeWidth="1.72"/>
+          <path d={naturalLashes} transform={transform} fill="none" stroke={mix(hair, "#291E32", .53)} strokeWidth=".92" opacity=".86"/>
+          <path d={lowerLash} transform={transform} fill="none" stroke={ink} strokeWidth=".69" opacity=".61"/>
+          <path d="M82 159C91 170 104 174 116 172C125 171 135 166 141 162" transform={transform}
+            fill="none" stroke={warmth} strokeWidth=".83" opacity=".55"/>
         </g>;
-      })}
+      })}</g>
       {hairVisible && <>
         <path d={hairline} fill={`url(#${id}-hair)`}/>
         <path d="M159 44C132 58 113 54 89 75M162 42C192 44 228 63 243 96M49 153C45 214 52 239 47 269M269 154C272 217 266 242 273 269" fill="none" stroke={mix(hair, light, .35)} strokeWidth=".7" opacity=".63"/>

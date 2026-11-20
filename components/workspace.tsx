@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
-import { BookOpen, Brush, CalendarCheck, ClipboardList, Download, House, Layers, ListChecks, LogIn, LogOut, Plus, Search, Settings, ShoppingBag, X } from "lucide-react";
-import { Catalog, Inventory, ProductEditor } from "./inventory";
+import { BookOpen, Brush, CalendarCheck, ChevronDown, ClipboardList, Download, Globe, House, Layers, ListChecks, LogIn, LogOut, Search, Settings, ShoppingBag, X } from "lucide-react";
+import { Catalog, Inventory } from "./inventory";
 import { Palette } from "./palette";
 import { HomeDiscovery } from "./home-discovery";
 import { MakeupStudio } from "./makeup-studio";
@@ -52,23 +52,26 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   const [view, setView] = useState<View>("accueil");
   const [studioTab, setStudioTab] = useState<"look" | "photo">("look");
   const [catalogue, setCatalogue] = useState({ query: "", revision: 0 });
-  const [productEditor, setProductEditor] = useState<Product | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [guide, setGuide] = useState<string>();
   const [auth, setAuth] = useState(false);
   const accountDialog = useRef<HTMLDialogElement>(null);
   const conflictDialog = useRef<HTMLDialogElement>(null);
   const content = useRef<HTMLElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const onHistoryChange = () => {
       const next = readView(portable);
       setView(next);
-      if (next === "catalogue") setCatalogue((current) => current.query ? { query: "", revision: current.revision + 1 } : current);
+      if (next === "catalogue") {
+        setCatalogue((current) => current.query ? { query: "", revision: current.revision + 1 } : current);
+        setSearchTerm("");
+      }
       setStudioTab(location.hash === "#palette" ? "photo" : "look");
       setSelected(null);
       setGuide(undefined);
-      setProductEditor(null);
     };
     onHistoryChange();
     window.addEventListener("popstate", onHistoryChange);
@@ -99,14 +102,12 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   useEffect(() => {
     setSelected(null);
     setGuide(undefined);
-    setProductEditor(null);
   }, [activeAccount]);
 
   function navigate(next: View, focus = true) {
     setView(next);
     setStudioTab("look");
     setSelected(null);
-    setProductEditor(null);
     setGuide(undefined);
     setNotice("");
     if (location.hash !== `#${next}`) history.pushState(null, "", `#${next}`);
@@ -121,24 +122,26 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     else navigate(next);
   }
 
-  function openCatalogue(query = "") {
+  function openCatalogue(query = "", focusSearch = false) {
+    setSearchTerm(query);
     setCatalogue((current) => ({ query, revision: current.revision + 1 }));
-    navigate("catalogue");
+    navigate("catalogue", !focusSearch);
+    if (focusSearch) searchInput.current?.focus();
+  }
+
+  function clearSearch() {
+    setSearchTerm("");
+    if (view === "catalogue") setCatalogue((current) => ({ query: "", revision: current.revision + 1 }));
+    searchInput.current?.focus();
   }
 
   function saveProduct(product: Product) {
-    const saved = update((previous) => ({
-      ...previous,
-      products: previous.products.some(({ id }) => id === product.id)
-        ? previous.products.map((item) => item.id === product.id ? product : item)
-        : [product, ...previous.products],
-    }));
-    if (saved) {
-      if (productEditor) setSelected(product.id);
-      setProductEditor(null);
-      setNotice(t(`« ${product.name} » enregistré.`, `“${product.name}” saved.`));
-    }
-    return saved;
+    const barcode = product.barcode?.padStart(14, "0");
+    return update((previous) => {
+      const alreadySaved = previous.products.some((item) => item.id === product.id ||
+        Boolean(barcode && item.barcode?.padStart(14, "0") === barcode));
+      return alreadySaved ? previous : { ...previous, products: [product, ...previous.products] };
+    });
   }
 
   function removeProduct(id: string) {
@@ -147,7 +150,6 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
       products: previous.products.filter((item) => item.id !== id),
       routines: previous.routines.map((routine) => ({ ...routine, steps: routine.steps.filter((step) => step.productId !== id) })),
     }))) return;
-    setProductEditor(null);
     setSelected(null);
     setNotice(t("Produit supprimé.", "Product removed."));
   }
@@ -198,25 +200,27 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
           aria-current={view === "accueil" ? "page" : undefined} onClick={(event) => navClick(event, "accueil")}>Navier</a>
         <form className="toolbar-search search-field" role="search" aria-label={t("Rechercher des produits", "Find products")} onSubmit={(event) => {
           event.preventDefault();
-          const query = String(new FormData(event.currentTarget).get("query") ?? "").trim();
-          openCatalogue(query);
+          openCatalogue(searchTerm.trim());
         }}>
-          <input name="query" type="search" maxLength={120}
+          <input ref={searchInput} name="query" type="search" maxLength={120} spellCheck={false}
+            value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)}
             aria-label={t("Nom du produit, marque ou code-barres", "Product name, brand or barcode")}
             placeholder={t("Nom du produit, marque ou code-barres", "Product name, brand or barcode")}/>
+          {searchTerm && <button className="toolbar-search-clear" type="button" onClick={clearSearch}
+            aria-label={t("Effacer la recherche", "Clear search")}><X size={15} aria-hidden="true"/></button>}
           <button className="toolbar-search-button" type="submit" aria-label={t("Lancer la recherche", "Search catalogue")}>
             <Search size={18} strokeWidth={1.8} aria-hidden="true"/>
           </button>
         </form>
         <div className="header-actions">
-          <div className="language-switch" role="group" aria-label={t("Langue de l’interface", "Interface language")}>
-            {localeOptions.map(({ value, name }) => (
-              <button key={value} type="button" lang={value} aria-label={`${value.toUpperCase()}, ${name}`} title={name}
-                aria-pressed={locale === value} disabled={!ready} onClick={() => switchLanguage(value)}>
-                {value.toUpperCase()}
-              </button>
-            ))}
-          </div>
+          <label className="language-select">
+            <Globe size={16} strokeWidth={1.7} aria-hidden="true"/>
+            <select aria-label={t("Langue de l’interface", "Interface language")} value={locale} disabled={!ready}
+              onChange={(event) => { if (isLocale(event.target.value)) switchLanguage(event.target.value); }}>
+              {localeOptions.map(({ value, name }) => <option key={value} value={value} lang={value}>{name}</option>)}
+            </select>
+            <ChevronDown size={14} aria-hidden="true"/>
+          </label>
           <a className={`icon-button header-settings${view === "preferences" ? " nav-current" : ""}`} href="#preferences"
             aria-label={label("preferences")} aria-current={view === "preferences" ? "page" : undefined}
             onClick={(event) => navClick(event, "preferences")}><Settings size={19} strokeWidth={1.7} aria-hidden="true"/></a>
@@ -254,16 +258,15 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
           {view === "accueil" && <HomeDiscovery state={state} onNavigate={(route) => route === "catalogue" ? openCatalogue() : navigate(route)}
             onProduct={(id) => { navigate("vanity"); setSelected(id); }}
             onRoutine={(routine) => { navigate("routines"); if (routine.steps.length) setGuide(routine.id); }}/>}
-          {view === "catalogue" && <Catalog key={catalogue.revision} initialQuery={catalogue.query} currentProducts={state.products} onSave={saveProduct} portable={portable}/>}
+          {view === "catalogue" && <Catalog key={catalogue.revision} initialQuery={catalogue.query} currentProducts={state.products}
+            onSave={saveProduct} portable={portable}
+            onOpenProduct={(id) => { navigate("vanity"); setSelected(id); }}/>}
           {view === "vanity" && <>
-            {!productEditor && <div className="page-heading">
+            <div className="page-heading">
               <div><h1>{t("Mes produits", "My products")}</h1><p>{t("Les produits que tu as enregistrés.", "Products you’ve saved.")}</p></div>
-              <button className="button button-primary" type="button" onClick={() => openCatalogue()}><Plus size={17}/>{t("Ajouter un produit", "Add a product")}</button>
-            </div>}
-            {productEditor
-              ? <ProductEditor product={productEditor} currentProducts={state.products} onCancel={() => setProductEditor(null)} onSave={saveProduct}/>
-              : <Inventory products={state.products} preferences={state.preferences} selected={selected}
-                onSelect={setSelected} onEdit={setProductEditor} onRemove={removeProduct}/>}
+              <button className="button button-primary" type="button" onClick={() => openCatalogue("", true)}><Search size={17} aria-hidden="true"/>{t("Chercher un produit", "Find a product")}</button>
+            </div>
+            <Inventory products={state.products} preferences={state.preferences} selected={selected} onSelect={setSelected} onRemove={removeProduct}/>
           </>}
           {view === "routines" && <Routines products={state.products} routines={state.routines} preferences={state.preferences} palette={state.palette}
             onChange={(routines) => update((previous) => ({ ...previous, routines }))}

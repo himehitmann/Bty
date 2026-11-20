@@ -1,5 +1,5 @@
 .site {
-  --site-paper: var(--background);
+  --site-paper: var(--surface);
   --site-white: var(--surface);
   --site-ink: var(--ink);
   --site-muted: var(--muted);
@@ -50,9 +50,9 @@
 
 .wordmark,
 .footerMark {
-  color: var(--site-ink);
-  font: 400 2rem/1 var(--display, Georgia, serif);
-  letter-spacing: -.04em;
+  color: var(--plum);
+  font: 800 2.05rem/.96 var(--display);
+  letter-spacing: -.055em;
   text-decoration: none;
 }
 
@@ -117,11 +117,12 @@
   margin-block-end: clamp(24px, 5vw, 54px);
   padding: clamp(24px, 6vw, 76px);
   border-radius: 22px;
-  background: linear-gradient(125deg, #f5e7d6, #ecd0bd);
+  color: #fff;
+  background: linear-gradient(122deg, var(--plum) 22%, #4b2b73 100%);
 }
 
 .heroCopy {
-  max-width: 44rem;
+  max-width: 49rem;
 }
 
 .hero h1,
@@ -133,7 +134,9 @@
 }
 
 .hero h1 {
-  font: 400 clamp(2.75rem, 7vw, 5.1rem)/.98 var(--display, Georgia, serif);
+  font: 780 clamp(2.35rem, 6vw, 4.8rem)/1.02 var(--display);
+  letter-spacing: -.043em;
+  word-spacing: .02em;
 }
 
 .heroCopy p,
@@ -144,6 +147,28 @@
   color: var(--site-muted);
   font-size: 1rem;
   line-height: 1.6;
+}
+
+.heroCopy p { color: #eee4f6; }
+
+.hero :is(.primary, .secondary):focus-visible { outline-color: #fff; }
+.hero .primary {
+  border-color: #fff;
+  color: var(--plum);
+  background: #fff;
+}
+.hero .primary:hover {
+  border-color: var(--lavender);
+  background: var(--lavender);
+}
+.hero .secondary {
+  border-color: #ba9ed1;
+  color: #fff;
+  background: transparent;
+}
+.hero .secondary:hover {
+  border-color: #fff;
+  background: #ffffff21;
 }
 
 .actions {
@@ -204,7 +229,7 @@
   display: inline-flex;
   flex: 0 0 auto;
   margin-block-start: .1rem;
-  color: var(--site-muted);
+  color: var(--brand);
 }
 
 .featureList h3 {
@@ -228,7 +253,7 @@
   padding: clamp(19px, 4vw, 38px);
   border: 1px solid var(--site-edge);
   border-radius: 10px;
-  background: var(--site-white);
+  background: var(--background);
 }
 
 .closing a {
@@ -257,4 +282,10 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+@media (max-width: 460px) {
+  .headerInner { column-gap: 12px; }
+  .nav { column-gap: 10px; }
+  .nav .navAction { padding-inline: 10px; }
 }

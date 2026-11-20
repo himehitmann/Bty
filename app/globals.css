@@ -1,36 +1,32 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: "Instrument Sans";
-  src: url("/fonts/instrument-sans.woff2") format("woff2");
-  font-weight: 400 700;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Hedvig Letters Serif";
-  src: url("/fonts/hedvig-letters-serif.woff2") format("woff2");
-  font-weight: 400;
+  font-family: "Bricolage Grotesque";
+  src: url("/fonts/bricolage-grotesque.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 800;
   font-display: swap;
 }
 
 :root {
-  --ink: #302521;
-  --muted: #67554d;
-  --brand: #793c3e;
-  --brand-dark: #5d292c;
-  --line: #e7d9cc;
-  --surface: #fffdf9;
-  --background: #f8f1e8;
-  --lavender: #f3e5dc;
-  --sage: #dce5d1;
-  --terracotta: #be634b;
-  --display: "Hedvig Letters Serif", Georgia, serif;
+  --ink: #201826;
+  --muted: #595366;
+  --brand: #5632c1;
+  --brand-dark: #382375;
+  --line: #e7e2ec;
+  --surface: #fff;
+  --background: #f7f5fa;
+  --lavender: #efe7fd;
+  --plum: #2b172d;
+  --cornflower: #7186f7;
+  --violet: #ac60ea;
+  --magenta: #da67ac;
   --workspace-gutter: clamp(1rem, 4.2vw, 3rem);
-  --sans: "Instrument Sans", system-ui, sans-serif;
+  --sans: "Bricolage Grotesque", system-ui, sans-serif;
+  --display: var(--sans);
   --serif: var(--display);
   color: var(--ink);
-  background: var(--background);
+  background: var(--surface);
   font-family: var(--sans);
   font-synthesis: none;
 }
@@ -73,7 +69,7 @@ svg { flex-shrink: 0; }
 }
 .workspace-masthead {
   display: grid;
-  grid-template-columns: 1fr minmax(17rem, 29rem) 1fr;
+  grid-template-columns: minmax(max-content, 1fr) minmax(16rem, 29rem) minmax(max-content, 1fr);
   grid-template-areas: "wordmark search utilities";
   align-items: center;
   gap: 16px;
@@ -85,8 +81,8 @@ svg { flex-shrink: 0; }
   justify-self: start;
   padding: 2px 4px 5px;
   border-radius: 6px;
-  color: var(--brand-dark);
-  font: 400 2.4rem/1 var(--display);
+  color: var(--plum);
+  font: 800 2.32rem/.96 var(--display);
   letter-spacing: -.055em;
   text-decoration: none;
 }
@@ -103,7 +99,11 @@ svg { flex-shrink: 0; }
   min-height: 39px;
   font-size: .875rem;
 }
-.toolbar-search-button {
+.workspace-masthead .toolbar-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.toolbar-search-button, .toolbar-search-clear {
   display: grid;
   place-items: center;
   width: 36px;
@@ -112,7 +112,8 @@ svg { flex-shrink: 0; }
   border-radius: 50%;
   color: var(--brand);
 }
-.toolbar-search-button:hover { background: var(--lavender); }
+.toolbar-search-clear { color: var(--muted); }
+.toolbar-search-button:hover, .toolbar-search-clear:hover { background: var(--lavender); }
 .header-actions {
   display: flex;
   grid-area: utilities;
@@ -121,26 +122,45 @@ svg { flex-shrink: 0; }
   justify-content: flex-end;
   gap: 8px;
 }
-.language-switch {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+.language-select {
+  position: relative;
+  display: inline-grid;
   flex: none;
-  padding: 3px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 100px;
+  color: var(--plum);
+  background: var(--surface);
+}
+.language-select:hover {
+  border-color: #c9b8e5;
   background: var(--background);
 }
-.language-switch button {
-  min-width: 39px;
-  min-height: 34px;
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: .76rem;
-  font-weight: 650;
+.language-select > svg {
+  position: absolute;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
-.language-switch button:hover { color: var(--brand); background: var(--lavender); }
-.language-switch button[aria-pressed="true"] { color: #fff; background: var(--brand); }
+.language-select > svg:first-child { inset-inline-start: 11px; }
+.language-select > svg:last-child { inset-inline-end: 9px; }
+.language-select select {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 28px 0 32px;
+  border: 0;
+  border-radius: inherit;
+  color: inherit;
+  background: transparent;
+  font-size: .85rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.language-select select:disabled {
+  opacity: .55;
+  cursor: default;
+}
 .workspace-header .account-control { min-height: 40px; }
 .workspace-header .header-settings { border-radius: 50%; }
 .workspace-navigation { border-top: 1px solid var(--line); }
@@ -167,8 +187,8 @@ svg { flex-shrink: 0; }
 .nav-link:hover { background: var(--background); color: var(--brand-dark); }
 .nav-current, .nav-current:hover { background: var(--lavender); color: var(--brand-dark); font-weight: 680; }
 .nav-link[href="#studio"] svg { color: var(--brand); }
-.nav-link[href="#routines"] svg { color: #915141; }
-.nav-link[href="#listes"] svg { color: #52644a; }
+.nav-link[href="#routines"] svg { color: #384eab; }
+.nav-link[href="#listes"] svg { color: #8e357a; }
 
 .main-shell { min-width: 0; flex: 1; background: var(--surface); }
 .main-content {
@@ -197,7 +217,7 @@ svg { flex-shrink: 0; }
 .page-heading h1, .privacy-page h1 {
   font-family: var(--display);
   font-size: clamp(1.95rem, 3.6vw, 2.9rem);
-  font-weight: 400;
+  font-weight: 730;
   line-height: 1.08;
   letter-spacing: -.045em;
   overflow-wrap: anywhere;
@@ -259,7 +279,7 @@ svg { flex-shrink: 0; }
 .button-primary { background: var(--brand); color: #fff; }
 .button-primary:hover:not(:disabled) { background: var(--brand-dark); }
 .button-secondary { background: var(--surface); border-color: var(--line); color: var(--ink); }
-.button-secondary:hover:not(:disabled) { background: var(--background); border-color: #c9ad9d; }
+.button-secondary:hover:not(:disabled) { background: var(--background); border-color: #c9b8e5; }
 .button-danger { background: #8d3641; color: #fff; }
 .button-danger:hover:not(:disabled) { background: #752530; }
 .icon-button {
@@ -395,7 +415,7 @@ svg { flex-shrink: 0; }
     gap: 9px 10px;
     padding-block: 10px 12px;
   }
-  .brand { font-size: 2.4rem; }
+  .brand { font-size: 2.18rem; }
   .workspace-navigation-inner { justify-content: flex-start; }
   .nav-link { min-height: 38px; font-size: .82rem; }
 }
@@ -413,9 +433,11 @@ svg { flex-shrink: 0; }
     grid-template-columns: minmax(4.9rem, 1fr) minmax(0, auto);
     column-gap: 8px;
   }
-  .brand { font-size: clamp(1.6rem, 7.1vw, 2.05rem); }
+  .brand { font-size: clamp(1.64rem, 7.2vw, 2.05rem); }
   .header-actions { max-width: 100%; flex-wrap: wrap; gap: 4px; }
-  .language-switch button { min-width: 32px; }
+  .language-select select { padding-inline-start: 29px; padding-inline-end: 24px; }
+  .language-select > svg:first-child { inset-inline-start: 9px; }
+  .language-select > svg:last-child { inset-inline-end: 6px; }
   .workspace-header .header-settings { width: 38px; height: 38px; }
   .workspace-header .account-control { min-height: 38px; padding-inline: 8px; }
   .form-grid { grid-template-columns: 1fr; }

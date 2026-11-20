@@ -35,7 +35,7 @@ const features = [
   {
     icon: ScanBarcode,
     title: ["Retrouver un produit", "Find a product"],
-    description: ["Cherche par nom, marque ou code-barres. Consulte les informations disponibles et ajoute tes propres notes.", "Search by name, brand or barcode. See the available product information and add your own notes."],
+    description: ["Lance une recherche par nom, marque ou code-barres. Consulte les photos quand elles sont disponibles et ajoute directement un résultat à tes produits.", "Search by name, brand or barcode. See photos when available and save a result directly to your products."],
   },
 ];
 
