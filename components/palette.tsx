@@ -27,7 +27,7 @@ type PaletteProps = {
   colors: PaletteColor[];
   onChange: (recipe: (colors: PaletteColor[]) => PaletteColor[]) => boolean | void;
   onUpload?: (file: File) => Promise<{ path: string; url: string }>;
-  onRemovePhoto?: (path: string) => Promise<void>;
+  onDiscardUpload?: (path: string) => Promise<void>;
   onResolvePhoto?: (path: string) => Promise<string>;
 };
 
@@ -137,7 +137,7 @@ function boundedPoint(x: number, y: number, { width, height }: ImageData): Point
   };
 }
 
-export function Palette({ colors, onChange, onUpload, onRemovePhoto, onResolvePhoto }: PaletteProps) {
+export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolvePhoto }: PaletteProps) {
   const uploader = useRef<HTMLInputElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const photoTask = useRef<AbortController | null>(null);
@@ -276,14 +276,16 @@ export function Palette({ colors, onChange, onUpload, onRemovePhoto, onResolvePh
     setNotice("");
 
     try {
-      let photoPath = savePhoto && (onUpload || onResolvePhoto) ? photo.path : undefined;
+      let photoPath = savePhoto && photo.path && colors.some((color) => color.photoPath === photo.path)
+        ? photo.path : undefined;
+      let uploadedPath: string | undefined;
       let photoFailed = false;
 
       if (onUpload && savePhoto && !photoPath) {
         try {
           const { path } = await onUpload(await encodePhoto(photo));
           photoPath = path;
-          setPhoto({ ...photo, path });
+          uploadedPath = path;
         } catch {
           photoFailed = true;
         }
@@ -291,7 +293,12 @@ export function Palette({ colors, onChange, onUpload, onRemovePhoto, onResolvePh
 
       const title = name.trim() || selected;
       const swatch = { id: crypto.randomUUID(), hex: selected, name: title, photoPath };
-      if (onChange((existing) => [swatch, ...existing]) === false) return;
+      if (onChange((existing) => [swatch, ...existing]) === false) {
+        if (uploadedPath) void onDiscardUpload?.(uploadedPath).catch(() => {});
+        setError("La teinte n’a pas pu être ajoutée.");
+        return;
+      }
+      if (uploadedPath) setPhoto({ ...photo, path: uploadedPath });
       setName("");
       setNotice(`${title} a été ajoutée à tes teintes.`);
       if (photoFailed) setError("La teinte est enregistrée. La copie de la photo dans ton compte a échoué.");
@@ -303,7 +310,7 @@ export function Palette({ colors, onChange, onUpload, onRemovePhoto, onResolvePh
     }
   }
 
-  async function removeColor(color: PaletteColor) {
+  function removeColor(color: PaletteColor) {
     if (savePending.current) return;
     if (onChange((existing) => existing.filter((item) => item.id !== color.id)) === false) return;
     setEditing((active) => active?.id === color.id ? null : active);
@@ -311,17 +318,8 @@ export function Palette({ colors, onChange, onUpload, onRemovePhoto, onResolvePh
     setNotice(`${color.name} a été retirée.`);
 
     const path = color.photoPath;
-    if (!path || !onRemovePhoto || colors.some((item) => item.id !== color.id && item.photoPath === path)) return;
-    savePending.current = true;
-    setSaving(true);
-    try {
-      await onRemovePhoto(path);
+    if (path && !colors.some((item) => item.id !== color.id && item.photoPath === path)) {
       setPhoto((active) => active?.path === path ? { ...active, path: undefined } : active);
-    } catch {
-      setError("La suppression de la photo associée a échoué.");
-    } finally {
-      savePending.current = false;
-      setSaving(false);
     }
   }
 

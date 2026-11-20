@@ -7,7 +7,7 @@ import { Palette } from "./palette";
 import { Routines } from "./routines";
 import { Tutorials } from "./tutorials";
 import { emptyState, preferenceSchema, type Product, type Routine, type State } from "@/lib/model";
-import { getPalettePhotoUrl, uploadPalettePhoto } from "@/lib/supabase/browser";
+import { getPalettePhotoUrl, removePalettePhoto, uploadPalettePhoto } from "@/lib/supabase/browser";
 import { useWorkspaceState } from "@/lib/use-workspace";
 
 const navigation = [
@@ -144,10 +144,11 @@ export function Workspace() {
   }
 
   function createFromTutorial(routine: Routine) {
-    if (state.routines.length >= 100) { setNotice("Tu as atteint la limite de 100 routines."); return; }
-    if (!update((previous) => ({ ...previous, routines: [...previous.routines, routine] }))) return;
+    if (state.routines.length >= 100) { setNotice("Tu as atteint la limite de 100 routines."); return false; }
+    if (!update((previous) => ({ ...previous, routines: [...previous.routines, routine] }))) return false;
     navigate("routines");
     setNotice(`Routine « ${routine.name} » ajoutée.`);
+    return true;
   }
 
   const activeAccount = user?.id;
@@ -236,6 +237,7 @@ export function Workspace() {
                 {view === "palette" && <Palette key={user?.id ?? "guest"} colors={state.palette}
                   onChange={(apply) => update((previous) => ({ ...previous, palette: apply(previous.palette) }), user?.id ?? null)}
                   onUpload={client && user ? (file) => uploadPalettePhoto(client, user.id, file) : undefined}
+                  onDiscardUpload={client && user ? (path) => removePalettePhoto(client, path) : undefined}
                   onResolvePhoto={client && user ? (path) => getPalettePhotoUrl(client, path) : undefined}
                 />}
                 {view === "tutoriels" && <Tutorials products={state.products} onCreateRoutine={createFromTutorial}/>}

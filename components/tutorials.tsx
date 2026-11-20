@@ -179,7 +179,7 @@ function matchesProduct(step: TutorialStep, product: Product) {
 type TutorialCardProps = {
   tutorial: Tutorial;
   products: Product[];
-  onCreateRoutine: (routine: Routine) => void;
+  onCreateRoutine: (routine: Routine) => boolean;
 };
 
 function TutorialCard({ tutorial, products, onCreateRoutine }: TutorialCardProps) {
@@ -217,13 +217,13 @@ function TutorialCard({ tutorial, products, onCreateRoutine }: TutorialCardProps
 
     if (!steps.length) return;
 
-    onCreateRoutine({
+    const createdRoutine = onCreateRoutine({
       id: crypto.randomUUID(),
       name: tutorial.title,
       period: tutorial.period,
       steps,
     });
-    setCreated(true);
+    if (createdRoutine) setCreated(true);
   }
 
   return (
@@ -295,7 +295,7 @@ function TutorialCard({ tutorial, products, onCreateRoutine }: TutorialCardProps
 
 export function Tutorials({ products, onCreateRoutine }: {
   products: Product[];
-  onCreateRoutine: (routine: Routine) => void;
+  onCreateRoutine: (routine: Routine) => boolean;
 }) {
   const heading = useId();
 

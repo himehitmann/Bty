@@ -6,11 +6,30 @@ const retinoid = /^(retinol|retinal|retinyl palmitate|retinyl acetate|hydroxypin
 const exfoliant = /^(glycolic acid|lactic acid|mandelic acid|salicylic acid|gluconolactone|lactobionic acid)\b/;
 
 export function ingredientList(ingredients: string) {
-  return ingredients.split(/[,;\n]+/).map((ingredient) => ingredient.trim()).filter(Boolean);
+  const entries: string[] = [];
+  let start = 0;
+  let depth = 0;
+  for (let index = 0; index < ingredients.length; index += 1) {
+    const character = ingredients[index];
+    if (character === "(") depth += 1;
+    if (character === ")") depth = Math.max(0, depth - 1);
+    if (depth > 0 || !/[,;\n]/.test(character)) continue;
+
+    // INCI locants can have internal commas, as in 1,2-Hexanediol.
+    if (character === "," && /\d/.test(ingredients[index - 1] ?? "") && /\d/.test(ingredients[index + 1] ?? "")) continue;
+    entries.push(ingredients.slice(start, index).trim());
+    start = index + 1;
+  }
+  entries.push(ingredients.slice(start).trim());
+  return entries.filter(Boolean);
+}
+
+function ingredientNames(ingredients: string) {
+  return ingredientList(ingredients.replace(/[()]/g, ",")).map(normalize);
 }
 
 export function analyzeProduct(product: Product, preferences: Preferences) {
-  const entries = ingredientList(product.ingredients).map(normalize);
+  const entries = ingredientNames(product.ingredients);
   if (!entries.length) return ["Composition indisponible. Consulte la liste sur l’emballage avant de tirer une conclusion."];
   const notes: string[] = [];
   const excluded = ingredientList(preferences.avoid);
@@ -29,7 +48,7 @@ export function analyzeRoutine(routine: Routine, products: Product[], preference
     const product = products.find((item) => item.id === step.productId);
     return product ? [product] : [];
   });
-  const entries = ordered.map((product) => ingredientList(product.ingredients).map(normalize));
+  const entries = ordered.map((product) => ingredientNames(product.ingredients));
   const retinoids = entries.flatMap((list, index) => list.some((entry) => retinoid.test(entry)) ? [index] : []);
   const exfoliants = entries.flatMap((list, index) => list.some((entry) => exfoliant.test(entry)) ? [index] : []);
   const notes: string[] = [];

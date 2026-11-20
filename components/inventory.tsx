@@ -147,9 +147,9 @@ export function ProductDialog({ product, currentProducts, onClose, onSave }: {
       setError("Ce code-barres est déjà enregistré dans ton vanity.");
       return;
     }
-    const ingredientsEdited = Boolean(draft && draft.ingredients !== parsed.data.ingredients);
+    const sourceChanged = draft && (draft.ingredients !== parsed.data.ingredients || draft.barcode !== parsed.data.barcode);
     const saved = onSave({ ...draft, ...parsed.data, id: product?.id ?? crypto.randomUUID(),
-      source: ingredientsEdited ? "manuel" : draft?.source ?? "manuel" });
+      source: sourceChanged ? "manuel" : draft?.source ?? "manuel" });
     if (!saved) setError("Ce produit n’a pas été enregistré. Vérifie la taille de ton inventaire et raccourcis la composition si nécessaire.");
   }
 
