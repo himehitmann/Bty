@@ -10,6 +10,7 @@ import { FaceChart } from "./face-chart";
 import styles from "./makeup-studio.module.css";
 
 type StudioTab = "look" | "photo";
+type PreviewMode = "look" | "bare";
 type StudioArea = "visage" | "joues" | "yeux" | "levres";
 type PigmentKind = PigmentLayer["kind"];
 type StudioTool = PigmentKind | "setting-powder";
@@ -204,9 +205,10 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
   const photoTab = useRef<HTMLButtonElement>(null);
   const preview = useRef<HTMLHeadingElement>(null);
   const [tab, setTab] = useState<StudioTab>(initialTab);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("look");
   const [{ area, tool }, setSelection] = useState<{ area: StudioArea; tool: StudioTool }>({ area: "joues", tool: "blush" });
-  const [skinTone, setSkinTone] = useState(skinTones[2].hex);
-  const [iris, setIris] = useState("#543A35");
+  const [skinTone, setSkinTone] = useState(skinTones[1].hex);
+  const [iris, setIris] = useState("#5A4359");
   const [hair, setHair] = useState("#473342");
   const [showHair, setShowHair] = useState(false);
   const [look, setLook] = useState<Look>({});
@@ -230,6 +232,8 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
   const photoTool = isSetting ? "powder" : tool;
   const currentPlacement = selectedPlacement(tool, placements);
   const mattePlacement = settingApplied ? selectedPlacement("setting-powder", placements)?.id : undefined;
+  const showLook = previewMode === "look";
+  const showGuide = showLook && guideVisible;
   const layers: PigmentLayer[] = studioAreas.flatMap((zone) => areas[zone].tools.flatMap((kind) => {
     if (kind === "setting-powder") return [];
     const layer = look[zone]?.[kind];
@@ -238,18 +242,10 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
       name: layer.name, productName: layer.name, opacity: layer.intensity / 100, stepId: `${zone}-${kind}`, zone,
       placement: selectedPlacement(kind, placements)?.id }];
   }));
-  const [red, green, blue] = colourChannels(skinTone);
-  const darkTone = red * 0.2126 + green * 0.7152 + blue * 0.0722 < 128;
   const toneStyle = {
     "--face-skin": skinTone,
-    "--face-outline": "#593F37",
     "--face-hair": hair,
-    "--face-hair-outline": "#302521",
     "--face-iris": iris,
-    "--face-iris-outline": darkTone ? "#F6DBCE" : "#483147",
-    "--face-details": darkTone ? "#F6DBCE" : "#483147",
-    "--face-active": darkTone ? "#F2C5B1" : "#793C3E",
-    "--face-hover": darkTone ? "#F8E1D1" : "#5D292C",
   } as CSSProperties;
 
   useEffect(() => { setTab(initialTab); }, [initialTab]);
@@ -264,6 +260,7 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
 
   function applyVirtual(hex: string, name: string, pigmentTool: StudioTool = tool, swatchId?: string) {
     if (pigmentTool === "setting-powder" || !hexPattern.test(hex)) return;
+    setPreviewMode("look");
     setLook((previous) => {
       const prior = previous[area]?.[pigmentTool];
       return { ...previous, [area]: { ...previous[area], [pigmentTool]: { hex, name, swatchId, mix: prior?.mix,
@@ -275,6 +272,7 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
     const ownedProduct = ownedById.get(id);
     if (!ownedProduct) return;
     const { appearance, product, zone } = ownedProduct;
+    setPreviewMode("look");
     setLook((previous) => ({ ...previous, [zone]: { ...previous[zone], [appearance.kind]: { hex: appearance.hex, name: product.name,
       productId: product.id, intensity: Math.round(appearance.opacity * 100) } } }));
     setSelection({ area: zone, tool: appearance.kind });
@@ -282,6 +280,7 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
 
   function updateLayer(change: Partial<StudioLayer>) {
     if (tool === "setting-powder") return;
+    setPreviewMode("look");
     setLook((previous) => {
       const layer = previous[area]?.[tool];
       return layer ? { ...previous, [area]: { ...previous[area], [tool]: { ...layer, ...change } } } : previous;
@@ -290,6 +289,11 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
 
   function selectArea(zone: StudioArea) {
     if (zone !== area) setSelection({ area: zone, tool: areas[zone].kind });
+  }
+
+  function applySetting(productId?: string) {
+    setPreviewMode("look");
+    setSetting(productId ? { productId } : {});
   }
 
   function applyFromPhoto(color: PaletteColor) {
@@ -321,12 +325,25 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
         <section className={styles.preview} aria-labelledby={`${id}-preview`}>
           <div className={styles.previewHeader}>
             <h2 id={`${id}-preview`} tabIndex={-1} ref={preview}>Face Chart</h2>
-            {currentPlacement && <button type="button" className={styles.guideToggle} aria-pressed={guideVisible}
-              onClick={() => setGuideVisible(!guideVisible)}><Crosshair size={16} aria-hidden="true"/>{t("Guide de placement", "Placement guide")}</button>}
+            {currentPlacement && <button type="button" className={styles.guideToggle} aria-pressed={showGuide} aria-controls={`${id}-portrait`}
+              onClick={() => {
+                setGuideVisible(!showGuide);
+                setPreviewMode("look");
+              }}><Crosshair size={16} aria-hidden="true"/>{t("Guide de placement", "Placement guide")}</button>}
           </div>
-          <FaceChart selected={area} availableZones={studioAreas} layers={layers} className={styles.face} style={toneStyle}
-            placementGuide={guideVisible ? currentPlacement?.id : undefined} mattePlacement={mattePlacement} showHair={showHair}
-            onSelect={(zone) => { if (isStudioArea(zone)) selectArea(zone); }}/>
+          <div className={styles.comparison} role="group" aria-label={t("Aperçu du visage", "Face preview")}>
+            <button type="button" aria-pressed={!showLook} aria-controls={`${id}-portrait`} onClick={() => setPreviewMode("bare")}>
+              {t("Visage nu", "Bare face")}
+            </button>
+            <button type="button" aria-pressed={showLook} aria-controls={`${id}-portrait`} onClick={() => setPreviewMode("look")}>
+              {t("Look maquillé", "Makeup look")}
+            </button>
+          </div>
+          <div id={`${id}-portrait`} className={styles.portrait}>
+            <FaceChart selected={area} availableZones={studioAreas} layers={showLook ? layers : []} className={styles.face} style={toneStyle}
+              placementGuide={showGuide ? currentPlacement?.id : undefined} mattePlacement={showLook ? mattePlacement : undefined} showHair={showHair}
+              onSelect={(zone) => { if (isStudioArea(zone)) selectArea(zone); }}/>
+          </div>
           <fieldset className={styles.skinTones}>
             <legend>{t("Carnation de l’illustration", "Illustrated skin tone")}</legend>
             {skinTones.map((tone) => <button type="button" key={tone.hex} className={styles.skinTone}
@@ -346,12 +363,17 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
           {(layers.length > 0 || settingApplied) && <ul className={styles.layerList} aria-label={t("Couches du look", "Look layers")}>
             {layers.map((layer) => <li key={layer.stepId}>
               <button type="button" aria-pressed={layer.zone === area && layer.kind === tool} onClick={() => {
-                if (isStudioArea(layer.zone)) setSelection({ area: layer.zone, tool: layer.kind });
+                if (!isStudioArea(layer.zone)) return;
+                setSelection({ area: layer.zone, tool: layer.kind });
+                setPreviewMode("look");
               }} title={layer.name}>
                 <span style={{ backgroundColor: layer.hex }} aria-hidden="true"/>{t(...toolLabels[layer.kind])}
               </button>
             </li>)}
-            {settingApplied && <li><button type="button" aria-pressed={isSetting} onClick={() => setSelection({ area: "visage", tool: "setting-powder" })}>
+            {settingApplied && <li><button type="button" aria-pressed={isSetting} onClick={() => {
+              setSelection({ area: "visage", tool: "setting-powder" });
+              setPreviewMode("look");
+            }}>
               <span className={styles.settingMarker} aria-hidden="true"/>{t(...toolLabels["setting-powder"])}
             </button></li>}
           </ul>}
@@ -373,6 +395,7 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
             <div className={styles.placements}>
               {getMakeupPlacements(placementKind(tool)).map((option) => <button type="button" key={option.id}
                 aria-pressed={option.id === currentPlacement.id} onClick={() => {
+                  setPreviewMode("look");
                   setPlacements((previous) => ({ ...previous, [tool]: option.id }));
                   if (isSetting && !settingApplied) setGuideVisible(true);
                 }}>{t(option.label[0], option.label[1])}</button>)}
@@ -384,7 +407,7 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
             {ownedSettingPowders.length > 0 && <label>{t("Poudre translucide de mon vanity", "Translucent powder from my vanity")}
               <select value={settingProduct?.id ?? ""} onChange={(event) => {
                 const product = ownedSettingPowders.find((item) => item.id === event.target.value);
-                setSetting(product ? { productId: product.id } : {});
+                applySetting(product?.id);
               }}>
                 <option value="">{t("Poudre de simulation", "Sample powder")}</option>
                 {ownedSettingPowders.map((product) => <option key={product.id} value={product.id}>{product.name}{product.brand ? ` · ${product.brand}` : ""}</option>)}
@@ -393,7 +416,7 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
             {settingApplied ? <p role="status" className={styles.settingStatus}>
               {settingProduct?.name ? t(`${settingProduct.name} · poudrage tracé`, `${settingProduct.name} · setting areas marked`)
                 : t("Poudrage tracé sur l’illustration.", "Setting areas are marked on the illustration.")}
-            </p> : <button type="button" className="button button-primary" onClick={() => setSetting({})}>
+            </p> : <button type="button" className="button button-primary" onClick={() => applySetting()}>
               {t("Tracer le poudrage", "Mark setting areas")}
             </button>}
           </div> : <>
@@ -448,6 +471,7 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
           <div className={styles.actions}>
             {(active || isSetting && settingApplied) && <button type="button" className="button button-secondary"
               onClick={() => {
+                setPreviewMode("look");
                 if (isSetting) setSetting(null);
                 else setLook((previous) => ({ ...previous, [area]: { ...previous[area], [tool]: undefined } }));
               }}>
@@ -455,12 +479,17 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
             </button>}
             <button type="button" className="button button-secondary" disabled={!layers.some((layer) => layer.zone === area) && !(area === "visage" && settingApplied)}
               onClick={() => {
+                setPreviewMode("look");
                 setLook((previous) => ({ ...previous, [area]: undefined }));
                 if (area === "visage") setSetting(null);
               }}>
               <CircleX size={16} aria-hidden="true"/>{t("Effacer la zone", "Clear area")}
             </button>
-            <button type="button" className="button button-secondary" disabled={!layers.length && !settingApplied} onClick={() => { setLook({}); setSetting(null); }}>
+            <button type="button" className="button button-secondary" disabled={!layers.length && !settingApplied} onClick={() => {
+              setPreviewMode("look");
+              setLook({});
+              setSetting(null);
+            }}>
               <RotateCcw size={16} aria-hidden="true"/>{t("Effacer le look", "Clear look")}
             </button>
           </div>
