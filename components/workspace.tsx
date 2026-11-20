@@ -1,26 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
-import { ArrowRight, BookOpen, CalendarCheck, ChevronRight, Download, House, Layers, ListChecks, LogIn, LogOut, Plus, Search, Settings, ShoppingBag, SwatchBook, X } from "lucide-react";
+import { BookOpen, Brush, CalendarCheck, ClipboardList, Download, House, Layers, ListChecks, LogIn, LogOut, Plus, Search, Settings, ShoppingBag, X } from "lucide-react";
 import { Catalog, Inventory, ProductEditor } from "./inventory";
 import { Palette } from "./palette";
+import { HomeDiscovery } from "./home-discovery";
+import { MakeupStudio } from "./makeup-studio";
+import { BeautyLists } from "./beauty-lists";
 import { Routines } from "./routines";
 import { Tutorials } from "./tutorials";
 import { Journal } from "./journal";
 import { Plans } from "./plans";
 import { ProfileFields, RoutineCoach } from "./profile-coach";
 import { useBillingStatus } from "@/lib/billing-client";
-import { LocaleProvider, useLocale } from "@/lib/i18n";
-import { categoryLabels, preferenceSchema, type Product, type Routine, type State } from "@/lib/model";
+import { LocaleProvider, useLocale, type Locale } from "@/lib/i18n";
+import { preferenceSchema, type Product, type Routine, type State } from "@/lib/model";
 import { getPalettePhotoUrl, removePalettePhoto, uploadPalettePhoto } from "@/lib/supabase/browser";
 import { useWorkspaceState } from "@/lib/use-workspace";
 
 const navigation = [
   { id: "accueil", fr: "Accueil", en: "Home", icon: House },
-  { id: "catalogue", fr: "Rechercher", en: "Find products", icon: Search },
-  { id: "vanity", fr: "Mes produits", en: "My products", icon: ShoppingBag },
+  { id: "studio", fr: "Simulation maquillage", en: "Makeup simulator", icon: Brush },
   { id: "routines", fr: "Mes routines", en: "My routines", icon: ListChecks },
-  { id: "palette", fr: "Mes teintes", en: "My shades", icon: SwatchBook },
+  { id: "listes", fr: "Mes listes", en: "My lists", icon: ClipboardList },
+  { id: "catalogue", fr: "Catalogue", en: "Catalogue", icon: Search },
+  { id: "vanity", fr: "Mes produits", en: "My products", icon: ShoppingBag },
   { id: "tutoriels", fr: "Tutoriels", en: "Tutorials", icon: BookOpen },
   { id: "journal", fr: "Journal", en: "Journal", icon: CalendarCheck },
   { id: "preferences", fr: "Paramètres", en: "Settings", icon: Settings },
@@ -31,7 +35,7 @@ type WorkspaceData = ReturnType<typeof useWorkspaceState>;
 
 function readView(portable: boolean): View {
   const hash = location.hash.slice(1);
-  const view = navigation.find((item) => item.id === hash)?.id ?? "accueil";
+  const view = hash === "palette" ? "studio" : navigation.find((item) => item.id === hash)?.id ?? "accueil";
   return portable && (view === "journal" || view === "offres") ? "accueil" : view;
 }
 
@@ -45,6 +49,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   const { state, user, client, ready, update, sync, notice, setNotice } = data;
   const billing = useBillingStatus(user?.id, !portable);
   const [view, setView] = useState<View>("accueil");
+  const [studioTab, setStudioTab] = useState<"look" | "photo">("look");
   const [catalogue, setCatalogue] = useState({ query: "", revision: 0 });
   const [productEditor, setProductEditor] = useState<Product | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -57,6 +62,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   useEffect(() => {
     const onHistoryChange = () => {
       setView(readView(portable));
+      setStudioTab(location.hash === "#palette" ? "photo" : "look");
       setSelected(null);
       setGuide(undefined);
       setProductEditor(null);
@@ -95,13 +101,14 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
 
   function navigate(next: View, focus = true) {
     setView(next);
+    setStudioTab("look");
     setSelected(null);
     setProductEditor(null);
     setGuide(undefined);
     setNotice("");
-    if (next !== readView(portable)) history.pushState(null, "", `#${next}`);
+    if (location.hash !== `#${next}`) history.pushState(null, "", `#${next}`);
     window.scrollTo(0, 0);
-    if (focus) requestAnimationFrame(() => content.current?.focus());
+    if (focus) requestAnimationFrame(() => content.current?.focus({ preventScroll: true }));
   }
 
   function navClick(event: MouseEvent<HTMLAnchorElement>, next: View) {
@@ -161,6 +168,10 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     return true;
   }
 
+  function switchLanguage(next: Locale) {
+    if (next !== locale) update((previous) => ({ ...previous, preferences: { ...previous.preferences, locale: next } }));
+  }
+
   const label = (id: View) => {
     const item = navigation.find((entry) => entry.id === id)!;
     return t(item.fr, item.en);
@@ -177,51 +188,53 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
 
   return <div className="app-shell">
     <a href="#main-content" className="skip-link" onClick={(event) => { event.preventDefault(); content.current?.focus(); }}>{t("Aller au contenu", "Skip to content")}</a>
-    <aside className="sidebar">
-      <div className="sidebar-top">
-        <a className="brand" href="#accueil" aria-label={t("Navier, accueil", "Navier, home")} onClick={(event) => navClick(event, "accueil")}>Navier</a>
-        <a className={`icon-button mobile-settings${view === "preferences" ? " nav-current" : ""}`} href="#preferences" aria-label={label("preferences")}
-          aria-current={view === "preferences" ? "page" : undefined} onClick={(event) => navClick(event, "preferences")}><Settings size={19} aria-hidden="true"/></a>
-      </div>
-      <nav className="navigation" aria-label={t("Navigation principale", "Main navigation")}>
-        {availableNavigation.filter(({ id }) => id !== "preferences" && id !== "offres").map(({ id, icon: Icon }) =>
-          <a key={id} href={`#${id}`} className={`nav-link${view === id ? " nav-current" : ""}`} aria-current={view === id ? "page" : undefined}
-            onClick={(event) => navClick(event, id)}><Icon size={16} strokeWidth={1.65} aria-hidden="true"/><span>{label(id)}</span></a>
-        )}
-        {!portable && <a className={`nav-link mobile-offers${view === "offres" ? " nav-current" : ""}`} href="#offres" aria-current={view === "offres" ? "page" : undefined}
-          onClick={(event) => navClick(event, "offres")}><Layers size={16} strokeWidth={1.65} aria-hidden="true"/><span>{label("offres")}</span></a>}
-      </nav>
-      <div className="sidebar-bottom">
-        <a className={`nav-link${view === "preferences" ? " nav-current" : ""}`} href="#preferences" aria-current={view === "preferences" ? "page" : undefined}
-          onClick={(event) => navClick(event, "preferences")}><Settings size={16} strokeWidth={1.65} aria-hidden="true"/><span>{label("preferences")}</span></a>
-        {!portable && <a className={`nav-link${view === "offres" ? " nav-current" : ""}`} href="#offres" aria-current={view === "offres" ? "page" : undefined}
-          onClick={(event) => navClick(event, "offres")}><Layers size={16} strokeWidth={1.65} aria-hidden="true"/><span>{label("offres")}</span></a>}
-      </div>
-    </aside>
-
-    <div className="main-shell">
-      <header className={`topbar${client ? " topbar-account" : ""}`}>
-        <span className="breadcrumb">{label(view)}</span>
-        {view !== "accueil" && view !== "catalogue" && <form key={view} className="toolbar-search" role="search" onSubmit={(event) => {
+    <header className="workspace-header">
+      <div className="workspace-masthead">
+        <a className="brand" href="#accueil" aria-label={t("Navier, accueil", "Navier, home")}
+          aria-current={view === "accueil" ? "page" : undefined} onClick={(event) => navClick(event, "accueil")}>Navier</a>
+        <form className="toolbar-search search-field" role="search" aria-label={t("Rechercher des produits", "Find products")} onSubmit={(event) => {
           event.preventDefault();
           const query = String(new FormData(event.currentTarget).get("query") ?? "").trim();
           openCatalogue(query);
         }}>
-          <label className="search-field">
-            <Search size={15} strokeWidth={1.65} aria-hidden="true"/>
-            <input name="query" type="search" maxLength={120} aria-label={t("Rechercher un produit ou une marque", "Search for a product or brand")}
-              placeholder={t("Produit, marque, code-barres…", "Product, brand, barcode…")}/>
-          </label>
-        </form>}
+          <input name="query" type="search" maxLength={120}
+            aria-label={t("Nom du produit, marque ou code-barres", "Product name, brand or barcode")}
+            placeholder={t("Nom du produit, marque ou code-barres", "Product name, brand or barcode")}/>
+          <button className="toolbar-search-button" type="submit" aria-label={t("Lancer la recherche", "Search catalogue")}>
+            <Search size={18} strokeWidth={1.8} aria-hidden="true"/>
+          </button>
+        </form>
         <div className="header-actions">
-          <span className="sync-label">{status}</span>
-          {!portable && client && <button type="button" className="button button-secondary account-control" onClick={() => setAuth(true)}>
-            <LogIn size={16} aria-hidden="true"/>{user ? t("Compte", "Account") : t("Connexion", "Sign in")}
+          <div className="language-switch" role="group" aria-label={t("Langue de l’interface", "Interface language")}>
+            <button type="button" lang="fr" aria-label="FR, Français" aria-pressed={locale === "fr"} disabled={!ready}
+              onClick={() => switchLanguage("fr")}>FR</button>
+            <button type="button" lang="en" aria-label="EN, English" aria-pressed={locale === "en"} disabled={!ready}
+              onClick={() => switchLanguage("en")}>EN</button>
+          </div>
+          <a className={`icon-button header-settings${view === "preferences" ? " nav-current" : ""}`} href="#preferences"
+            aria-label={label("preferences")} aria-current={view === "preferences" ? "page" : undefined}
+            onClick={(event) => navClick(event, "preferences")}><Settings size={19} strokeWidth={1.7} aria-hidden="true"/></a>
+          {!portable && client && <button type="button" className="button button-secondary account-control"
+            aria-label={user ? t("Compte", "Account") : t("Connexion", "Sign in")} onClick={() => setAuth(true)}>
+            <LogIn size={16} aria-hidden="true"/><span>{user ? t("Compte", "Account") : t("Connexion", "Sign in")}</span>
           </button>}
+          {user && <span className="sr-only" role="status">{status}</span>}
         </div>
-      </header>
+      </div>
+      <nav className="workspace-navigation" aria-label={t("Navigation principale", "Main navigation")}>
+        <div className="workspace-navigation-inner">
+          {availableNavigation.filter(({ id }) => id !== "accueil" && id !== "preferences").map(({ id, icon: Icon }) =>
+            <a key={id} href={`#${id}`} className={`nav-link${view === id ? " nav-current" : ""}`}
+              aria-current={view === id ? "page" : undefined} onClick={(event) => navClick(event, id)}>
+              <Icon size={16} strokeWidth={1.7} aria-hidden="true"/><span>{label(id)}</span>
+            </a>
+          )}
+        </div>
+      </nav>
+    </header>
 
-      <main className="main-content" id="main-content" ref={content} tabIndex={-1}>
+    <div className="main-shell">
+      <main className={`main-content${view === "accueil" ? " discovery-content" : ""}`} id="main-content" ref={content} tabIndex={-1}>
         {(notice || sync === "error" || sync === "conflict") && <div className="notice" role="status">
           <span>{notice || (sync === "conflict"
             ? t("Une version plus récente existe en ligne. Ton brouillon reste sur cet appareil.", "A newer version exists online. Your draft remains on this device.")
@@ -232,9 +245,9 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
         </div>}
 
         {!ready ? <p role="status">{t("Chargement de ton espace…", "Loading your workspace…")}</p> : <div className="page-content" key={view}>
-          {view === "accueil" && <Dashboard state={state} onSearch={openCatalogue} onNavigate={navigate}
+          {view === "accueil" && <HomeDiscovery state={state} onNavigate={(route) => route === "catalogue" ? openCatalogue() : navigate(route)}
             onProduct={(id) => { navigate("vanity"); setSelected(id); }}
-            onGuide={(routine) => { navigate("routines"); setGuide(routine.id); }}/>}
+            onRoutine={(routine) => { navigate("routines"); if (routine.steps.length) setGuide(routine.id); }}/>}
           {view === "catalogue" && <Catalog key={catalogue.revision} initialQuery={catalogue.query} currentProducts={state.products} onSave={saveProduct} localOnly={portable}/>}
           {view === "vanity" && <>
             {!productEditor && <div className="page-heading">
@@ -249,22 +262,16 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
           {view === "routines" && <Routines products={state.products} routines={state.routines} preferences={state.preferences} palette={state.palette}
             onChange={(routines) => update((previous) => ({ ...previous, routines }))}
             startRoutineId={guide} onStartGuide={setGuide} onExitGuide={() => setGuide(undefined)} onComplete={complete}/>}
-          {view === "palette" && <>
-            <div className="page-heading"><div><h1>{t("Mes teintes", "My shades")}</h1><p>{t("Préleve une couleur sur une photo de maquillage et réutilise-la dans une routine.", "Sample a colour from a makeup photo and reuse it in a routine.")}</p></div></div>
-            <details className="inline-help">
-              <summary>{t("À quoi ça sert ?", "What is this for?")}</summary>
-              <ol>
-                <li>{t("Ajoute une photo d’un rouge à lèvres, d’un fard ou d’une palette.", "Add a photo of a lipstick, eyeshadow or palette.")}</li>
-                <li>{t("Clique sur la couleur qui t’intéresse et enregistre-la sous un nom.", "Click the colour you want and give it a name.")}</li>
-                <li>{t("Dans une routine, choisis cette teinte pour une étape avec un produit teinté. Le Face Chart l’affichera sur la zone choisie.", "In a routine, select the shade for a tinted product step. The Face Chart will show it on the chosen area.")}</li>
-              </ol>
-            </details>
-            <Palette key={user?.id ?? "guest"} colors={state.palette}
-              onChange={(apply) => update((previous) => ({ ...previous, palette: apply(previous.palette) }), user?.id ?? null)}
-              onUpload={client && user ? (file) => uploadPalettePhoto(client, user.id, file) : undefined}
-              onDiscardUpload={client && user ? (path) => removePalettePhoto(client, path) : undefined}
-              onResolvePhoto={client && user ? (path) => getPalettePhotoUrl(client, path) : undefined}/>
-          </>}
+          {view === "studio" && <MakeupStudio key={`${user?.id ?? "guest"}:${studioTab}`} products={state.products}
+            palette={state.palette} initialTab={studioTab} paletteEditor={
+              <Palette colors={state.palette}
+                onChange={(apply) => update((previous) => ({ ...previous, palette: apply(previous.palette) }), user?.id ?? null)}
+                onUpload={client && user ? (file) => uploadPalettePhoto(client, user.id, file) : undefined}
+                onDiscardUpload={client && user ? (path) => removePalettePhoto(client, path) : undefined}
+                onResolvePhoto={client && user ? (path) => getPalettePhotoUrl(client, path) : undefined}/>
+            }/>}
+          {view === "listes" && <BeautyLists key={user?.id ?? "guest"} lists={state.lists ?? []} products={state.products}
+            onChange={(apply) => update((previous) => ({ ...previous, lists: apply(previous.lists ?? []) }), user?.id ?? null)}/>}
           {view === "tutoriels" && <Tutorials products={state.products} onCreateRoutine={createRoutine}/>}
           {view === "journal" && !portable && <Journal key={user?.id ?? "guest"} userId={user?.id} client={client} plus={billing.plus} entitlementLoading={billing.loading}
             products={state.products} routines={state.routines} completed={state.completed} onOpenPlans={() => navigate("offres")}/>}
@@ -273,10 +280,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
             <div className="page-heading"><div><h1>{t("Paramètres", "Settings")}</h1><p>{t("Langue, préférences et données.", "Language, preferences and data.")}</p></div></div>
             <section className="settings-language" aria-labelledby="language-title">
               <div><h2 id="language-title">{t("Langue de l’interface", "Interface language")}</h2></div>
-              <select aria-labelledby="language-title" value={locale} onChange={(event) => {
-                const next = event.target.value === "en" ? "en" : "fr";
-                if (update((previous) => ({ ...previous, preferences: { ...previous.preferences, locale: next } }))) setNotice("");
-              }}><option value="fr">Français</option><option value="en">English</option></select>
+              <select aria-labelledby="language-title" value={locale} onChange={(event) => switchLanguage(event.target.value === "en" ? "en" : "fr")}><option value="fr">Français</option><option value="en">English</option></select>
             </section>
             <PreferencesForm state={state} portable={portable} onSave={(preferences) => {
               if (update((previous) => ({ ...previous, preferences }))) setNotice(t("Préférences enregistrées.", "Preferences saved."));
@@ -297,71 +301,6 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
         <button className="button button-primary" onClick={() => void data.reloadRemote()}>{t("Charger", "Load")}</button>
       </form>
     </dialog>}
-  </div>;
-}
-
-const englishCategories = { soin: "Skincare", maquillage: "Makeup", cheveux: "Hair", parfums: "Fragrance" };
-function Dashboard({ state, onSearch, onNavigate, onProduct, onGuide }: {
-  state: State; onSearch: (query: string) => void; onNavigate: (view: View) => void;
-  onProduct: (id: string) => void; onGuide: (routine: Routine) => void;
-}) {
-  const { t } = useLocale();
-  const [query, setQuery] = useState("");
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - 6);
-  weekStart.setHours(0, 0, 0, 0);
-  const sessions = state.completed.filter(({ at }) => Date.parse(at) >= weekStart.getTime()).length;
-  return <div className="home-page">
-    <header className="home-heading">
-      <h1>{t("Ton espace beauté", "Your beauty workspace")}</h1>
-      <p>{t("Retrouve tes produits et organise tes routines.", "Find your products and organise your routines.")}</p>
-    </header>
-    <form className="home-search" role="search" onSubmit={(event) => { event.preventDefault(); onSearch(query.trim()); }}>
-      <label className="home-search-label">
-        <span className="sr-only">{t("Rechercher par produit, marque ou code-barres", "Search by product, brand or barcode")}</span>
-        <Search size={20} strokeWidth={1.65} aria-hidden="true"/>
-        <input type="search" maxLength={120} value={query} onChange={(event) => setQuery(event.target.value)}
-          placeholder={t("Nom du produit, marque ou code-barres", "Product name, brand or barcode")}/>
-      </label>
-      <button className="button button-primary" type="submit">{t("Rechercher", "Search")}<ArrowRight size={16} aria-hidden="true"/></button>
-    </form>
-
-    <div className="dashboard-grid">
-      <section className="home-section" aria-labelledby="home-products">
-        <header className="section-heading">
-          <h2 id="home-products">{t("Mes produits", "My products")}</h2>
-          {state.products.length > 0 && <button className="text-button" type="button" onClick={() => onNavigate("vanity")}>{t("Tout voir", "View all")}<ChevronRight size={15}/></button>}
-        </header>
-        {state.products.length ? <div className="home-list">
-          {state.products.slice(0, 4).map((product) => <button type="button" className="home-row" key={product.id} onClick={() => onProduct(product.id)}>
-            <span><strong>{product.name}</strong><small>{product.brand || t(categoryLabels[product.category], englishCategories[product.category])}</small></span><ChevronRight size={16}/>
-          </button>)}
-        </div> : <div className="home-empty">
-          <p>{t("Aucun produit enregistré.", "No products saved yet.")}</p>
-          <button type="button" className="text-button" onClick={() => onSearch("")}><Plus size={15}/>{t("Ajouter un produit", "Add a product")}</button>
-        </div>}
-      </section>
-
-      <section className="home-section" aria-labelledby="home-routines">
-        <header className="section-heading">
-          <h2 id="home-routines">{t("Mes routines", "My routines")}</h2>
-          {state.routines.length > 0 && <button className="text-button" type="button" onClick={() => onNavigate("routines")}>{t("Tout voir", "View all")}<ChevronRight size={15}/></button>}
-        </header>
-        {sessions > 0 && <p className="home-summary muted">{t(
-          `${sessions} séance${sessions === 1 ? "" : "s"} ces 7 derniers jours`,
-          `${sessions} ${sessions === 1 ? "session" : "sessions"} in the past 7 days`,
-        )}</p>}
-        {state.routines.length ? <div className="home-list">
-          {state.routines.slice(0, 4).map((routine) => <button type="button" className="home-row" key={routine.id}
-            onClick={() => routine.steps.length ? onGuide(routine) : onNavigate("routines")}>
-            <span><strong>{routine.name}</strong><small>{routine.steps.length} {routine.steps.length === 1 ? t("étape", "step") : t("étapes", "steps")}</small></span><ChevronRight size={16}/>
-          </button>)}
-        </div> : <div className="home-empty">
-          <p>{t("Aucune routine créée.", "No routines created yet.")}</p>
-          <button type="button" className="text-button" onClick={() => onNavigate("routines")}><Plus size={15}/>{t("Créer une routine", "Create a routine")}</button>
-        </div>}
-      </section>
-    </div>
   </div>;
 }
 
@@ -413,7 +352,7 @@ function PreferencesForm({ state, portable, onSave }: {
       <button className="button button-secondary" type="button" onClick={() => exportWorkspace(state)}><Download size={16}/>{t("Exporter mon espace", "Export my workspace")}</button>
       <p className="muted">{portable
         ? t("Garde le fichier Navier au même endroit et utilise le même navigateur pour retrouver tes données.", "Keep the Navier file in the same place and use the same browser to find your data.")
-        : t("Le fichier inclut les produits, routines, teintes et préférences.", "The file includes products, routines, shades and preferences.")}</p>
+        : t("Le fichier inclut les produits, routines, listes, teintes et préférences.", "The file includes products, routines, lists, shades and preferences.")}</p>
       {!portable && <>
         <a href="/installer">{t("Installer Navier", "Install Navier")}</a>
         <a href="/confidentialite">{t("Confidentialité", "Privacy")}</a>

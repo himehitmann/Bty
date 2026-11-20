@@ -1,6 +1,6 @@
 # Navier
 
-Navier est une application web installable pour gérer tes produits et tes routines beauté. Elle s’adapte aux écrans mobiles. Un nouvel espace démarre vide. La langue de l’interface se change dans **Paramètres**.
+Navier est une application web installable pour simuler un maquillage, composer des routines et organiser tes produits dans des listes personnelles. L’accueil présente ces outils en cartes à faire défiler. Un nouvel espace démarre vide. Les boutons **FR** et **EN** sont dans l’en-tête.
 
 ## Ouvrir Navier par double-clic
 
@@ -40,17 +40,18 @@ Chaque compte démarre avec un espace vide. L’espace invité reste sur le navi
 
 ## Fonctionnement
 
-- **Mes produits** · recherche par nom, marque ou code-barres depuis l’accueil ou **Rechercher**, ajout dans la page ou saisie manuelle, filtres par catégorie, édition et suppression. Les routines perdent les étapes d’un produit supprimé.
+- **Mes produits** · recherche par nom, marque ou code-barres depuis l’en-tête ou le **Catalogue**, puis ajout dans la page. Tu peux noter un achat, un favori, un avis et les raisons à retenir. Les routines perdent les étapes d’un produit supprimé.
 - **INCI** · affichage de la liste et de sa provenance. La version web interroge [Open Beauty Facts](https://world.openbeautyfacts.org/). Le catalogue embarqué contient quelques références réelles issues d’Open Beauty Facts sous [licence ODbL](https://opendatacommons.org/licenses/odbl/1-0/), avec un lien par fiche, ainsi que des formules clairement signalées comme indicatives. `OPEN_BEAUTY_FACTS_CONTACT` permet de renseigner le contact envoyé dans le User-Agent.
-- **Routines** · création, réorganisation et suivi des étapes, Face Chart SVG utilisable au clavier et points de vigilance sur les listes et leur ordre.
-- **Mes teintes** · prélèvement précis sur une photo via Canvas, aperçu des couleurs dominantes et sauvegarde des codes hexadécimaux. Une teinte enregistrée peut être sélectionnée pour une étape de maquillage teinté et affichée sur le Face Chart. L’éclairage et l’écran influencent les résultats.
+- **Simulation maquillage** · Face Chart SVG original avec carnation, couleur des yeux et des cheveux, calques par type de maquillage, intensité et mélange de teintes. L’onglet photo prélève une couleur avec Canvas pour la réutiliser dans un look ou une routine.
+- **Routines** · création, réorganisation et suivi des étapes, points de vigilance et Face Chart utilisable au clavier. Indique un accessoire, une consigne et, pour les cheveux, la zone et le massage prévu.
+- **Mes listes** · listes à nom libre pour les favoris, les achats, une trousse ou les déceptions. Ajoute un produit ou du texte, note la raison et coche les éléments au fur et à mesure.
 - **Tutoriels** · suggestions à partir du nom et de la catégorie des produits possédés, puis personnalisation avant la création d’une routine.
 
 Les repères INCI concernent les ingrédients déclarés et quelques superpositions. Les données communautaires peuvent être incomplètes ou obsolètes. Les noms seuls ne permettent pas de déterminer une concentration, un pH ou une tolérance. Navier ne fournit aucun diagnostic ni garantie d’innocuité, d’efficacité ou de résultat esthétique.
 
 ## Architecture
 
-Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. La police [Geist](public/fonts/geist-OFL.txt) est hébergée avec l’application et intégrée au fichier portable.
+Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. Les polices [Geist](public/fonts/geist-OFL.txt) et [Instrument Serif](public/fonts/instrument-serif-OFL.txt) sont hébergées avec l’application et intégrées au fichier portable.
 
 Références techniques · [Next.js App Router](https://nextjs.org/docs/app), [Proxy](https://nextjs.org/docs/app/api-reference/file-conventions/proxy), [PWA](https://nextjs.org/docs/app/guides/progressive-web-apps), [Tailwind CSS](https://tailwindcss.com/docs/installation/framework-guides/nextjs), [Supabase Auth SSR](https://supabase.com/docs/guides/auth/server-side/nextjs), [Supabase Storage](https://supabase.com/docs/reference/javascript/storage-from-createsignedurl), [Zod](https://zod.dev/api) et [API Open Facts](https://openfoodfacts.github.io/openfoodfacts-server/api/).
 

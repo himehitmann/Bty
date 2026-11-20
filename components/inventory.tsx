@@ -1,16 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, Brush, CalendarClock, ChevronRight, CircleAlert, Columns2, Droplets, Pencil, Plus, Scissors, Search, SprayCan, Trash2 } from "lucide-react";
+import { ArrowLeft, Brush, CalendarClock, ChevronRight, CircleAlert, Columns2, Droplets, Heart, Pencil, Plus, Scissors, Search, SprayCan, Trash2 } from "lucide-react";
 import { analyzeProduct, ingredientList } from "@/lib/analysis";
 import { normalizeCatalogText, searchLocalCatalog, type CatalogSearchMode } from "@/lib/catalog";
 import { useLocale } from "@/lib/i18n";
-import { categories, categoryLabels, makeupEffectLabels, makeupEffects, makeupKindLabels, makeupKinds, productInput, productSchema, sourceLabels, type Preferences, type Product } from "@/lib/model";
+import { categories, categoryLabels, makeupEffectLabels, makeupEffects, makeupKindLabels, makeupKinds, personalProductNoteLimit, productFeedbackOptions, productInput, productSchema, sourceLabels, type Preferences, type Product } from "@/lib/model";
 import { getProductLifecycle, lifecycleStatusLabels, localCalendarDate, upcomingWindowDays } from "@/lib/product-life";
 import styles from "./inventory.module.css";
 
 type Filter = "all" | Product["category"];
 type DateFilter = "all" | "soon" | "past";
+type FeedbackFilter = "all" | "purchased" | NonNullable<Product["feedback"]>;
 const categoryIcons = { soin: Droplets, maquillage: Brush, cheveux: Scissors, parfums: SprayCan };
 const categoryLabelsEn = { soin: "Skincare", maquillage: "Makeup", cheveux: "Haircare", parfums: "Fragrance" };
 const sourceLabelsEn = { manuel: "Manual entry", local: "Local catalogue · example formula", "open-beauty-facts": "Open Beauty Facts" };
@@ -20,6 +21,11 @@ const makeupKindLabelsEn = {
   eyeliner: "Eyeliner", mascara: "Mascara", lip: "Lip product", powder: "Powder", other: "Other",
 };
 const makeupEffectLabelsEn = { tinted: "Tinted", transparent: "Transparent", mattifying: "Mattifying", unknown: "Unspecified" };
+const feedbackLabels = {
+  favorite: ["Favori", "Favourite"],
+  liked: ["Apprécié", "Liked"],
+  disappointed: ["Décevant", "Disappointing"],
+} as const;
 const claimFields = [
   { key: "vegan", label: "Vegan" },
   { key: "crueltyFree", label: "Cruelty-free" },
@@ -31,6 +37,11 @@ function brandLabel(brand: string, t: Translate) {
     : brand === "Formule indicative" ? t("Formule indicative", "Example formula") : brand;
 }
 
+function feedbackLabel(feedback: NonNullable<Product["feedback"]>, t: Translate) {
+  const [french, english] = feedbackLabels[feedback];
+  return t(french, english);
+}
+
 function ProductIcon({ category }: { category: Product["category"] }) {
   const Icon = categoryIcons[category];
   return <span className={styles.productIcon}><Icon size={18} strokeWidth={1.6} aria-hidden="true"/></span>;
@@ -39,11 +50,14 @@ function ProductIcon({ category }: { category: Product["category"] }) {
 export function ProductTile({ product, onSelect, today }: { product: Product; onSelect: () => void; today?: string }) {
   const { t } = useLocale();
   const { status } = getProductLifecycle(product, today);
+  const feedback = product.feedback ? feedbackLabel(product.feedback, t) : undefined;
+  const summary = [product.purchased ? t("Acheté", "Purchased") : undefined, feedback].filter(Boolean).join(" · ");
   return <button className={styles.productTile} type="button" onClick={onSelect} data-product-id={product.id}>
     <ProductIcon category={product.category}/>
     <span className={styles.tileText}>
       <strong>{product.name}</strong>
       <small>{brandLabel(product.brand, t)} · {t(categoryLabels[product.category], categoryLabelsEn[product.category])}</small>
+      {summary && <small>{summary}</small>}
       {(status === "past" || status === "today" || status === "soon") && (
         <span className={styles.dateBadge} data-status={status}><CalendarClock size={14} aria-hidden="true"/>{t(lifecycleStatusLabels[status], lifecycleLabelsEn[status])}</span>
       )}
@@ -59,6 +73,7 @@ export function Inventory({ products, preferences, selected, onSelect, onEdit, o
   const { t } = useLocale();
   const [filter, setFilter] = useState<Filter>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [feedbackFilter, setFeedbackFilter] = useState<FeedbackFilter>("all");
   const [query, setQuery] = useState("");
   const [comparing, setComparing] = useState(false);
   const current = products.find((product) => product.id === selected);
@@ -66,6 +81,8 @@ export function Inventory({ products, preferences, selected, onSelect, onEdit, o
   const words = normalizeCatalogText(query).trim().split(/\s+/).filter(Boolean);
   const visible = products.filter((product) => {
     if (filter !== "all" && filter !== product.category) return false;
+    const matchesFeedback = feedbackFilter === "purchased" ? product.purchased : feedbackFilter === "all" || feedbackFilter === product.feedback;
+    if (!matchesFeedback) return false;
     const label = normalizeCatalogText(`${product.name} ${product.brand} ${categoryLabels[product.category]} ${categoryLabelsEn[product.category]} ${product.barcode ?? ""}`);
     if (!words.every((word) => label.includes(word))) return false;
     if (dateFilter === "all") return true;
@@ -102,14 +119,24 @@ export function Inventory({ products, preferences, selected, onSelect, onEdit, o
           <input id="inventory-search" type="search" aria-label={t("Rechercher dans mes produits", "Search my products")}
             placeholder={t("Rechercher dans mes produits", "Search my products")} value={query} onChange={(event) => setQuery(event.target.value)}/>
         </label>
-        {products.length > 0 && <label className={styles.dateFilter}>
+        <label className={styles.inventoryFilter}>
+          <Heart size={17} aria-hidden="true"/>
+          <select aria-label={t("Filtrer par suivi personnel", "Filter by personal tracking")} value={feedbackFilter} onChange={(event) => setFeedbackFilter(event.target.value as FeedbackFilter)}>
+            <option value="all">{t("Tous les statuts", "All statuses")}</option>
+            <option value="purchased">{t("Produits achetés", "Purchased products")}</option>
+            <option value="favorite">{t("Favoris", "Favourites")}</option>
+            <option value="liked">{t("Produits appréciés", "Liked products")}</option>
+            <option value="disappointed">{t("Produits décevants", "Disappointing products")}</option>
+          </select>
+        </label>
+        <label className={styles.inventoryFilter}>
           <CalendarClock size={17} aria-hidden="true"/>
           <select aria-label={t("Filtrer par date de conservation", "Filter by use-by date")} value={dateFilter} onChange={(event) => setDateFilter(event.target.value as DateFilter)}>
             <option value="all">{t("Toutes les dates", "All dates")}</option>
             <option value="soon">{t(`À vérifier sous ${upcomingWindowDays} jours`, `Due within ${upcomingWindowDays} days`)}</option>
             <option value="past">{t("Repères dépassés", "Past their dates")}</option>
           </select>
-        </label>}
+        </label>
         {products.length >= 2 && <button type="button" className="button button-secondary" onClick={() => setComparing(true)}>
           <Columns2 size={17} aria-hidden="true"/>{t("Comparer les compositions", "Compare ingredients")}
         </button>}
@@ -118,7 +145,7 @@ export function Inventory({ products, preferences, selected, onSelect, onEdit, o
     {visible.length ? <div className={styles.collectionGrid}>{visible.map((product) => <ProductTile key={product.id} product={product} today={today} onSelect={() => onSelect(product.id)}/>)}</div>
       : <div className={styles.emptyState}>
         <h2>{t("Aucun produit trouvé", "No products found")}</h2>
-        <button type="button" className="button button-secondary" onClick={() => { setQuery(""); setFilter("all"); setDateFilter("all"); }}>
+        <button type="button" className="button button-secondary" onClick={() => { setQuery(""); setFilter("all"); setDateFilter("all"); setFeedbackFilter("all"); }}>
           {t("Réinitialiser les filtres", "Reset filters")}
         </button>
       </div>}
@@ -150,6 +177,7 @@ function ProductDetail({ product, today, preferences, onBack, onEdit, onRemove }
         <Pencil size={16} aria-hidden="true"/>{t("Modifier", "Edit")}
       </button>
     </header>
+    <PersonalProductFeedback product={product}/>
     <section className="product-detail-panel">
       <h3>{t("Composition INCI", "INCI ingredients")}</h3>
       {ingredients.length ? <>
@@ -176,6 +204,24 @@ function ProductDetail({ product, today, preferences, onBack, onEdit, onRemove }
     </div> : <div className="form-actions">
       <button ref={removeButton} type="button" className="button button-secondary" onClick={() => setRemovePending(true)}><Trash2 size={17} aria-hidden="true"/>{t("Supprimer", "Remove")}</button>
     </div>}
+  </section>;
+}
+
+function PersonalProductFeedback({ product }: { product: Product }) {
+  const { t } = useLocale();
+  const feedback = product.feedback ? feedbackLabel(product.feedback, t) : undefined;
+  return <section className="product-detail-panel">
+    <h3>{t("Mon suivi", "My tracking")}</h3>
+    {product.purchased || feedback || product.personalNote ? <>
+      {(product.purchased || feedback) && <dl className={styles.declarationList}>
+        {product.purchased && <div><dt>{t("Achat", "Purchase")}</dt><dd>{t("Acheté", "Purchased")}</dd></div>}
+        {feedback && <div><dt>{t("Mon avis", "My feedback")}</dt><dd>{feedback}</dd></div>}
+      </dl>}
+      {product.personalNote && <div>
+        <strong>{t("Ma note privée", "My private note")}</strong>
+        <p className={styles.instructionText}>{product.personalNote}</p>
+      </div>}
+    </> : <p className="muted">{t("Utilise Modifier pour noter un achat, ton avis ou une impression.", "Use Edit to record a purchase, your feedback or an observation.")}</p>}
   </section>;
 }
 
@@ -588,6 +634,7 @@ export function ProductEditor({ product, initialProduct, currentProducts, onCanc
     const parsed = productInput.safeParse({
       name: form.get("name"), brand: form.get("brand"), category,
       ingredients: form.get("ingredients"), barcode, openedOn, expiresOn, paoMonths: pao ? Number(pao) : undefined,
+      purchased: form.has("purchased") || undefined, feedback: optionalText(form, "feedback"), personalNote: optionalText(form, "personalNote"),
       makeupKind: category === "maquillage" ? optionalText(form, "makeupKind") : undefined,
       makeupEffect, shadeHex: makeupEffect === "tinted" ? optionalText(form, "shadeHex") : undefined,
       claims: readClaims(form, draft, sameBarcode), usageInstructions,
@@ -610,6 +657,7 @@ export function ProductEditor({ product, initialProduct, currentProducts, onCanc
       imageUrl: !sameBarcode && draft?.source === "open-beauty-facts" ? undefined : draft?.imageUrl,
       claims: parsed.data.claims, usageInstructions: parsed.data.usageInstructions,
       makeupKind: parsed.data.makeupKind, makeupEffect: parsed.data.makeupEffect, shadeHex: parsed.data.shadeHex,
+      purchased: parsed.data.purchased, feedback: parsed.data.feedback, personalNote: parsed.data.personalNote,
     });
     if (!saved) setError(t("Ce produit n’a pas été enregistré. Vérifie la taille de ton inventaire et raccourcis la composition si nécessaire.", "The product could not be saved. Check your product limit and shorten the ingredient list if needed."));
   }
@@ -628,6 +676,24 @@ export function ProductEditor({ product, initialProduct, currentProducts, onCanc
         </select></label>
         <label>{t("Code-barres", "Barcode")}<input name="barcode" inputMode="numeric" pattern="[0-9]{8,14}" maxLength={14} defaultValue={draft?.barcode}/></label>
       </div>
+      <fieldset className={styles.feedbackFields}>
+        <legend>{t("Mon suivi", "My tracking")}</legend>
+        <div className="form-grid">
+          <label>{t("Mon avis", "My feedback")}
+            <select name="feedback" defaultValue={draft?.feedback ?? ""}>
+              <option value="">{t("Sans avis", "No feedback")}</option>
+              {productFeedbackOptions.map((option) => <option key={option} value={option}>{feedbackLabel(option, t)}</option>)}
+            </select>
+          </label>
+          <label className="check-field"><input type="checkbox" name="purchased" defaultChecked={draft?.purchased}/>
+            <span>{t("Produit acheté", "Purchased product")}</span>
+          </label>
+        </div>
+        <label>{t("Ma note privée", "My private note")}
+          <textarea name="personalNote" rows={3} maxLength={personalProductNoteLimit} defaultValue={draft?.personalNote}
+            placeholder={t("Ce que j’ai aimé ou ce que je changerais", "What I liked or would change")}/>
+        </label>
+      </fieldset>
       <label><span>{t("Composition INCI", "INCI ingredients")} <span className="muted">{t("(facultative)", "(optional)")}</span></span>
         <textarea name="ingredients" rows={5} maxLength={6500} defaultValue={draft?.ingredients}
           placeholder={category === "parfums" ? t("Recopie la liste d’ingrédients de l’emballage", "Copy the ingredient list from the packaging") : "Aqua, Glycerin, …"}/>

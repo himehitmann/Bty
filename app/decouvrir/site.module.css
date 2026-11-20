@@ -51,8 +51,8 @@
 .wordmark,
 .footerMark {
   color: var(--site-ink);
-  font: 650 1rem/1 var(--sans, system-ui, sans-serif);
-  letter-spacing: .1em;
+  font: 400 2rem/1 var(--display, Georgia, serif);
+  letter-spacing: -.04em;
   text-decoration: none;
 }
 
@@ -113,7 +113,11 @@
 }
 
 .hero {
-  padding-block: clamp(46px, 8vw, 105px);
+  margin-block-start: clamp(18px, 4vw, 35px);
+  margin-block-end: clamp(24px, 5vw, 54px);
+  padding: clamp(24px, 6vw, 76px);
+  border-radius: 22px;
+  background: linear-gradient(125deg, #f1e7fe, #f9e2e6);
 }
 
 .heroCopy {
@@ -126,6 +130,10 @@
   font: 600 clamp(2.15rem, 4.3vw, 3.45rem)/1.12 var(--sans, system-ui, sans-serif);
   letter-spacing: -.04em;
   text-wrap: balance;
+}
+
+.hero h1 {
+  font: 400 clamp(2.75rem, 7vw, 5.1rem)/.98 var(--display, Georgia, serif);
 }
 
 .heroCopy p,

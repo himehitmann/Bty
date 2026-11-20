@@ -10,12 +10,12 @@ export function SiteHeader() {
     <header className={styles.header}>
       <div className={styles.headerInner}>
         <Link href="/decouvrir" aria-label={t("Navier, accueil du site", "Navier home page")} className={styles.wordmark}>
-          <span>NAVIER</span>
+          <span>Navier</span>
         </Link>
         <nav aria-label={t("Navigation du site", "Site navigation")} className={styles.nav}>
           <Link href="/installer">{t("Installer", "Install")}</Link>
           <Link href="/#offres">{t("Offres", "Plans")}</Link>
-          <Link href="/" className={styles.navAction}>{t("Mon espace", "My workspace")}</Link>
+          <Link href="/" className={styles.navAction}>{t("Ouvrir Navier", "Open Navier")}</Link>
         </nav>
       </div>
     </header>
@@ -27,7 +27,7 @@ export function SiteFooter() {
   return (
     <footer className={styles.footer}>
       <div className={styles.footerInner}>
-        <Link href="/decouvrir" className={styles.footerMark}>NAVIER</Link>
+        <Link href="/decouvrir" className={styles.footerMark}>Navier</Link>
         <nav aria-label={t("Liens de pied de page", "Footer links")} className={styles.footerLinks}>
           <Link href="/installer">{t("Guide d’installation", "Installation guide")}</Link>
           <Link href="/#offres">{t("Offres", "Plans")}</Link>

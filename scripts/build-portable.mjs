@@ -48,7 +48,9 @@ const { outputFiles } = await build({
 const script = outputFiles.find((file) => file.path.endsWith(".js")).text.replace(/<\/script/gi, "<\\/script");
 const css = outputFiles.find((file) => file.path.endsWith(".css")).text;
 const hash = createHash("sha256").update(script).digest("base64");
-const license = (await readFile(path.join(root, "public", "fonts", "geist-OFL.txt"), "utf8")).replaceAll("-->", "--&gt;");
+const licenses = await Promise.all(["geist", "instrument-serif"].map((font) =>
+  readFile(path.join(root, "public", "fonts", `${font}-OFL.txt`), "utf8")));
+const license = licenses.join("\n\n").replaceAll("-->", "--&gt;");
 
 await mkdir(path.dirname(destination), { recursive: true });
 await writeFile(destination + ".tmp", `<!doctype html>

@@ -1,4 +1,4 @@
-import { Blend, CalendarDays, Layers3, ScanBarcode } from "lucide-react";
+import { Brush, ClipboardList, Layers3, ScanBarcode } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter, SiteHeader } from "./site-shell";
@@ -6,11 +6,11 @@ import { Localized } from "@/lib/i18n";
 import styles from "./site.module.css";
 
 export const metadata: Metadata = {
-  title: "Découvrir Navier — Ton espace beauté",
-  description: "Organise ton vanity, suis les dates d’ouverture et compose tes rituels avec les produits que tu as déjà.",
+  title: "Découvrir Navier — Studio maquillage, routines et listes",
+  description: "Essaie des couleurs sur un visage illustré, organise tes routines et classe tes produits beauté.",
   openGraph: {
     title: "Navier — Les rituels qui te ressemblent",
-    description: "Un espace pour ton vanity, tes routines et les teintes que tu aimes.",
+    description: "Simulation maquillage, routines guidées et listes beauté personnelles.",
     locale: "fr_FR",
     type: "website",
   },
@@ -18,24 +18,24 @@ export const metadata: Metadata = {
 
 const features = [
   {
-    icon: ScanBarcode,
-    title: ["Comprends ton vanity", "Know your beauty collection"],
-    description: ["Retrouve un produit par code-barres, ajoute-le à ta collection et consulte la liste d’ingrédients avec sa source et ses limites.", "Find a product by barcode, add it to your collection and see its ingredients with their source and limitations."],
-  },
-  {
-    icon: CalendarDays,
-    title: ["Garde les dates en vue", "Keep track of dates"],
-    description: ["Note quand tu ouvres un produit et la durée indiquée sur son emballage pour retrouver le repère au bon moment.", "Record when you open a product and the period on its packaging so you can check it when it matters."],
+    icon: Brush,
+    title: ["Simuler un maquillage", "Try a makeup look"],
+    description: ["Choisis une carnation, superpose les teintes et vois où les appliquer sur le Face Chart interactif.", "Choose a skin tone, layer your shades and see where to apply them on the interactive face chart."],
   },
   {
     icon: Layers3,
-    title: ["Compose à partir de ce que tu as", "Build on what you already own"],
-    description: ["Organise chaque geste, visualise les zones sur le Face Chart et choisis un tutoriel adapté à tes produits.", "Organise each step, see application areas on the Face Chart and pick a tutorial that fits your products."],
+    title: ["Suivre une routine", "Follow a routine"],
+    description: ["Ordonne tes gestes de soin, de maquillage ou de coiffage. Retrouve les produits, les outils et les zones au fil des étapes.", "Arrange your skincare, makeup or hair steps. See the products, tools and application areas as you go."],
   },
   {
-    icon: Blend,
-    title: ["Retrouve une nuance", "Find that shade again"],
-    description: ["Prélève une couleur depuis une photo et conserve-la dans ta palette pour la retrouver plus tard.", "Pick a colour from a photo and save it in your palette for later."],
+    icon: ClipboardList,
+    title: ["Faire des listes", "Make lists"],
+    description: ["Garde tes favoris, tes achats à prévoir et les raisons de tes déceptions au même endroit.", "Keep favourites, planned purchases and the reasons behind disappointments together."],
+  },
+  {
+    icon: ScanBarcode,
+    title: ["Retrouver un produit", "Find a product"],
+    description: ["Cherche par nom, marque ou code-barres. Consulte les informations disponibles et ajoute tes propres notes.", "Search by name, brand or barcode. See the available product information and add your own notes."],
   },
 ];
 
@@ -47,10 +47,10 @@ export default function DiscoverPage() {
       <main id="contenu">
         <section className={styles.hero} aria-labelledby="discover-title">
           <div className={styles.heroCopy}>
-            <h1 id="discover-title"><Localized fr="Les rituels qui te ressemblent." en="Beauty routines that feel like you."/></h1>
-            <p><Localized fr="Réunis tes produits, compose tes routines et retrouve les teintes que tu aimes. Tout commence avec ce que tu possèdes déjà." en="Bring your products together, build your routines and find the shades you love. It starts with what you already own."/></p>
+            <h1 id="discover-title"><Localized fr="Ton studio maquillage et tes routines beauté" en="Your makeup studio and beauty routines"/></h1>
+            <p><Localized fr="Essaie un look, organise les gestes de ta routine et garde une trace des produits que tu veux racheter." en="Try a look, organise your routine and remember which products you want to buy again."/></p>
             <div className={styles.actions}>
-              <Link href="/" className={styles.primary}><Localized fr="Ouvrir mon espace" en="Open my workspace"/></Link>
+              <Link href="/#studio" className={styles.primary}><Localized fr="Essayer le simulateur" en="Try the simulator"/></Link>
               <Link href="/installer" className={styles.secondary}><Localized fr="Installer Navier" en="Install Navier"/></Link>
             </div>
           </div>
@@ -58,9 +58,8 @@ export default function DiscoverPage() {
 
         <section className={styles.features} aria-labelledby="features-title">
           <div className={styles.featureLead}>
-            <h2 id="features-title"><Localized fr="De ta coiffeuse à tes routines." en="From your dressing table to your routines."/></h2>
-            <p><Localized fr="Prends soin de ta collection avec des repères concrets pour choisir quoi utiliser, quand et dans quel ordre." en="Look after your collection with practical guidance on what to use, when and in which order."/></p>
-            <Link href="/#vanity" className={styles.quietLink}><Localized fr="Découvrir le vanity" en="Explore the beauty collection"/></Link>
+            <h2 id="features-title"><Localized fr="Les outils de Navier" en="Navier’s tools"/></h2>
+            <Link href="/" className={styles.quietLink}><Localized fr="Ouvrir Navier" en="Open Navier"/></Link>
           </div>
           <ul className={styles.featureList}>
             {features.map(({ icon: Icon, title, description }) => (

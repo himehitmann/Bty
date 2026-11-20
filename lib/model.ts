@@ -38,6 +38,9 @@ const claimEvidence = z.discriminatedUnion("source", [
 ]);
 const instructionText = z.string().trim().min(1).max(1200);
 
+export const productFeedbackOptions = ["favorite", "liked", "disappointed"] as const;
+export const personalProductNoteLimit = 800;
+
 export function declaredProductText(value: string): string {
   const text = value.trim();
   const normalized = text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()
@@ -55,6 +58,9 @@ export const productInput = z.object({
   openedOn: z.iso.date().optional(),
   paoMonths: z.number().int().min(1).max(60).optional(),
   expiresOn: z.iso.date().optional(),
+  purchased: z.boolean().optional(),
+  feedback: z.enum(productFeedbackOptions).optional(),
+  personalNote: z.string().trim().max(personalProductNoteLimit).optional(),
   claims: z.object({ vegan: claimEvidence.optional(), crueltyFree: claimEvidence.optional() }).optional(),
   usageInstructions: z.discriminatedUnion("source", [
     catalogEvidence.extend({ text: instructionText }),
@@ -87,16 +93,34 @@ export const productSchema = productInput.extend({
 });
 
 const zoneSchema = z.enum(["visage", "front", "joues", "yeux", "levres", "menton", "cheveux"]);
+export const hairApplicationAreas = ["scalp", "lengths", "ends"] as const;
 const stepSchema = z.object({
   id: identifier, productId: identifier, zone: zoneSchema, note: z.string().max(800),
   swatchId: identifier.optional(),
   applicationsPerWeek: z.number().int().min(1).max(7).optional(),
+  tool: z.string().trim().max(120).optional(),
+  hairArea: z.enum(hairApplicationAreas).optional(),
+  massage: z.boolean().optional(),
 });
 const routineSchema = z.object({
   id: identifier, name, period: z.enum(["matin", "soir", "libre"]), steps: z.array(stepSchema).max(40),
 });
 const colorSchema = z.object({
   id: identifier, hex, name, photoPath: z.string().max(300).optional(),
+});
+export const beautyListLimits = { lists: 30, items: 120, name: 100, text: 300, reason: 400 } as const;
+const beautyListItemSchema = z.object({
+  id: identifier,
+  text: z.string().trim().min(1).max(beautyListLimits.text),
+  reason: z.string().trim().max(beautyListLimits.reason).optional(),
+  checked: z.boolean(),
+  productId: identifier.optional(),
+});
+const beautyListSchema = z.object({
+  id: identifier,
+  name: z.string().trim().min(1).max(beautyListLimits.name),
+  items: z.array(beautyListItemSchema).max(beautyListLimits.items)
+    .refine((items) => new Set(items.map((item) => item.id)).size === items.length),
 });
 export const skinFeels = ["seche", "brillante", "mixte", "equilibree", "incertaine"] as const;
 export const skinConcerns = ["tiraillements", "brillance", "rougeurs", "imperfections", "texture"] as const;
@@ -114,6 +138,8 @@ export const stateSchema = z.object({
   products: z.array(productSchema).max(500),
   routines: z.array(routineSchema).max(100),
   palette: z.array(colorSchema).max(200),
+  lists: z.array(beautyListSchema).max(beautyListLimits.lists)
+    .refine((lists) => new Set(lists.map((list) => list.id)).size === lists.length).optional(),
   preferences: preferenceSchema,
   completed: z.array(z.object({ routineId: identifier, at: z.iso.datetime() })).max(1000),
 });
@@ -123,6 +149,7 @@ export type FaceZone = z.infer<typeof zoneSchema>;
 export type RoutineStep = z.infer<typeof stepSchema>;
 export type Routine = z.infer<typeof routineSchema>;
 export type PaletteColor = z.infer<typeof colorSchema>;
+export type BeautyList = z.infer<typeof beautyListSchema>;
 export type Preferences = z.infer<typeof preferenceSchema>;
 export type State = z.infer<typeof stateSchema>;
 

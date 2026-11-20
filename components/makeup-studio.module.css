@@ -1,0 +1,492 @@
+.studio {
+  --studio-ink: #302443;
+  --studio-line: #e6dbea;
+  --studio-lilac: #e8ddfd;
+  --studio-blush: #f3d1d8;
+  --studio-muted: #67586c;
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  color: var(--studio-ink);
+}
+
+.header {
+  display: grid;
+  gap: 0.44rem;
+}
+
+.header h1 {
+  font: 400 clamp(2.5rem, 5vw, 4.35rem) / 0.98 var(--display, Georgia, serif);
+  letter-spacing: -0.035em;
+}
+
+.header p,
+.photoIntro p {
+  color: var(--studio-muted);
+  line-height: 1.5;
+}
+
+.tabs,
+.zones,
+.tools,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.44rem;
+}
+
+.tabs {
+  max-width: max-content;
+  gap: 0.24rem;
+  padding: 0.24rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 0.75rem;
+  background: #f6eff9;
+}
+
+.tabs button,
+.zones button,
+.tools button,
+.apply,
+.mixToggle {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  color: var(--studio-ink);
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.tabs button[aria-selected="true"] {
+  border-color: var(--studio-line);
+  background: #fff;
+  box-shadow: 0 1px 3px #30244313;
+}
+
+.zones button,
+.tools button,
+.mixToggle,
+.apply {
+  border-color: var(--studio-line);
+  background: #fff;
+}
+
+.tabs button:hover,
+.zones button:hover,
+.tools button:hover,
+.mixToggle:hover,
+.apply:hover {
+  border-color: #b7a2ca;
+}
+
+.zones button[aria-pressed="true"],
+.mixToggle[aria-pressed="true"] {
+  border-color: #8a6caa;
+  background: var(--studio-lilac);
+}
+
+.tools button {
+  min-height: 2.45rem;
+  padding-block: 0.35rem;
+  color: var(--studio-muted);
+}
+
+.tools button[aria-pressed="true"] {
+  border-color: #bc889a;
+  color: var(--studio-ink);
+  background: var(--studio-blush);
+}
+
+.tabPanel {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.tabPanel[hidden] {
+  display: none;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 0.9rem;
+}
+
+.preview,
+.controls,
+.photoIntro {
+  min-width: 0;
+  padding: clamp(0.9rem, 3vw, 1.4rem);
+  border: 1px solid var(--studio-line);
+  border-radius: 1rem;
+}
+
+.preview {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  background: radial-gradient(ellipse at 52% 40%, #fff7f2 12%, #f8e9f1 62%, #ede3f8 100%);
+}
+
+.preview h2 {
+  font: 400 clamp(1.7rem, 4vw, 2.25rem) / 1 var(--display, Georgia, serif);
+}
+
+.preview h2:focus {
+  outline: none;
+}
+
+.preview .face {
+  width: min(100%, 16rem);
+}
+
+.face [data-pigment="highlighter"] {
+  animation: sheen 2.8s ease-in-out both;
+}
+
+@keyframes sheen {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.73; }
+}
+
+.skinTones {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+}
+
+.skinTones legend {
+  width: 100%;
+  margin-bottom: 0.28rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.skinTone,
+.customSkinTone {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0.26rem;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+}
+
+.skinTone::before {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #30244338;
+  border-radius: inherit;
+  background: var(--swatch);
+  content: "";
+}
+
+.skinTone:hover,
+.skinTone[aria-pressed="true"] {
+  border-color: #72528d;
+  background: #fff9;
+}
+
+.customSkinTone {
+  border-color: #9e80b5;
+  background: #fff9;
+  cursor: pointer;
+}
+
+.customSkinTone::-webkit-color-swatch-wrapper { padding: 0; }
+.customSkinTone::-webkit-color-swatch { border: 1px dashed #72528d; border-radius: 50%; }
+.customSkinTone::-moz-color-swatch { border: 1px dashed #72528d; border-radius: 50%; }
+
+.portraitOptions {
+  text-align: center;
+}
+
+.portraitOptions summary {
+  padding: 0.35rem;
+  color: #573976;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.portraitOptions > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0;
+}
+
+.portraitOptions label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+}
+
+.portraitOptions input[type="color"] {
+  width: 2.45rem;
+  height: 2.45rem;
+  padding: 0.25rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 0.48rem;
+  background: #fff;
+  cursor: pointer;
+}
+
+.layerList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.28rem;
+  margin: 0.3rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.layerList button {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 1rem;
+  background: #fff8;
+  font-size: 0.76rem;
+}
+
+.layerList button[aria-pressed="true"] {
+  border-color: #9b7db6;
+  background: #fff;
+}
+
+.layerList span {
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1px solid #30244324;
+  border-radius: 50%;
+}
+
+.hint {
+  max-width: 24rem;
+  color: var(--studio-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.controls,
+.adjustments,
+.mixControls,
+.shadeSources,
+.colourField {
+  display: grid;
+  min-width: 0;
+  gap: 0.74rem;
+}
+
+.controls {
+  background: var(--surface, #fff);
+}
+
+.swatches {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(4.35rem, 1fr));
+  gap: 0.28rem;
+  padding: 0;
+  border: 0;
+}
+
+.swatches legend,
+.colourField label,
+.shadeSources label,
+.range {
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.swatches legend {
+  margin-bottom: 0.34rem;
+}
+
+.shade {
+  display: grid;
+  min-height: 3.85rem;
+  align-content: start;
+  justify-items: center;
+  gap: 0.32rem;
+  padding: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+}
+
+.shade:hover,
+.shade[aria-pressed="true"] {
+  border-color: #ad92c3;
+  background: #f4eefb;
+}
+
+.shade span {
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 1px solid #30244325;
+  border-radius: 0.5rem;
+  background: var(--swatch);
+}
+
+.shade small {
+  color: var(--studio-ink);
+  font-size: 0.75rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.colourField {
+  gap: 0.3rem;
+}
+
+.colourInputs {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  gap: 0.4rem;
+}
+
+.colourInputs input,
+.shadeSources select {
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.46rem 0.55rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 0.55rem;
+  color: var(--studio-ink);
+  background: #fff;
+  font: inherit;
+}
+
+.colourInputs input[type="color"] {
+  width: 100%;
+  padding: 0.3rem;
+  cursor: pointer;
+}
+
+.colourInputs input[type="text"] {
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+}
+
+.shadeSources label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.shadeSources select {
+  width: 100%;
+  font-weight: 450;
+}
+
+.photoShortcut {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.4rem;
+  color: #583976;
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+.photoShortcut:hover {
+  text-decoration: underline;
+}
+
+.adjustments {
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--studio-line);
+}
+
+.activeShade {
+  color: var(--studio-muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.range {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.range span {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.range output {
+  color: var(--studio-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.range input {
+  width: 100%;
+  min-height: 1.95rem;
+  accent-color: #674585;
+  cursor: pointer;
+}
+
+.mixToggle {
+  justify-self: start;
+}
+
+.mixControls {
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+  background: #f9eff6;
+}
+
+.actions {
+  padding-top: 0.25rem;
+}
+
+.photoIntro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  background: #f7effa;
+}
+
+@media (min-width: 770px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  }
+
+  .preview .face {
+    width: min(100%, 19rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .face [data-pigment="highlighter"] { animation: none; }
+}

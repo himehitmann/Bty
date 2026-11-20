@@ -384,6 +384,37 @@
   font-size: 0.875rem;
 }
 
+.stepSetup {
+  padding: .7rem .85rem;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--background);
+}
+
+.stepSetup summary {
+  cursor: pointer;
+  font-size: .875rem;
+  font-weight: 620;
+}
+
+.stepSetup .fields {
+  margin-top: .7rem;
+}
+
+.stepSetup .massageOption {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .55rem;
+  min-height: 40px;
+}
+
+.massageOption input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--brand);
+}
+
 .instructions summary,
 .makeupLegend summary {
   color: var(--brand-dark);
@@ -483,14 +514,14 @@
 }
 
 .silhouette {
-  fill: #fbfaf7;
-  stroke: #7b7d7b;
+  fill: var(--face-skin, #fbfaf7);
+  stroke: var(--face-outline, #7b7d7b);
   stroke-width: 1.2;
 }
 
 .hair {
-  fill: #edebe4;
-  stroke: #7b7d7b;
+  fill: var(--face-hair, #edebe4);
+  stroke: var(--face-hair-outline, #7b7d7b);
   stroke-width: 1.2;
 }
 
@@ -511,14 +542,18 @@
 }
 
 .faceZone[data-active="true"] path {
-  stroke: #345f87;
+  stroke: var(--face-active, #345f87);
   stroke-width: 1.8;
   stroke-dasharray: 3.5 3.5;
 }
 
+.faceZone[data-guided="true"] path {
+  stroke: transparent;
+}
+
 .faceZone:hover path,
 .faceZone:focus-visible path {
-  stroke: #1e3f62;
+  stroke: var(--face-hover, #1e3f62);
   stroke-width: 2.2;
 }
 
@@ -528,14 +563,39 @@
 
 .faceDetails {
   fill: none;
-  stroke: #6a6e70;
+  stroke: var(--face-details, #6a6e70);
   stroke-width: 1.05;
   pointer-events: none;
 }
 
 .faceDetails circle {
-  fill: #6a6e70;
-  stroke: none;
+  fill: var(--face-iris, var(--face-details, #6a6e70));
+  stroke: var(--face-iris-outline, none);
+  stroke-width: .65;
+}
+
+.applicationMarking {
+  fill: none;
+  stroke: #805896;
+  stroke-width: 1.9;
+  stroke-dasharray: 4 4;
+  pointer-events: none;
+  animation: applicationPulse 2.65s ease-in-out both;
+}
+
+.applicationMarking[data-application="hair"] {
+  stroke: #885174;
+  stroke-width: 2.4;
+}
+
+.massageArrows {
+  stroke-width: 1.55;
+  stroke-dasharray: none;
+}
+
+@keyframes applicationPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .57; }
 }
 
 .chartSelection {
@@ -659,4 +719,6 @@
   .faceZone path {
     transition: none;
   }
+
+  .applicationMarking { animation: none; }
 }
