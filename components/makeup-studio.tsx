@@ -4,54 +4,46 @@ import { Camera, CircleX, Crosshair, Palette as PaletteIcon, RotateCcw, SlidersH
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { defaultApplicationZone, makeupAppearance, type PigmentLayer } from "@/lib/face-makeup";
 import { useLocale } from "@/lib/i18n";
-import { findMakeupPlacement, getMakeupPlacements, type MakeupPlacement } from "@/lib/makeup-placements";
+import { findMakeupPlacement, getMakeupPlacements } from "@/lib/makeup-placements";
 import type { FaceZone, PaletteColor, Product } from "@/lib/model";
+import {
+  studioAreas, studioLookLimits, studioToolsByArea,
+  type SavedStudioLook, type StudioArea, type StudioLayer, type StudioLookLayers, type StudioPlacements, type StudioSetting, type StudioTool,
+} from "@/lib/studio-looks";
 import { FaceChart } from "./face-chart";
+import { StudioLookLibrary } from "./studio-look-library";
 import styles from "./makeup-studio.module.css";
 
 type StudioTab = "look" | "photo";
 type PreviewMode = "look" | "bare";
-type StudioArea = "visage" | "joues" | "yeux" | "levres";
 type PigmentKind = PigmentLayer["kind"];
-type StudioTool = PigmentKind | "setting-powder";
+type StudioSelection = { area: StudioArea; tool: StudioTool };
 type Labels = [french: string, english: string];
 type Shade = { hex: string; label: Labels };
-type StudioLayer = {
-  name: string;
-  hex: string;
-  intensity: number;
-  mix?: { hex: string; amount: number };
-  productId?: string;
-  swatchId?: string;
-};
-type Look = Partial<Record<StudioArea, Partial<Record<PigmentKind, StudioLayer>>>>;
-type Placements = Partial<Record<StudioTool, MakeupPlacement>>;
-type SettingLayer = { productId?: string };
 
-const studioAreas = ["visage", "joues", "yeux", "levres"] as const;
 const tabs = ["look", "photo"] as const;
 const areas = {
-  visage: { label: ["Teint", "Complexion"], kind: "foundation", tools: ["foundation", "concealer", "powder", "setting-powder"], intensity: 38, shades: [
+  visage: { label: ["Teint", "Complexion"], kind: "foundation", tools: studioToolsByArea.visage, intensity: 38, shades: [
     { hex: "#F6DCCA", label: ["Ivoire", "Ivory"] }, { hex: "#E2B395", label: ["Beige doré", "Golden beige"] },
     { hex: "#C58C64", label: ["Miel", "Honey"] }, { hex: "#9C664F", label: ["Ambre", "Amber"] },
     { hex: "#744D3E", label: ["Châtaigne", "Chestnut"] }, { hex: "#57382E", label: ["Cacao", "Cocoa"] },
   ] },
-  joues: { label: ["Joues", "Cheeks"], kind: "blush", tools: ["contour", "bronzer", "blush", "highlighter"], intensity: 66, shades: [
+  joues: { label: ["Joues", "Cheeks"], kind: "blush", tools: studioToolsByArea.joues, intensity: 66, shades: [
     { hex: "#DC8E9D", label: ["Rose poudré", "Dusty rose"] }, { hex: "#EC967F", label: ["Pêche", "Peach"] },
     { hex: "#D25D6F", label: ["Framboise", "Raspberry"] }, { hex: "#A55169", label: ["Bois de rose", "Rosewood"] },
     { hex: "#AE6352", label: ["Terracotta", "Terracotta"] }, { hex: "#784760", label: ["Prune", "Plum"] },
   ] },
-  yeux: { label: ["Yeux", "Eyes"], kind: "eyeshadow", tools: ["eyeshadow", "eyeliner", "mascara"], intensity: 72, shades: [
+  yeux: { label: ["Yeux", "Eyes"], kind: "eyeshadow", tools: studioToolsByArea.yeux, intensity: 72, shades: [
     { hex: "#B8927F", label: ["Taupe rosé", "Rosy taupe"] }, { hex: "#AA85B7", label: ["Mauve", "Mauve"] },
     { hex: "#B97C62", label: ["Cuivre", "Copper"] }, { hex: "#6C786B", label: ["Sauge", "Sage"] },
     { hex: "#707199", label: ["Iris", "Iris"] }, { hex: "#513746", label: ["Aubergine", "Aubergine"] },
   ] },
-  levres: { label: ["Lèvres", "Lips"], kind: "lip", tools: ["lip"], intensity: 88, shades: [
+  levres: { label: ["Lèvres", "Lips"], kind: "lip", tools: studioToolsByArea.levres, intensity: 88, shades: [
     { hex: "#C38788", label: ["Nude rosé", "Rosy nude"] }, { hex: "#D16C6D", label: ["Corail", "Coral"] },
     { hex: "#B84455", label: ["Rouge velours", "Velvet red"] }, { hex: "#A46056", label: ["Brique", "Brick"] },
     { hex: "#8D3F5D", label: ["Baie", "Berry"] }, { hex: "#60384B", label: ["Mûre", "Blackberry"] },
   ] },
-} satisfies Record<StudioArea, { label: Labels; kind: StudioTool; tools: StudioTool[]; intensity: number; shades: Shade[] }>;
+} satisfies Record<StudioArea, { label: Labels; kind: StudioTool; tools: readonly StudioTool[]; intensity: number; shades: Shade[] }>;
 
 const toolLabels = {
   foundation: ["Fond de teint", "Foundation"], concealer: ["Correcteur", "Concealer"], powder: ["Poudre teintée", "Tinted powder"],
@@ -99,7 +91,7 @@ function placementKind(tool: StudioTool) {
   return tool === "setting-powder" ? "powder" : tool;
 }
 
-function selectedPlacement(tool: StudioTool, choices: Placements) {
+function selectedPlacement(tool: StudioTool, choices: StudioPlacements) {
   const kind = placementKind(tool);
   const saved = choices[tool];
   return (saved ? findMakeupPlacement(kind, saved) : undefined) ?? getMakeupPlacements(kind)[0];
@@ -193,10 +185,12 @@ function SavedShades({ palette, selected, onSelect }: { palette: PaletteColor[];
   </fieldset>;
 }
 
-export function MakeupStudio({ products, palette, paletteEditor, initialTab = "look" }: {
+export function MakeupStudio({ products, palette, paletteEditor, savedLooks, onChangeLooks, initialTab = "look" }: {
   products: Product[];
   palette: PaletteColor[];
   paletteEditor: ReactNode;
+  savedLooks: readonly SavedStudioLook[];
+  onChangeLooks: (apply: (current: SavedStudioLook[]) => SavedStudioLook[]) => boolean;
   initialTab?: StudioTab;
 }) {
   const { t, formatNumber } = useLocale();
@@ -206,15 +200,16 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
   const preview = useRef<HTMLHeadingElement>(null);
   const [tab, setTab] = useState<StudioTab>(initialTab);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("look");
-  const [{ area, tool }, setSelection] = useState<{ area: StudioArea; tool: StudioTool }>({ area: "joues", tool: "blush" });
+  const [{ area, tool }, setSelection] = useState<StudioSelection>({ area: "joues", tool: "blush" });
   const [skinTone, setSkinTone] = useState(skinTones[1].hex);
   const [iris, setIris] = useState("#5A4359");
   const [hair, setHair] = useState("#473342");
   const [showHair, setShowHair] = useState(false);
-  const [look, setLook] = useState<Look>({});
-  const [placements, setPlacements] = useState<Placements>({});
+  const [look, setLook] = useState<StudioLookLayers>({});
+  const [placements, setPlacements] = useState<StudioPlacements>({});
+  const [activeLookId, setActiveLookId] = useState<string>();
   const [guideVisible, setGuideVisible] = useState(false);
-  const [setting, setSetting] = useState<SettingLayer | null>(null);
+  const [setting, setSetting] = useState<StudioSetting | null>(null);
   const owned = products.flatMap((product) => {
     const pigment = productPigment(product);
     return pigment ? [pigment] : [];
@@ -242,6 +237,7 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
       name: layer.name, productName: layer.name, opacity: layer.intensity / 100, stepId: `${zone}-${kind}`, zone,
       placement: selectedPlacement(kind, placements)?.id }];
   }));
+  const hasLook = layers.length > 0 || settingApplied;
   const toneStyle = {
     "--face-skin": skinTone,
     "--face-hair": hair,
@@ -303,6 +299,75 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
     requestAnimationFrame(() => preview.current?.focus());
   }
 
+  function saveLook(name: string, existingId?: string) {
+    if (!hasLook) return false;
+    const savedPlacements = { ...placements };
+    for (const { kind, placement } of layers) if (placement) savedPlacements[kind] = placement;
+    if (mattePlacement) savedPlacements["setting-powder"] = mattePlacement;
+    const item: SavedStudioLook = {
+      id: existingId ?? crypto.randomUUID(),
+      name,
+      updatedAt: new Date().toISOString(),
+      snapshot: {
+        portrait: { skinTone, iris, hair, showHair },
+        layers: look,
+        placements: savedPlacements,
+        setting: settingApplied ? setting : null,
+      },
+    };
+    let changed = false;
+    const applied = onChangeLooks((current) => {
+      if (existingId ? !current.some(({ id }) => id === existingId) : current.length >= studioLookLimits.looks) return current;
+      changed = true;
+      return [item, ...current.filter(({ id }) => id !== item.id)];
+    });
+    if (!applied || !changed) return false;
+    setActiveLookId(item.id);
+    return true;
+  }
+
+  function openLook({ id, snapshot }: SavedStudioLook) {
+    const restored: StudioLookLayers = {};
+    let selection: StudioSelection | undefined;
+    for (const zone of studioAreas) {
+      const zoneLayers = snapshot.layers[zone];
+      if (!zoneLayers) continue;
+      for (const kind of studioToolsByArea[zone]) {
+        if (kind === "setting-powder") continue;
+        const layer = zoneLayers[kind];
+        if (!layer) continue;
+        const ownedLayer = layer.productId ? ownedById.get(layer.productId) : undefined;
+        const swatch = palette.find((color) => color.id === layer.swatchId && color.hex.toUpperCase() === layer.hex.toUpperCase());
+        restored[zone] = { ...restored[zone], [kind]: {
+          ...layer,
+          productId: ownedLayer?.zone === zone && ownedLayer.appearance.kind === kind ? layer.productId : undefined,
+          swatchId: swatch?.id,
+        } };
+        selection ??= { area: zone, tool: kind };
+      }
+    }
+    const { skinTone: savedSkin, iris: savedIris, hair: savedHair, showHair: savedShowHair } = snapshot.portrait;
+    const powderId = snapshot.setting?.productId;
+    setSetting(snapshot.setting && (ownedSettingPowders.some(({ id }) => id === powderId) ? snapshot.setting : {}));
+    setSkinTone(savedSkin);
+    setIris(savedIris);
+    setHair(savedHair);
+    setShowHair(savedShowHair);
+    setLook(restored);
+    setPlacements(snapshot.placements);
+    setSelection(selection ?? { area: "visage", tool: "setting-powder" });
+    setGuideVisible(false);
+    setPreviewMode("look");
+    setActiveLookId(id);
+    requestAnimationFrame(() => preview.current?.focus());
+  }
+
+  function deleteLook(id: string) {
+    const applied = onChangeLooks((current) => current.filter((look) => look.id !== id));
+    if (applied && activeLookId === id) setActiveLookId(undefined);
+    return applied;
+  }
+
   return <section className={styles.studio} aria-labelledby={`${id}-title`}>
     <header className={styles.header}>
       <h1 id={`${id}-title`}>{t("Studio maquillage", "Makeup studio")}</h1>
@@ -321,6 +386,7 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
     </div>
 
     <div className={styles.tabPanel} role="tabpanel" id={`${id}-panel-look`} aria-labelledby={`${id}-tab-look`} hidden={tab !== "look"}>
+      <StudioLookLibrary looks={savedLooks} activeId={activeLookId} canSave={hasLook} onSave={saveLook} onOpen={openLook} onDelete={deleteLook}/>
       <div className={styles.workspace}>
         <section className={styles.preview} aria-labelledby={`${id}-preview`}>
           <div className={styles.previewHeader}>
@@ -485,7 +551,7 @@ export function MakeupStudio({ products, palette, paletteEditor, initialTab = "l
               }}>
               <CircleX size={16} aria-hidden="true"/>{t("Effacer la zone", "Clear area")}
             </button>
-            <button type="button" className="button button-secondary" disabled={!layers.length && !settingApplied} onClick={() => {
+            <button type="button" className="button button-secondary" disabled={!hasLook} onClick={() => {
               setPreviewMode("look");
               setLook({});
               setSetting(null);

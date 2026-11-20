@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { makeupPlacementIds } from "./makeup-placements";
+import { savedStudioLookSchema, studioLookLimits } from "./studio-looks";
 
 export const categories = ["soin", "maquillage", "cheveux", "parfums"] as const;
 export const categoryLabels = { soin: "Soin", maquillage: "Maquillage", cheveux: "Cheveux", parfums: "Parfums" };
@@ -143,6 +144,8 @@ export const stateSchema = z.object({
   palette: z.array(colorSchema).max(200),
   lists: z.array(beautyListSchema).max(beautyListLimits.lists)
     .refine((lists) => new Set(lists.map((list) => list.id)).size === lists.length).optional(),
+  looks: z.array(savedStudioLookSchema).max(studioLookLimits.looks)
+    .refine((looks) => new Set(looks.map((look) => look.id)).size === looks.length).optional(),
   preferences: preferenceSchema,
   completed: z.array(z.object({ routineId: identifier, at: z.iso.datetime() })).max(1000),
 });

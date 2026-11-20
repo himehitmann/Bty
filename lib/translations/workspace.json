@@ -52,7 +52,7 @@
   "My data": ["Mis datos", "I miei dati"],
   "Export my workspace": ["Exportar mi espacio", "Esporta il mio spazio"],
   "Keep the Navier file in the same place and use the same browser to find your data.": ["Deja el archivo de Navier en el mismo lugar y usa el mismo navegador para encontrar tus datos.", "Mantieni il file di Navier nella stessa posizione e usa lo stesso browser per ritrovare i tuoi dati."],
-  "The file includes products, routines, lists, shades and preferences.": ["El archivo incluye productos, rutinas, listas, tonos y preferencias.", "Il file include prodotti, routine, liste, tonalità e preferenze."],
+  "The file includes products, routines, lists, looks, shades and preferences.": ["El archivo incluye productos, rutinas, listas, maquillajes guardados, tonos y preferencias.", "Il file include prodotti, routine, liste, look, tonalità e preferenze."],
   "Install Navier": ["Instalar Navier", "Installa Navier"],
   "Privacy": ["Privacidad", "Privacy"],
   "You’re signed in to your Navier workspace.": ["Ya has iniciado sesión en tu espacio de Navier.", "Hai effettuato l’accesso al tuo spazio Navier."],

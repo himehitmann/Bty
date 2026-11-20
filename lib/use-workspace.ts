@@ -174,7 +174,7 @@ export function useWorkspaceState(localOnly = false) {
     return () => window.removeEventListener("online", reconnect);
   }, [activate, flush, sync]);
 
-  const update = useCallback((recipe: (previous: State) => State, expectedId?: string | null) => {
+  const update = useCallback((recipe: (previous: State) => State, expectedId?: string | null, { requireLocalCopy = false } = {}) => {
     const current = scope.current;
     if (!current || (expectedId !== undefined && expectedId !== current.id)) return false;
     const validated = stateSchema.safeParse(recipe(current.draft.state));
@@ -188,9 +188,13 @@ export function useWorkspaceState(localOnly = false) {
         "Your workspace is full. Shorten some ingredient lists or reduce your history."));
       return false;
     }
-    current.draft = { ...current.draft, state: validated.data, dirty: Boolean(current.id) };
-    setState(current.draft.state);
-    if (!writeDraft(current.id, current.draft)) setNotice(draftMessage(current.draft, "Le navigateur n’a pas pu enregistrer une copie locale.", "The browser could not save a local copy."));
+    const nextDraft = { ...current.draft, state: validated.data, dirty: Boolean(current.id) };
+    if (!writeDraft(current.id, nextDraft)) {
+      setNotice(draftMessage(nextDraft, "Le navigateur n’a pas pu enregistrer une copie locale.", "The browser could not save a local copy."));
+      if (requireLocalCopy) return false;
+    }
+    current.draft = nextDraft;
+    setState(nextDraft.state);
     void flush();
     return true;
   }, [flush]);

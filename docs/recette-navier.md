@@ -30,6 +30,7 @@ Ouvre `http://localhost:3000` tant que le serveur tourne. Le site et le guide d�
 9. Ajoute une étape capillaire à une routine. Choisis les pointes, saisis le nom de la brosse et coche le massage si c’est le geste prévu. Lance la routine et vérifie les informations et le repère visuel.
 10. Dans le Studio, compare le blush sur le bombé des joues et en haut des pommettes. Active le guide, puis teste une poudre translucide sous les yeux et le contour de la mâchoire. Enregistre deux teintes sous un même nom de palette et essaie-les depuis le nuancier.
 11. Dans le fichier **Navier.html** connecté à Internet, cherche une référence absente de la sélection embarquée. Passe hors connexion et cherche le code `3337875795456` pour vérifier le retour du catalogue embarqué.
+12. Dans **Mes looks**, utilise **Enregistrer ce look** et donne-lui un nom. Recharge Navier, sélectionne le look, clique sur **Ouvrir** et compare **Visage nu** et **Look maquillé**. Retire la teinte ou le produit d’origine, puis vérifie que le look conserve la couleur et son placement. Retouche-le et utilise **Enregistrer comme nouveau** pour garder les deux versions. Vérifie leur présence dans le JSON depuis **Paramètres → Exporter mon espace**. Avec Supabase configuré, attends la synchronisation puis ouvre le même compte dans un second navigateur pour vérifier les looks.
 
 ## Inventaire des fonctions
 
@@ -41,6 +42,7 @@ Ouvre `http://localhost:3000` tant que le serveur tourne. Le site et le guide d�
 | **Profil** | Noter son ressenti, ses observations et son sous-ton. Consulter la méthode de comparaison des sous-tons. Préparer une trame matinale avec les produits dont on confirme le rôle. |
 | **Routines et tutoriels** | Créer et réordonner des étapes, choisir une zone, une consigne et une fréquence indicative, convertir un tutoriel depuis le vanity et consulter les points de vigilance. Suivre une routine et retrouver le nombre de séances terminées sur les sept derniers jours. |
 | **Simulation et Face Chart** | Composer un look sur le visage illustré, choisir sa carnation, essayer et mélanger des couleurs, ajouter plusieurs calques à une même zone et réutiliser une teinte prélevée sur une photo. Les produits transparents ou matifiants ne déposent pas de pigment. |
+| **Mes looks** | Enregistrer une composition sous un nom depuis le Studio et la retrouver dans le même navigateur ou avec un compte synchronisé. |
 | **Listes et avis** | Organiser les achats et favoris, garder la raison d’une déception et cocher les éléments. Consulter les notes déjà enregistrées sur un produit. |
 | **Données et PWA** | Utiliser l’espace local, retrouver les outils hors connexion après un premier chargement, exporter son espace, installer la PWA via le navigateur compatible, ou synchroniser son espace et stocker des photos privées avec Supabase configuré. |
 | **Journal Plus** | Noter le ressenti, les produits et la routine du jour, filtrer l’historique et consulter les synthèses. Exporter les observations. Les droits d’écriture dépendent de l’abonnement et sont contrôlés côté serveur. |

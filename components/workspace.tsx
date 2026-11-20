@@ -272,6 +272,8 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
             onChange={(routines) => update((previous) => ({ ...previous, routines }))}
             startRoutineId={guide} onStartGuide={setGuide} onExitGuide={() => setGuide(undefined)} onComplete={complete}/>}
           {view === "studio" && <MakeupStudio key={`${user?.id ?? "guest"}:${studioTab}`} products={state.products}
+            savedLooks={state.looks ?? []}
+            onChangeLooks={(apply) => update((previous) => ({ ...previous, looks: apply(previous.looks ?? []) }), user?.id ?? null, { requireLocalCopy: !user })}
             palette={state.palette} initialTab={studioTab} paletteEditor={
               <Palette colors={state.palette}
                 onChange={(apply) => update((previous) => ({ ...previous, palette: apply(previous.palette) }), user?.id ?? null)}
@@ -365,7 +367,7 @@ function PreferencesForm({ state, portable, onSave }: {
       <button className="button button-secondary" type="button" onClick={() => exportWorkspace(state)}><Download size={16}/>{t("Exporter mon espace", "Export my workspace")}</button>
       <p className="muted">{portable
         ? t("Garde le fichier Navier au même endroit et utilise le même navigateur pour retrouver tes données.", "Keep the Navier file in the same place and use the same browser to find your data.")
-        : t("Le fichier inclut les produits, routines, listes, teintes et préférences.", "The file includes products, routines, lists, shades and preferences.")}</p>
+        : t("Le fichier inclut les produits, routines, listes, looks, teintes et préférences.", "The file includes products, routines, lists, looks, shades and preferences.")}</p>
       {!portable && <>
         <a href="/installer">{t("Installer Navier", "Install Navier")}</a>
         <a href="/confidentialite">{t("Confidentialité", "Privacy")}</a>
