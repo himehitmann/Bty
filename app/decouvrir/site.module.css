@@ -4,7 +4,7 @@
   --site-ink: var(--ink);
   --site-muted: var(--muted);
   --site-edge: var(--line);
-  --site-blue: var(--brand-dark);
+  --site-accent: var(--brand-dark);
   display: flex;
   min-height: 100svh;
   flex-direction: column;
@@ -108,8 +108,8 @@
 }
 
 .primary:hover {
-  border-color: var(--site-blue);
-  background: var(--site-blue);
+  border-color: var(--site-accent);
+  background: var(--site-accent);
 }
 
 .hero {
@@ -117,7 +117,7 @@
   margin-block-end: clamp(24px, 5vw, 54px);
   padding: clamp(24px, 6vw, 76px);
   border-radius: 22px;
-  background: linear-gradient(125deg, #f1e7fe, #f9e2e6);
+  background: linear-gradient(125deg, #f5e7d6, #ecd0bd);
 }
 
 .heroCopy {
@@ -166,7 +166,7 @@
 
 .quietLink {
   display: inline-block;
-  color: var(--site-blue);
+  color: var(--site-accent);
   font-weight: 650;
   text-decoration: underline;
   text-underline-offset: .22em;

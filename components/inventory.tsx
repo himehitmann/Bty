@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, Brush, CalendarClock, ChevronRight, CircleAlert, Columns2, Droplets, Heart, Pencil, Plus, Scissors, Search, SprayCan, Trash2 } from "lucide-react";
 import { analyzeProduct, ingredientList } from "@/lib/analysis";
-import { normalizeCatalogText, searchLocalCatalog, type CatalogSearchMode } from "@/lib/catalog";
+import { normalizeCatalogQuery, normalizeCatalogText, rankCatalogProducts, searchLocalCatalog, type CatalogSearchMode } from "@/lib/catalog";
 import { useLocale } from "@/lib/i18n";
 import { categories, categoryLabels, makeupEffectLabels, makeupEffects, makeupKindLabels, makeupKinds, personalProductNoteLimit, productFeedbackOptions, productInput, productSchema, sourceLabels, type Preferences, type Product } from "@/lib/model";
+import { searchOpenBeautyFacts } from "@/lib/open-beauty-facts";
 import { getProductLifecycle, lifecycleStatusLabels, localCalendarDate, upcomingWindowDays } from "@/lib/product-life";
 import styles from "./inventory.module.css";
 
@@ -17,7 +18,7 @@ const categoryLabelsEn = { soin: "Skincare", maquillage: "Makeup", cheveux: "Hai
 const sourceLabelsEn = { manuel: "Manual entry", local: "Local catalogue · example formula", "open-beauty-facts": "Open Beauty Facts" };
 const lifecycleLabelsEn = { past: "Past its date", today: "Due today", soon: "Check soon", upcoming: "Next date" };
 const makeupKindLabelsEn = {
-  foundation: "Foundation", concealer: "Concealer", blush: "Blush", bronzer: "Bronzer", highlighter: "Highlighter", eyeshadow: "Eyeshadow",
+  foundation: "Foundation", concealer: "Concealer", blush: "Blush", contour: "Contour", bronzer: "Bronzer", highlighter: "Highlighter", eyeshadow: "Eyeshadow",
   eyeliner: "Eyeliner", mascara: "Mascara", lip: "Lip product", powder: "Powder", other: "Other",
 };
 const makeupEffectLabelsEn = { tinted: "Tinted", transparent: "Transparent", mattifying: "Mattifying", unknown: "Unspecified" };
@@ -314,7 +315,9 @@ function CompareProducts({ products, onBack }: { products: Product[]; onBack: ()
     </div>
     <p className={styles.compareStatus} role="status">
       {leftInci.length && rightInci.length
-        ? t(`${sharedCount} libellé${shared.size === 1 ? "" : "s"} INCI en commun.`, `${sharedCount} matching INCI ${shared.size === 1 ? "entry" : "entries"}.`)
+        ? shared.size === 1
+          ? t(`${sharedCount} libellé INCI en commun.`, `${sharedCount} matching INCI entry.`)
+          : t(`${sharedCount} libellés INCI en commun.`, `${sharedCount} matching INCI entries.`)
         : t("Il faut deux listes INCI pour afficher les libellés communs.", "Matching entries need two ingredient lists.")}
     </p>
     <div className={styles.compareColumns}>
@@ -354,7 +357,9 @@ function ProductTracking({ product, today }: { product: Product; today: string }
     {hasTracking ? <>
       <dl>
         {openedOn && <><dt>{t("Ouverture", "Opened")}</dt><dd><time dateTime={openedOn}>{dateLabel(openedOn)}</time></dd></>}
-        {paoMonths && <><dt>{t("Durée après ouverture", "Period after opening")}</dt><dd>{t(`${formatNumber(paoMonths)} mois`, `${formatNumber(paoMonths)} ${paoMonths === 1 ? "month" : "months"}`)}</dd></>}
+        {paoMonths && <><dt>{t("Durée après ouverture", "Period after opening")}</dt><dd>{paoMonths === 1
+          ? t(`${formatNumber(paoMonths)} mois`, `${formatNumber(paoMonths)} month`)
+          : t(`${formatNumber(paoMonths)} mois`, `${formatNumber(paoMonths)} months`)}</dd></>}
         {paoDate && <><dt>{t("Date calculée après ouverture", "Date based on opening")}</dt><dd><time dateTime={paoDate}>{dateLabel(paoDate)}</time></dd></>}
         {expiresOn && <><dt>{t("Péremption indiquée sur l’emballage", "Expiry date on packaging")}</dt><dd><time dateTime={expiresOn}>{dateLabel(expiresOn)}</time></dd></>}
       </dl>
@@ -468,11 +473,11 @@ function localMatches(query: string, mode: CatalogSearchMode = "all") {
   return query ? items : items.filter(({ source }) => source !== "local");
 }
 
-export function Catalog({ currentProducts, onSave, initialQuery = "", localOnly = false }: {
+export function Catalog({ currentProducts, onSave, initialQuery = "", portable = false }: {
   currentProducts: Product[];
   onSave: (product: Product) => boolean;
   initialQuery?: string;
-  localOnly?: boolean;
+  portable?: boolean;
 }) {
   const { t, formatNumber } = useLocale();
   const searchInput = useRef<HTMLInputElement>(null);
@@ -486,20 +491,35 @@ export function Catalog({ currentProducts, onSave, initialQuery = "", localOnly 
   const full = currentProducts.length >= 500;
 
   const search = useCallback(async (value: string, mode: CatalogSearchMode = "all") => {
-    const cleanQuery = value.trim().slice(0, 120);
+    const input = value.trim().slice(0, 120);
+    const normalized = normalizeCatalogQuery(input);
+    const cleanQuery = normalized ? input : "";
     searchRequest.current?.abort();
     const localItems = localMatches(cleanQuery, mode);
-    if (localOnly || cleanQuery.length < 2) {
+    if (normalized.length < 2) {
       setResult({ items: localItems, origin: "local", query: cleanQuery });
+      setPending(false);
+      return;
+    }
+    if (!navigator.onLine) {
+      setResult({ items: localItems, origin: "unavailable", query: cleanQuery });
       setPending(false);
       return;
     }
     const request = new AbortController();
     searchRequest.current = request;
+    setResult({ items: localItems, origin: "local", query: cleanQuery });
     setPending(true);
     try {
+      if (portable) {
+        const remote = await searchOpenBeautyFacts(cleanQuery, mode, { signal: request.signal });
+        if (!request.signal.aborted) {
+          setResult({ items: rankCatalogProducts([...remote, ...localItems], cleanQuery, mode), origin: "online", query: cleanQuery });
+        }
+        return;
+      }
       const params = new URLSearchParams({ q: cleanQuery, mode });
-      const response = await fetch(`/api/catalog?${params}`, { signal: request.signal });
+      const response = await fetch(`/api/catalog?${params}`, { signal: request.signal, credentials: "omit" });
       if (!response.ok) throw new Error();
       const payload = await response.json() as { products?: unknown; externalStatus?: string };
       if (request.signal.aborted) return;
@@ -514,7 +534,7 @@ export function Catalog({ currentProducts, onSave, initialQuery = "", localOnly 
     } finally {
       if (!request.signal.aborted) setPending(false);
     }
-  }, [localOnly]);
+  }, [portable]);
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -535,6 +555,9 @@ export function Catalog({ currentProducts, onSave, initialQuery = "", localOnly 
     }}/>;
 
   const count = formatNumber(result.items.length);
+  const resultCount = result.items.length === 1
+    ? t(`${count} résultat pour « ${result.query} ».`, `${count} result for “${result.query}”.`)
+    : t(`${count} résultats pour « ${result.query} ».`, `${count} results for “${result.query}”.`);
   return <section className={styles.catalog} aria-labelledby="catalogue-title">
     <header className={styles.catalogHeader}>
       <div><h1 id="catalogue-title">{t("Catalogue", "Catalogue")}</h1>
@@ -558,21 +581,17 @@ export function Catalog({ currentProducts, onSave, initialQuery = "", localOnly 
       </label>
     </form>
     <section className={styles.resultsPanel} aria-labelledby="catalogue-results-title" aria-busy={pending}>
-      <h2 id="catalogue-results-title">{result.query || pending ? t("Résultats", "Results") : t("Catalogue local", "Local catalogue")}</h2>
+      <h2 id="catalogue-results-title">{result.query || pending ? t("Résultats", "Results") : t("Produits à découvrir", "Products to explore")}</h2>
       <div role="status" className={styles.searchStatus}>
-        {pending ? t("Recherche en cours…", "Searching…") : result.query ? t(
-          `${count} résultat${result.items.length === 1 ? "" : "s"} pour « ${result.query} ».`,
-          `${count} ${result.items.length === 1 ? "result" : "results"} for “${result.query}”.`,
-        ) : localOnly
-          ? t("Sélection disponible hors ligne.", "Selection available offline.")
-          : t("Quelques fiches disponibles avant la recherche.", "A few entries to browse before searching.")}
+        {pending ? t("Recherche en cours…", "Searching…") : result.query ? resultCount
+          : t("Sélection disponible hors ligne.", "Selection available offline.")}
         {!pending && result.origin === "unavailable" && <p>{t(
           "Open Beauty Facts est indisponible. Tu peux essayer le catalogue local ou saisir le produit.",
           "Open Beauty Facts is unavailable. You can use the local catalogue or enter the product manually.",
         )}</p>}
-        {!pending && localOnly && result.query && <p>{t("Recherche dans le catalogue local.", "Search of the local catalogue.")}</p>}
+        {!pending && result.origin === "local" && result.query && <p>{t("Recherche dans le catalogue local.", "Search of the local catalogue.")}</p>}
       </div>
-      {!pending && (result.items.length > 0 ? <ul className={styles.catalogResults}>
+      {result.items.length > 0 ? <ul className={styles.catalogResults}>
         {result.items.map((item) => {
           const alreadyAdded = Boolean(item.barcode && recordedBarcodes.has(item.barcode.padStart(14, "0")));
           return <li key={item.id}><button type="button" disabled={alreadyAdded || full} className={styles.catalogItem}
@@ -585,9 +604,14 @@ export function Catalog({ currentProducts, onSave, initialQuery = "", localOnly 
             {alreadyAdded ? <span className={styles.savedLabel}>{t("Déjà ajouté", "Already added")}</span> : <Plus size={17} aria-hidden="true"/>}
           </button></li>;
         })}
-      </ul> : <p className="muted">{t("Essaie un autre nom, une autre marque ou la saisie manuelle.", "Try a different product name or brand, or add the product manually.")}</p>)}
+      </ul> : !pending && <div className={styles.emptyState}>
+        <p>{t("Essaie un autre nom, une autre marque ou la saisie manuelle.", "Try a different product name or brand, or add the product manually.")}</p>
+        <button type="button" className="button button-secondary" onClick={() => {
+          setQuery(""); setBrandOnly(false); void search(""); searchInput.current?.focus();
+        }}>{t("Voir les produits à découvrir", "Browse suggested products")}</button>
+      </div>}
     </section>
-    {(!localOnly || result.items.some(({ source }) => source === "open-beauty-facts")) && <p className="muted">
+    {(!portable || result.items.some(({ source }) => source === "open-beauty-facts")) && <p className="muted">
       {t("Fiches communautaires issues d’Open Beauty Facts. Vérifie la composition sur l’emballage.", "Community entries come from Open Beauty Facts. Check the current ingredient list on the packaging.")}
     </p>}
   </section>;

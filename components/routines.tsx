@@ -17,12 +17,16 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { analyzeRoutine } from "@/lib/analysis";
 import { defaultApplicationZone, faceMakeupLayers, makeupAppearance, type PigmentLayer } from "@/lib/face-makeup";
 import { useLocale } from "@/lib/i18n";
+import { findMakeupPlacement, getMakeupPlacements } from "@/lib/makeup-placements";
 import { emptyState, hairApplicationAreas, type FaceZone, type PaletteColor, type Preferences, type Product, type Routine, type RoutineStep } from "@/lib/model";
+import { FaceChart } from "./face-chart";
 import styles from "./routines.module.css";
+
+export { FaceChart } from "./face-chart";
 
 const periods = {
   matin: { label: ["Matin", "Morning"], icon: Sun },
@@ -46,41 +50,6 @@ const hairAreas = {
   lengths: ["Longueurs", "Lengths"],
   ends: ["Pointes", "Ends"],
 } satisfies Record<(typeof hairApplicationAreas)[number], [string, string]>;
-
-const zonePaths: Record<FaceZone, string[]> = {
-  visage: ["M65 122C65 75 91 53 130 53S195 75 195 122V155C195 197 166 233 130 239C94 233 65 197 65 155Z"],
-  cheveux: ["M59 122C43 153 43 190 49 227C34 224 29 207 30 175L35 119C34 62 70 30 123 30C176 24 226 60 226 120L230 177C230 207 224 226 210 230C214 187 216 153 201 122C199 88 186 67 166 57C157 86 109 95 72 99C65 102 62 110 59 122Z"],
-  front: ["M90 96C117 91 147 88 166 76C174 86 180 98 181 110C161 123 99 123 80 113C81 107 85 101 90 96Z"],
-  yeux: ["M77 134C89 123 110 125 122 136C111 150 87 150 77 134Z", "M138 136C150 125 171 123 183 134C173 150 149 150 138 136Z"],
-  joues: ["M74 157C85 149 106 153 113 166C111 181 95 185 81 176C77 171 74 165 74 157Z", "M147 166C154 153 175 149 186 157C186 165 183 171 179 176C165 185 149 181 147 166Z"],
-  levres: ["M108 195C115 193 122 185 130 191C138 185 145 193 152 195C145 204 138 206 130 206C122 206 115 204 108 195Z"],
-  menton: ["M112 215C121 210 139 210 148 215C146 223 137 228 130 228C123 228 114 223 112 215Z"],
-};
-
-const eyeMakeupPaths = {
-  eyeshadow: [
-    "M76 132C86 119 106 118 122 136C108 129 90 128 76 132Z",
-    "M138 136C154 118 174 119 184 132C170 128 152 129 138 136Z",
-  ],
-  eyeliner: [
-    "M74 127L82 134C92 129 108 129 119 136",
-    "M141 136C152 129 168 129 178 134L186 127",
-  ],
-  mascara: [
-    "M84 133L79 126M91 131L88 123M99 130L98 122M107 131L108 124",
-    "M153 131L152 124M161 130L162 122M169 131L172 123M176 133L181 126",
-  ],
-};
-const cheekHighlightPaths = [
-  "M77 153C88 145 106 145 116 154C104 151 92 152 80 159Z",
-  "M144 154C154 145 172 145 183 153L180 159C168 152 156 151 144 154Z",
-];
-const hairMarkings = {
-  scalp: ["M60 93C68 63 89 48 124 46C158 44 189 58 201 88"],
-  lengths: ["M48 121C43 139 42 163 43 183", "M212 121C218 139 219 163 218 183"],
-  ends: ["M35 194C37 211 41 219 47 222", "M225 194C223 211 219 219 213 223"],
-};
-const complexionPath = [...zonePaths.visage, ...zonePaths.yeux, ...zonePaths.levres].join(" ");
 
 interface RoutinesProps {
   products: Product[];
@@ -283,6 +252,9 @@ function RoutineEditor({ initial, products, palette, preferences, onSave, onCanc
             const product = products.find((item) => item.id === step.productId);
             const appearance = makeupAppearance(product, step, palette);
             const canChooseSwatch = appearance.effect === "tinted" || appearance.effect === "no-shade" || appearance.effect === "wrong-zone";
+            const kind = product?.category === "maquillage" ? product.makeupKind : undefined;
+            const placements = getMakeupPlacements(kind);
+            const placement = findMakeupPlacement(kind, step.placement);
 
             return (
               <li key={step.id} className={styles.editorStep}>
@@ -304,6 +276,7 @@ function RoutineEditor({ initial, products, palette, preferences, onSave, onCanc
                         productId: product.id,
                         zone: defaultApplicationZone(product, step.zone),
                         swatchId: undefined,
+                        placement: product.category === "maquillage" ? findMakeupPlacement(product.makeupKind, step.placement)?.id : undefined,
                         applicationsPerWeek: undefined,
                         hairArea: product.category === "cheveux" ? step.hairArea : undefined,
                         massage: product.category === "cheveux" ? step.massage : undefined,
@@ -315,11 +288,21 @@ function RoutineEditor({ initial, products, palette, preferences, onSave, onCanc
                   </label>
                   <label>
                     {t("Zone d’application", "Application area")}
-                    <select value={step.zone} onChange={(event) => updateStep(step.id, { zone: event.target.value as FaceZone })}>
+                    <select value={step.zone} disabled={Boolean(placement)}
+                      onChange={(event) => updateStep(step.id, { zone: event.target.value as FaceZone })}>
                       {faceZones.map((zone) => <option key={zone} value={zone}>{t(...zones[zone])}</option>)}
                     </select>
                   </label>
                 </div>
+                {placements.length > 0 && <label>
+                  {t("Placement du maquillage", "Makeup placement")}
+                  <select value={placement?.id ?? ""} onChange={(event) =>
+                    updateStep(step.id, { placement: findMakeupPlacement(kind, event.target.value)?.id })}>
+                    <option value="">{t("Suivre la zone choisie", "Use the selected area")}</option>
+                    {placements.map((option) => <option key={option.id} value={option.id}>{t(...option.label)}</option>)}
+                  </select>
+                  {placement && <span className={styles.optional}>{t(...placement.description)}</span>}
+                </label>}
                 <div className={styles.fields}>
                   <label>
                     <span>{t("Fréquence par semaine", "Weekly frequency")} <span className={styles.optional}>{t("(facultative)", "(optional)")}</span></span>
@@ -399,96 +382,6 @@ function Vigilance({ notes }: { notes: string[] }) {
   );
 }
 
-export function FaceChart({ selected, layers, onSelect, availableZones = faceZones, className, style, application }: {
-  selected: FaceZone;
-  layers: PigmentLayer[];
-  onSelect: (zone: FaceZone) => void;
-  availableZones?: readonly FaceZone[];
-  className?: string;
-  style?: CSSProperties;
-  application?: { kind: "care" | "hair"; hairArea?: "scalp" | "lengths" | "ends"; massage?: boolean };
-}) {
-  const { t } = useLocale();
-  const id = useId();
-  const markingPaths = application?.kind === "hair" ? (application.hairArea ? hairMarkings[application.hairArea] : zonePaths.cheveux)
-    : application?.kind === "care" ? zonePaths[selected] : [];
-
-  function activate(event: KeyboardEvent<SVGGElement>, zone: FaceZone) {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    onSelect(zone);
-  }
-
-  function region(zone: FaceZone) {
-    return (
-      <g key={zone} className={styles.faceZone} data-active={zone === selected} data-zone={zone}
-        data-guided={application?.kind === "care" && zone === selected} role="button" tabIndex={0}
-        aria-label={t(...zones[zone])} aria-pressed={zone === selected}
-        onClick={() => onSelect(zone)} onKeyDown={(event) => activate(event, zone)}>
-        {zonePaths[zone].map((path) => <path key={path} d={path} />)}
-      </g>
-    );
-  }
-
-  return (
-    <svg className={className ? `${styles.face} ${className}` : styles.face} style={style} viewBox="0 0 260 302" role="group" aria-labelledby={id}>
-      <title id={id}>{t("Carte interactive des zones du visage", "Interactive face chart")}</title>
-      <defs>
-        {layers.map((layer, index) => (
-          <radialGradient key={layer.stepId} id={`${id}-pigment-${index}`}>
-            <stop offset="15%" stopColor={layer.hex} stopOpacity={layer.opacity} />
-            <stop offset="72%" stopColor={layer.hex} stopOpacity={layer.opacity * 0.72} />
-            <stop offset="100%" stopColor={layer.hex} stopOpacity={layer.opacity * 0.08} />
-          </radialGradient>
-        ))}
-      </defs>
-      <path d="M87 205C88 236 85 252 60 263L19 285H241L200 263C175 252 172 236 173 205" className={styles.silhouette} />
-      <path d="M68 139C51 126 49 150 56 165C58 170 63 173 68 172M192 139C209 126 211 150 204 165C202 170 197 173 192 172" className={styles.silhouette} />
-      <path d={zonePaths.visage[0]} className={styles.silhouette} />
-      <path d={zonePaths.cheveux[0]} className={styles.hair} />
-      <g className={styles.pigments} aria-hidden="true">
-        {layers.map((layer, index) => {
-          const { kind, zone, opacity, hex, stepId } = layer;
-          const paths = kind === "eyeliner" || kind === "mascara" || kind === "eyeshadow"
-            ? eyeMakeupPaths[kind]
-            : kind === "highlighter" && zone === "joues" ? cheekHighlightPaths
-            : zone === "visage" ? [complexionPath] : zonePaths[zone];
-          const isLine = kind === "eyeliner" || kind === "mascara";
-          const isSoft = kind === "blush" || kind === "bronzer" || kind === "highlighter";
-          const fill = isSoft ? `url(#${id}-pigment-${index})` : hex;
-          return (
-            <g key={stepId} data-pigment={kind} data-zone={zone}>
-              {paths.map((path) => (
-                <path key={path} d={path} opacity={isSoft ? 1 : opacity}
-                  fill={isLine ? "none" : fill} fillRule={zone === "visage" ? "evenodd" : undefined}
-                  stroke={isLine ? hex : "none"} strokeWidth={kind === "eyeliner" ? 3 : 2} />
-              ))}
-            </g>
-          );
-        })}
-      </g>
-      <g className={styles.faceDetails} aria-hidden="true">
-        <path d="M61 99C73 62 110 43 145 45M163 46C188 55 203 75 210 103M42 180C41 193 42 208 47 217M218 179C220 194 218 208 213 218" />
-        <path d="M80 123C93 115 111 116 120 122M140 122C149 116 167 115 180 123" />
-        <path d="M82 136C93 130 105 130 115 137M145 137C155 130 167 130 178 136" />
-        <circle cx="99" cy="137" r="3" />
-        <circle cx="161" cy="137" r="3" />
-        <path d="M129 143C128 155 120 165 124 172C128 176 135 174 137 171M107 195C119 198 129 194 130 196C131 194 141 198 153 195" />
-        <path d="M96 254C108 260 119 263 130 263C141 263 152 260 164 254" />
-      </g>
-      {application && <g className={styles.applicationMarking} data-application={application.kind}
-        data-hair-area={application.hairArea} aria-hidden="true" key={`${application.kind}-${application.hairArea ?? selected}`}>
-        {markingPaths.map((path) => <path key={path} d={path}/>)}
-        {application.kind === "hair" && application.massage && <path className={styles.massageArrows}
-          d="M91 72c-7 0-10-7-5-11 4-3 10-1 10 4m-4-2 4 3 3-4m48 0c4-5 11-4 13 1 2 5-2 9-7 9m2-4-4 4 5 2"/>}
-      </g>}
-      {availableZones.includes("visage") && region("visage")}
-      {availableZones.includes("cheveux") && region("cheveux")}
-      {availableZones.filter((zone) => zone !== "visage" && zone !== "cheveux").map(region)}
-    </svg>
-  );
-}
-
 const previewMessages = {
   none: ["Zone d’application indiquée par le contour.", "The outline marks where to apply the product."],
   unknown: ["Renseigne un type et un effet de maquillage dans le vanity pour afficher une teinte.", "Add a makeup type and finish in the vanity to preview a shade."],
@@ -505,12 +398,13 @@ function MakeupLegend({ layers }: { layers: PigmentLayer[] }) {
     <details className={styles.makeupLegend}>
       <summary>{t("Teintes visibles", "Visible shades")} ({layers.length})</summary>
       <ul>
-        {layers.map(({ stepId, name, hex, productName, zone }) => (
-          <li key={stepId}>
+        {layers.map(({ stepId, kind, placement, name, hex, productName, zone }) => {
+          const label = findMakeupPlacement(kind, placement)?.label ?? zones[zone];
+          return <li key={stepId}>
             <svg width={16} height={16} viewBox="0 0 16 16" aria-hidden="true"><circle cx={8} cy={8} r={6} fill={hex} /></svg>
-            <span>{productName} · {t(...zones[zone])} · {name}</span>
-          </li>
-        ))}
+            <span>{productName} · {t(...label)} · {name}</span>
+          </li>;
+        })}
       </ul>
       <p>{t("Aperçu indicatif du placement des couleurs. Le rendu réel varie selon le produit, la carnation et la lumière.", "The preview shows color placement. The finished look depends on the product, skin tone and lighting.")}</p>
     </details>
@@ -530,6 +424,7 @@ function RoutineGuide({ routine, products, palette, preferences, onExit, onCompl
   const [furthest, setFurthest] = useState(0);
   const [zone, setZone] = useState<FaceZone | null>(null);
   const [finished, setFinished] = useState(false);
+  const [showPlacement, setShowPlacement] = useState(true);
   const heading = useRef<HTMLHeadingElement>(null);
   const step = routine.steps[index];
   const last = index === routine.steps.length - 1;
@@ -571,7 +466,10 @@ function RoutineGuide({ routine, products, palette, preferences, onExit, onCompl
   const instructionSource = instructions?.source === "packaging" ? t("Emballage", "Packaging") : instructions?.source === "manufacturer" ? t("Fabricant", "Manufacturer") : "Open Beauty Facts";
   const frequency = step.applicationsPerWeek;
   const isHairStep = product?.category === "cheveux" && step.zone === "cheveux";
-  const applicationLabel = isHairStep && step.hairArea ? t(...hairAreas[step.hairArea]) : t(...zones[step.zone]);
+  const kind = product?.category === "maquillage" ? product.makeupKind : undefined;
+  const placement = findMakeupPlacement(kind, step.placement);
+  const mattePlacement = kind === "powder" && (preview.effect === "transparent" || preview.effect === "mattifying") ? placement?.id : undefined;
+  const applicationLabel = placement ? t(...placement.label) : isHairStep && step.hairArea ? t(...hairAreas[step.hairArea]) : t(...zones[step.zone]);
 
   return (
     <section className={styles.page} aria-labelledby="routine-guide-title">
@@ -634,14 +532,20 @@ function RoutineGuide({ routine, products, palette, preferences, onExit, onCompl
         <div className={styles.chartPanel}>
           <div className={styles.chartTitle}><Aperture size={17} aria-hidden="true" /> Face Chart</div>
           <FaceChart selected={selectedZone} layers={layers} onSelect={setZone}
+            placementGuide={showPlacement ? placement?.id : undefined} mattePlacement={mattePlacement}
             application={selectedZone === step.zone
               ? isHairStep ? { kind: "hair", hairArea: step.hairArea, massage: step.massage }
                 : product?.category === "soin" ? { kind: "care" } : undefined
               : undefined}/>
           <p className={styles.chartSelection} aria-live="polite">{selectedZone === step.zone ? applicationLabel : t(...zones[selectedZone])}</p>
           <p className={styles.chartHint} aria-live="polite">
-            {preview.effect === "tinted" ? `${t(...zones[step.zone])} · ${preview.name}` : t(...previewMessages[preview.effect])}
+            {preview.effect === "tinted" ? `${applicationLabel} · ${preview.name}` : t(...previewMessages[preview.effect])}
           </p>
+          {placement && <>
+            <p className={styles.chartHint}>{t(...placement.description)}</p>
+            <button type="button" className="button button-secondary" aria-pressed={showPlacement}
+              onClick={() => setShowPlacement(!showPlacement)}>{t("Guide de placement", "Placement guide")}</button>
+          </>}
           <div className={styles.zoneControls} aria-label={t("Zones d’application", "Application areas")} role="group">
             {faceZones.map((item) => <button type="button" key={item} aria-pressed={item === selectedZone} onClick={() => setZone(item)}>{t(...zones[item])}</button>)}
           </div>

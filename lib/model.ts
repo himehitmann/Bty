@@ -1,13 +1,14 @@
 import { z } from "zod";
+import { makeupPlacementIds } from "./makeup-placements";
 
 export const categories = ["soin", "maquillage", "cheveux", "parfums"] as const;
 export const categoryLabels = { soin: "Soin", maquillage: "Maquillage", cheveux: "Cheveux", parfums: "Parfums" };
 export const sourceLabels = { manuel: "Saisie manuelle", local: "Catalogue local · formule indicative", "open-beauty-facts": "Open Beauty Facts" };
 
-export const makeupKinds = ["foundation", "concealer", "blush", "bronzer", "highlighter", "eyeshadow", "eyeliner", "mascara", "lip", "powder", "other"] as const;
+export const makeupKinds = ["foundation", "concealer", "blush", "contour", "bronzer", "highlighter", "eyeshadow", "eyeliner", "mascara", "lip", "powder", "other"] as const;
 export const makeupEffects = ["tinted", "transparent", "mattifying", "unknown"] as const;
 export const makeupKindLabels = {
-  foundation: "Fond de teint", concealer: "Correcteur", blush: "Blush", bronzer: "Poudre bronzante",
+  foundation: "Fond de teint", concealer: "Correcteur", blush: "Blush", contour: "Contouring", bronzer: "Poudre bronzante",
   highlighter: "Enlumineur", eyeshadow: "Fard à paupières", eyeliner: "Eyeliner", mascara: "Mascara",
   lip: "Lèvres", powder: "Poudre", other: "Autre",
 } satisfies Record<(typeof makeupKinds)[number], string>;
@@ -97,6 +98,7 @@ export const hairApplicationAreas = ["scalp", "lengths", "ends"] as const;
 const stepSchema = z.object({
   id: identifier, productId: identifier, zone: zoneSchema, note: z.string().max(800),
   swatchId: identifier.optional(),
+  placement: z.enum(makeupPlacementIds).optional(),
   applicationsPerWeek: z.number().int().min(1).max(7).optional(),
   tool: z.string().trim().max(120).optional(),
   hairArea: z.enum(hairApplicationAreas).optional(),
@@ -107,6 +109,7 @@ const routineSchema = z.object({
 });
 const colorSchema = z.object({
   id: identifier, hex, name, photoPath: z.string().max(300).optional(),
+  collection: z.string().trim().min(1).max(100).optional(),
 });
 export const beautyListLimits = { lists: 30, items: 120, name: 100, text: 300, reason: 400 } as const;
 const beautyListItemSchema = z.object({
@@ -126,7 +129,7 @@ export const skinFeels = ["seche", "brillante", "mixte", "equilibree", "incertai
 export const skinConcerns = ["tiraillements", "brillance", "rougeurs", "imperfections", "texture"] as const;
 export const undertones = ["froid", "chaud", "neutre", "olive", "incertain"] as const;
 export const preferenceSchema = z.object({
-  locale: z.enum(["fr", "en"]).optional(),
+  locale: z.enum(["fr", "en", "es", "it"]).optional(),
   fragranceFree: z.boolean(),
   sensitive: z.boolean(),
   avoid: z.string().trim().max(600),

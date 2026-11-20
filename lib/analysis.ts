@@ -1,6 +1,6 @@
 import type { Preferences, Product, Routine } from "./model";
-
-type AnalysisLocale = "fr" | "en";
+import type { Locale } from "./locale";
+import { translate } from "./translations";
 
 const normalize = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
 const fragrance = /^(parfum|fragrance|aroma|limonene|linalool|citral|geraniol|eugenol|cinnamal|citronellol|coumarin)\b/;
@@ -30,8 +30,8 @@ function ingredientNames(ingredients: string) {
   return ingredientList(ingredients.replace(/[()]/g, ",")).map(normalize);
 }
 
-export function analyzeProduct(product: Product, preferences: Preferences, locale: AnalysisLocale = "fr") {
-  const t = (fr: string, en: string) => locale === "en" ? en : fr;
+export function analyzeProduct(product: Product, preferences: Preferences, locale: Locale = "fr") {
+  const t = (fr: string, en: string) => translate(locale, fr, en);
   const entries = ingredientNames(product.ingredients);
   if (!entries.length) return [t(
     "Composition indisponible. Consulte la liste sur l’emballage avant de tirer une conclusion.",
@@ -58,8 +58,8 @@ export function analyzeProduct(product: Product, preferences: Preferences, local
   return notes;
 }
 
-export function analyzeRoutine(routine: Routine, products: Product[], preferences: Preferences, locale: AnalysisLocale = "fr") {
-  const t = (fr: string, en: string) => locale === "en" ? en : fr;
+export function analyzeRoutine(routine: Routine, products: Product[], preferences: Preferences, locale: Locale = "fr") {
+  const t = (fr: string, en: string) => translate(locale, fr, en);
   const ordered = routine.steps.flatMap((step) => {
     const product = products.find((item) => item.id === step.productId);
     return product ? [product] : [];

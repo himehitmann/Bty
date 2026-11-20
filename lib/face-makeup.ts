@@ -1,23 +1,25 @@
 import type { FaceZone, PaletteColor, Product, RoutineStep } from "./model";
+import { findMakeupPlacement, type MakeupPlacement } from "./makeup-placements";
 
 const complexionZones = ["visage", "front", "joues", "menton"] as const;
 const shapes = {
   foundation: { zones: complexionZones, opacity: 0.38, defaultZone: "visage" },
-  concealer: { zones: complexionZones, opacity: 0.42, defaultZone: "menton" },
+  concealer: { zones: [...complexionZones, "yeux"], opacity: 0.42, defaultZone: "menton" },
   blush: { zones: ["joues"], opacity: 0.52, defaultZone: "joues" },
+  contour: { zones: complexionZones, opacity: 0.4, defaultZone: "joues" },
   bronzer: { zones: complexionZones, opacity: 0.4, defaultZone: "joues" },
   highlighter: { zones: ["front", "joues", "menton"], opacity: 0.34, defaultZone: "joues" },
   eyeshadow: { zones: ["yeux"], opacity: 0.64, defaultZone: "yeux" },
   eyeliner: { zones: ["yeux"], opacity: 0.92, defaultZone: "yeux" },
   mascara: { zones: ["yeux"], opacity: 0.92, defaultZone: "yeux" },
   lip: { zones: ["levres"], opacity: 0.82, defaultZone: "levres" },
-  powder: { zones: complexionZones, opacity: 0.27, defaultZone: "visage" },
+  powder: { zones: [...complexionZones, "yeux"], opacity: 0.27, defaultZone: "visage" },
 } satisfies Record<string, { zones: readonly FaceZone[]; opacity: number; defaultZone: FaceZone }>;
 
 type PigmentKind = keyof typeof shapes;
 type MakeupAppearance =
   | { effect: "none" | "unknown" | "transparent" | "mattifying" | "wrong-zone" | "no-shade" }
-  | { effect: "tinted"; kind: PigmentKind; hex: string; name: string; opacity: number };
+  | { effect: "tinted"; kind: PigmentKind; hex: string; name: string; opacity: number; placement?: MakeupPlacement };
 
 export type PigmentLayer = Extract<MakeupAppearance, { effect: "tinted" }> & {
   stepId: string;
@@ -49,12 +51,13 @@ export function makeupAppearance(product: Product | undefined, step: RoutineStep
 
   const shape = shapes[kind];
   const zones: readonly FaceZone[] = shape.zones;
-  if (!zones.includes(step.zone)) return { effect: "wrong-zone" };
+  const placement = findMakeupPlacement(kind, step.placement)?.id;
+  if (!placement && !zones.includes(step.zone)) return { effect: "wrong-zone" };
 
   const swatch = step.swatchId ? palette.find((entry) => entry.id === step.swatchId) : undefined;
   const hex = swatch?.hex ?? product.shadeHex;
   if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return { effect: "no-shade" };
-  return { effect: "tinted", kind, hex, name: swatch?.name ?? hex, opacity: shape.opacity };
+  return { effect: "tinted", kind, hex, name: swatch?.name ?? hex, opacity: shape.opacity, ...(placement && { placement }) };
 }
 
 export function defaultApplicationZone(product: Product, selected?: FaceZone): FaceZone {

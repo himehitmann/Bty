@@ -1,28 +1,32 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { isLocale, localeOptions, type Locale } from "./locale";
+import { translate } from "./translations";
 
-export type Locale = "fr" | "en";
+export type { Locale } from "./locale";
 
 const localeKey = "navier-locale";
 const localeEvent = "navier-locale-change";
-const locales = { fr: "fr-FR", en: "en-GB" } satisfies Record<Locale, string>;
-type Translate = (french: string, english: string) => string;
 
 export function readBrowserLocale(): Locale {
-  try { return localStorage.getItem(localeKey) === "en" ? "en" : "fr"; }
-  catch { return "fr"; }
+  try {
+    const stored = localStorage.getItem(localeKey);
+    return isLocale(stored) ? stored : "fr";
+  } catch {
+    return "fr";
+  }
 }
 
 function createLocale(locale: Locale) {
-  const t: Translate = (french, english) => locale === "en" ? english : french;
-  function formatDate(date: Date | number, options?: Intl.DateTimeFormatOptions) {
-    return new Intl.DateTimeFormat(locales[locale], options).format(date);
-  }
-  function formatNumber(value: number, options?: Intl.NumberFormatOptions) {
-    return new Intl.NumberFormat(locales[locale], options).format(value);
-  }
-  return { locale, intlLocale: locales[locale], t, formatDate, formatNumber };
+  const intlLocale = localeOptions.find((option) => option.value === locale)?.intl ?? "fr-FR";
+  return {
+    locale,
+    intlLocale,
+    t: (french: string, english: string) => translate(locale, french, english),
+    formatDate: (date: Date | number, options?: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(intlLocale, options).format(date),
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) => new Intl.NumberFormat(intlLocale, options).format(value),
+  };
 }
 
 const LocaleContext = createContext(createLocale("fr"));
@@ -38,8 +42,8 @@ export function LocaleProvider({ locale, children }: { locale?: Locale; children
       if (event.key === localeKey || event.key === null) syncSavedLocale();
     }
     function syncLocale(event: Event) {
-      const updated = (event as CustomEvent<Locale>).detail;
-      if (updated === "fr" || updated === "en") setSavedLocale(updated);
+      const updated = (event as CustomEvent<unknown>).detail;
+      if (isLocale(updated)) setSavedLocale(updated);
     }
     syncSavedLocale();
     window.addEventListener(localeEvent, syncLocale);
@@ -73,5 +77,7 @@ export function useLocale() {
 }
 
 export function Localized({ fr, en }: { fr: ReactNode; en: ReactNode }) {
-  return useLocale().locale === "en" ? en : fr;
+  const { locale, t } = useLocale();
+  if (typeof fr === "string" && typeof en === "string") return t(fr, en);
+  return locale === "fr" ? fr : en;
 }

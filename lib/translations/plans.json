@@ -1,0 +1,138 @@
+{
+  "Beauty collection, catalogue and ingredient lists": [
+    "Colección de belleza, catálogo y listas de ingredientes",
+    "Collezione beauty, catalogo ed elenchi degli ingredienti"
+  ],
+  "Guided routines and Face Chart": [
+    "Rutinas guiadas y carta facial",
+    "Routine guidate e face chart"
+  ],
+  "Photo colour picker, shades and tutorials": [
+    "Cuentagotas para fotos, tonos y tutoriales",
+    "Contagocce per foto, tonalità e tutorial"
+  ],
+  "Account sync for your collection and routines": [
+    "Sincronización de la colección y las rutinas con tu cuenta",
+    "Sincronizzazione di collezione e routine con l’account"
+  ],
+  "Personal journal for product use and skin comfort": [
+    "Diario personal de uso de productos y sensaciones en la piel",
+    "Diario personale sull’uso dei prodotti e sulle sensazioni della pelle"
+  ],
+  "Find your observations by product": [
+    "Encuentra tus observaciones por producto",
+    "Ritrova le tue osservazioni per prodotto"
+  ],
+  "Keep access to your observations after cancelling Plus": [
+    "Conserva el acceso a tus observaciones tras cancelar Plus",
+    "Continua a consultare le osservazioni dopo la disdetta di Plus"
+  ],
+  "This operation could not be completed.": [
+    "No se ha podido completar esta operación.",
+    "Impossibile completare questa operazione."
+  ],
+  "This operation could not be completed. Try again in a moment.": [
+    "No se ha podido completar esta operación. Inténtalo de nuevo en un momento.",
+    "Impossibile completare questa operazione. Riprova tra poco."
+  ],
+  "Navier plans": [
+    "Planes de Navier",
+    "Piani Navier"
+  ],
+  "Your beauty routine, at your pace.": [
+    "Tu rutina de belleza a tu ritmo.",
+    "La tua routine di bellezza, al tuo ritmo."
+  ],
+  "Organise your products and routines for free. Add a personal journal to track your observations over time.": [
+    "Organiza tus productos y rutinas gratis. Añade un diario personal para seguir tus observaciones con el tiempo.",
+    "Organizza gratuitamente i tuoi prodotti e le routine. Aggiungi un diario personale per seguire le tue osservazioni nel tempo."
+  ],
+  "Navier Plus is active on your account.": [
+    "Navier Plus está activo en tu cuenta.",
+    "Navier Plus è attivo sul tuo account."
+  ],
+  "We’re checking Stripe’s confirmation. You can refresh the status in a moment.": [
+    "Estamos comprobando la confirmación de Stripe. Puedes actualizar el estado en un momento.",
+    "Stiamo verificando la conferma di Stripe. Puoi aggiornare lo stato tra poco."
+  ],
+  "You returned from Stripe checkout.": [
+    "Has vuelto de la página de pago de Stripe.",
+    "Sei tornata dalla pagina di pagamento di Stripe."
+  ],
+  "Essential": [
+    "Esencial",
+    "Essenziale"
+  ],
+  "Free": [
+    "Gratis",
+    "Gratuito"
+  ],
+  "Everything you need to organise and follow your routines.": [
+    "Todo lo que necesitas para organizar y seguir tus rutinas.",
+    "Tutto il necessario per organizzare e seguire le tue routine."
+  ],
+  "Active": [
+    "Activo",
+    "Attivo"
+  ],
+  "See how your beauty habits evolve with a dated journal.": [
+    "Ve cómo evolucionan tus hábitos de belleza con un diario con fechas.",
+    "Scopri come cambiano le tue abitudini beauty grazie a un diario con date."
+  ],
+  "yearly": [
+    "anual",
+    "annuale"
+  ],
+  "per month": [
+    "al mes",
+    "al mese"
+  ],
+  "per year": [
+    "al año",
+    "all’anno"
+  ],
+  "Billed monthly": [
+    "Facturación mensual",
+    "Fatturazione mensile"
+  ],
+  "Billed yearly · save {0} over 12 months": [
+    "Facturación anual · ahorra {0} en 12 meses",
+    "Fatturazione annuale · risparmia {0} in 12 mesi"
+  ],
+  "Opening…": [
+    "Abriendo…",
+    "Apertura in corso…"
+  ],
+  "Choose monthly": [
+    "Elegir plan mensual",
+    "Scegli il piano mensile"
+  ],
+  "Choose yearly": [
+    "Elegir plan anual",
+    "Scegli il piano annuale"
+  ],
+  "Manage my subscription": [
+    "Gestionar mi suscripción",
+    "Gestisci l’abbonamento"
+  ],
+  "Checking your plan…": [
+    "Comprobando tu plan…",
+    "Verifica del piano…"
+  ],
+  "Payments are unavailable in this version of Navier.": [
+    "Los pagos no están disponibles en esta versión de Navier.",
+    "I pagamenti non sono disponibili in questa versione di Navier."
+  ],
+  "Stripe test mode. Payments in this environment are simulated.": [
+    "Modo de prueba de Stripe. Los pagos en este entorno son simulados.",
+    "Modalità di prova Stripe. I pagamenti in questo ambiente sono simulati."
+  ],
+  "Refresh status": [
+    "Actualizar estado",
+    "Aggiorna lo stato"
+  ],
+  "Renews automatically. Cancel in the Stripe portal. The final total is shown before you confirm payment.": [
+    "Se renueva automáticamente. Puedes cancelar desde el portal de Stripe. Verás el total antes de confirmar el pago.",
+    "Si rinnova automaticamente. Puoi annullare dal portale Stripe. Il totale viene mostrato prima della conferma del pagamento."
+  ]
+}

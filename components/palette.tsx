@@ -40,6 +40,7 @@ const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 const maxPhotoBytes = 8 * 1024 * 1024;
 const maxPhotoSide = 960;
 const maxColors = 200;
+const maxCollectionName = 100;
 const unreadablePhoto: PaletteMessage = ["La photo n’a pas pu être ouverte.", "The photo could not be opened."];
 
 class PhotoError extends Error {
@@ -156,11 +157,15 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
   const fileHelp = useId();
   const canvasHelp = useId();
   const nameId = useId();
+  const collectionId = useId();
+  const collectionOptionsId = useId();
   const editId = useId();
+  const editCollectionId = useId();
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [cursor, setCursor] = useState<Point | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [collection, setCollection] = useState("");
   const [savePhoto, setSavePhoto] = useState(true);
   const [editing, setEditing] = useState<PaletteColor | null>(null);
   const [loadingPhoto, setLoadingPhoto] = useState(false);
@@ -180,7 +185,7 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
     }
   }, [photo]);
 
-  async function loadPhoto(source: File | string) {
+  async function loadPhoto(source: File | string, linkedCollection = "") {
     if (savePending.current) return;
     photoTask.current?.abort();
     const request = new AbortController();
@@ -215,6 +220,7 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
       setSelected(null);
       setCursor(null);
       setName("");
+      setCollection(linkedCollection);
       setNotice(["Photo prête. Choisis une couleur.", "Photo ready. Choose a colour."]);
     } catch (cause) {
       if (!request.signal.aborted) setError(cause instanceof PhotoError ? cause.copy : unreadablePhoto);
@@ -306,7 +312,7 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
       }
 
       const title = name.trim() || selected;
-      const swatch = { id: crypto.randomUUID(), hex: selected, name: title, photoPath };
+      const swatch = { id: crypto.randomUUID(), hex: selected, name: title, photoPath, collection: collection.trim() || undefined };
       if (onChange((existing) => [swatch, ...existing]) === false) {
         if (uploadedPath) void onDiscardUpload?.(uploadedPath).catch(() => {});
         setError(["La teinte n’a pas pu être ajoutée.", "The shade could not be added."]);
@@ -349,6 +355,13 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
   }
 
   const interactionLocked = saving || loadingPhoto;
+  const groups = new Map<string | undefined, PaletteColor[]>();
+  for (const color of colors) {
+    const group = groups.get(color.collection);
+    if (group) group.push(color);
+    else groups.set(color.collection, [color]);
+  }
+  const namedCollections = [...groups.keys()].filter((title): title is string => title !== undefined);
 
   return (
     <div className={styles.palette}>
@@ -363,6 +376,9 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
           if (file) void loadPhoto(file);
         }}
       />
+      <datalist id={collectionOptionsId}>
+        {namedCollections.map((title) => <option key={title} value={title} />)}
+      </datalist>
 
       <div className={styles.workspace}>
         <section className={styles.panel} aria-label={t("Photo à échantillonner", "Photo to sample")}>
@@ -471,6 +487,14 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
           <form className={styles.sampleForm} onSubmit={(event) => { event.preventDefault(); void saveColor(); }}>
             <label htmlFor={nameId}>{t("Nom de la teinte", "Shade name")}</label>
             <input id={nameId} value={name} maxLength={140} disabled={!selected || interactionLocked} placeholder={t("Ex. Rose poudré", "E.g. Powder rose")} onChange={(event) => setName(event.target.value)} />
+            {photo && (
+              <>
+                <label htmlFor={collectionId}>{t("Nom de la palette (facultatif)", "Palette name (optional)")}</label>
+                <input id={collectionId} value={collection} maxLength={maxCollectionName} list={collectionOptionsId}
+                  disabled={interactionLocked} placeholder={t("Ex. Ma palette du soir", "E.g. My evening palette")}
+                  onChange={(event) => setCollection(event.target.value)} />
+              </>
+            )}
             {onUpload && (
               <label className={styles.photoOption}>
                 <input type="checkbox" checked={savePhoto} disabled={!selected || interactionLocked} onChange={(event) => setSavePhoto(event.target.checked)} />
@@ -491,46 +515,60 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
       <section className={styles.panel} aria-label={t("Teintes enregistrées", "Saved shades")}>
         <div className={styles.panelHeader}><h2>{t("Teintes enregistrées", "Saved shades")}</h2><span className={styles.count}>{formatNumber(colors.length)}</span></div>
         {colors.length === 0 ? <p className={styles.note}>{t("Les teintes que tu enregistres apparaîtront ici.", "Your saved shades will appear here.")}</p> : (
-          <ul className={styles.colors}>
-            {colors.map((color) => (
-              <li className={styles.colorCard} key={color.id}>
-                <div className={styles.colorBlock} style={{ backgroundColor: color.hex }} aria-hidden="true" />
-                <div className={styles.colorInfo}>
-                  {editing?.id === color.id ? (
-                    <form
-                      className={styles.editForm}
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        if (savePending.current) return;
-                        const nextName = editing.name.trim() || color.hex;
-                        if (onChange((existing) => existing.map((item) => item.id === color.id ? { ...item, name: nextName } : item)) === false) return;
-                        setEditing(null);
-                        setNotice(["Le nom de la teinte a été modifié.", "The shade name was updated."]);
-                      }}
-                    >
-                      <label className={styles.srOnly} htmlFor={editId}>{t("Modifier le nom de la teinte", "Edit shade name")}</label>
-                      <input id={editId} autoFocus value={editing.name} maxLength={140} onChange={(event) => setEditing({ ...editing, name: event.target.value })} />
-                      <button type="submit" className={styles.iconButton} aria-label={t("Enregistrer le nom", "Save name")} disabled={saving}><Check size={16} aria-hidden="true" /></button>
-                      <button type="button" className={styles.iconButton} aria-label={t("Annuler la modification", "Cancel edit")} onClick={() => setEditing(null)}><X size={16} aria-hidden="true" /></button>
-                    </form>
-                  ) : (
-                    <div className={styles.colorName}>
-                      <strong>{color.name}</strong>
-                      <code>{color.hex}</code>
-                    </div>
-                  )}
-                  <div className={styles.actions}>
-                    <button type="button" className={styles.iconButton} aria-label={t(`Copier le code de ${color.name}`, `Copy the code for ${color.name}`)} title={t("Copier le code", "Copy code")} onClick={() => void copyColor(color.hex)}><Copy size={16} aria-hidden="true" /></button>
-                    {color.photoPath && onResolvePhoto && (
-                      <button type="button" className={styles.iconButton} aria-label={t(`Voir la photo de ${color.name}`, `View photo for ${color.name}`)} title={t("Voir la photo", "View photo")} disabled={interactionLocked} onClick={() => { if (color.photoPath) void loadPhoto(color.photoPath); }}><ImageIcon size={16} aria-hidden="true" /></button>
-                    )}
-                    <button type="button" className={styles.iconButton} aria-label={t(`Renommer ${color.name}`, `Rename ${color.name}`)} title={t("Renommer", "Rename")} disabled={saving} onClick={() => setEditing(color)}><Pencil size={16} aria-hidden="true" /></button>
-                    <button type="button" className={styles.iconButton} aria-label={t(`Supprimer ${color.name}`, `Delete ${color.name}`)} title={t("Supprimer", "Delete")} disabled={interactionLocked} onClick={() => void removeColor(color)}><Trash2 size={16} aria-hidden="true" /></button>
-                  </div>
-                </div>
-              </li>
+          <div className={styles.collections}>
+            {[...groups].map(([title, swatches]) => (
+              <div className={styles.collection} key={title === undefined ? "ungrouped" : `palette-${title}`}>
+                {namedCollections.length > 0 && <h3>{title ?? t("Teintes sans palette", "Ungrouped shades")}</h3>}
+                <ul className={styles.colors}>
+                  {swatches.map((color) => (
+                    <li className={styles.colorCard} key={color.id}>
+                      <div className={styles.colorBlock} style={{ backgroundColor: color.hex }} aria-hidden="true" />
+                      <div className={styles.colorInfo}>
+                        {editing?.id === color.id ? (
+                          <form
+                            className={styles.editForm}
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              if (savePending.current) return;
+                              const nextName = editing.name.trim() || color.hex;
+                              const nextCollection = editing.collection?.trim() || undefined;
+                              if (onChange((existing) => existing.map((item) => item.id === color.id ? { ...item, name: nextName, collection: nextCollection } : item)) === false) return;
+                              setEditing(null);
+                              setNotice(["La teinte a été modifiée.", "The shade was updated."]);
+                            }}
+                          >
+                            <div className={styles.editFields}>
+                              <label className={styles.srOnly} htmlFor={editId}>{t("Modifier le nom de la teinte", "Edit shade name")}</label>
+                              <input id={editId} autoFocus value={editing.name} maxLength={140} onChange={(event) => setEditing({ ...editing, name: event.target.value })} />
+                              <label className={styles.srOnly} htmlFor={editCollectionId}>{t("Modifier le nom de la palette", "Edit palette name")}</label>
+                              <input id={editCollectionId} value={editing.collection ?? ""} maxLength={maxCollectionName} list={collectionOptionsId}
+                                placeholder={t("Nom de la palette (facultatif)", "Palette name (optional)")}
+                                onChange={(event) => setEditing({ ...editing, collection: event.target.value })} />
+                            </div>
+                            <button type="submit" className={styles.iconButton} aria-label={t("Enregistrer la modification", "Save edit")} disabled={saving}><Check size={16} aria-hidden="true" /></button>
+                            <button type="button" className={styles.iconButton} aria-label={t("Annuler la modification", "Cancel edit")} onClick={() => setEditing(null)}><X size={16} aria-hidden="true" /></button>
+                          </form>
+                        ) : (
+                          <div className={styles.colorName}>
+                            <strong>{color.name}</strong>
+                            <code>{color.hex}</code>
+                          </div>
+                        )}
+                        <div className={styles.actions}>
+                          <button type="button" className={styles.iconButton} aria-label={t(`Copier le code de ${color.name}`, `Copy the code for ${color.name}`)} title={t("Copier le code", "Copy code")} onClick={() => void copyColor(color.hex)}><Copy size={16} aria-hidden="true" /></button>
+                          {color.photoPath && onResolvePhoto && (
+                            <button type="button" className={styles.iconButton} aria-label={t(`Voir la photo de ${color.name}`, `View photo for ${color.name}`)} title={t("Voir la photo", "View photo")} disabled={interactionLocked} onClick={() => { if (color.photoPath) void loadPhoto(color.photoPath, color.collection); }}><ImageIcon size={16} aria-hidden="true" /></button>
+                          )}
+                          <button type="button" className={styles.iconButton} aria-label={t(`Renommer ${color.name}`, `Rename ${color.name}`)} title={t("Renommer", "Rename")} disabled={saving} onClick={() => setEditing(color)}><Pencil size={16} aria-hidden="true" /></button>
+                          <button type="button" className={styles.iconButton} aria-label={t(`Supprimer ${color.name}`, `Delete ${color.name}`)} title={t("Supprimer", "Delete")} disabled={interactionLocked} onClick={() => void removeColor(color)}><Trash2 size={16} aria-hidden="true" /></button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </section>
     </div>

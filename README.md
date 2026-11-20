@@ -1,10 +1,10 @@
 # Navier
 
-Navier est une application web installable pour simuler un maquillage, composer des routines et organiser tes produits dans des listes personnelles. L’accueil présente ces outils en cartes à faire défiler. Un nouvel espace démarre vide. Les boutons **FR** et **EN** sont dans l’en-tête.
+Navier est une application web installable pour simuler un maquillage, composer des routines et organiser tes produits dans des listes personnelles. L’accueil présente ces outils en cartes à faire défiler. Un nouvel espace démarre vide. Le français, l’anglais, l’espagnol et l’italien se choisissent depuis l’en-tête.
 
 ## Ouvrir Navier par double-clic
 
-Télécharge **Navier.html** dans la [dernière version GitHub](https://github.com/himehitmann/Bty/releases/latest) et double-clique sur le fichier. L’édition portable utilise un catalogue embarqué et conserve tes données dans le navigateur. Pour mettre à jour le fichier tout en gardant les données enregistrées dans le navigateur, remplace l’ancien fichier au même emplacement. **Paramètres → Exporter mon espace** permet de conserver une copie JSON des données.
+Télécharge **Navier.html** dans la [dernière version GitHub](https://github.com/himehitmann/Bty/releases/latest) et double-clique sur le fichier. La recherche portable consulte Open Beauty Facts avec une connexion. Le catalogue embarqué et la saisie manuelle restent disponibles hors ligne. Pour retrouver les données enregistrées lors d’une mise à jour, remplace l’ancien fichier au même emplacement et ouvre-le avec le même navigateur. **Paramètres → Exporter mon espace** permet de conserver une copie JSON des données.
 
 ## Démarrer
 
@@ -41,9 +41,9 @@ Chaque compte démarre avec un espace vide. L’espace invité reste sur le navi
 ## Fonctionnement
 
 - **Mes produits** · recherche par nom, marque ou code-barres depuis l’en-tête ou le **Catalogue**, puis ajout dans la page. Tu peux noter un achat, un favori, un avis et les raisons à retenir. Les routines perdent les étapes d’un produit supprimé.
-- **INCI** · affichage de la liste et de sa provenance. La version web interroge [Open Beauty Facts](https://world.openbeautyfacts.org/). Le catalogue embarqué contient quelques références réelles issues d’Open Beauty Facts sous [licence ODbL](https://opendatacommons.org/licenses/odbl/1-0/), avec un lien par fiche, ainsi que des formules clairement signalées comme indicatives. `OPEN_BEAUTY_FACTS_CONTACT` permet de renseigner le contact envoyé dans le User-Agent.
-- **Simulation maquillage** · Face Chart SVG original avec carnation, couleur des yeux et des cheveux, calques par type de maquillage, intensité et mélange de teintes. L’onglet photo prélève une couleur avec Canvas pour la réutiliser dans un look ou une routine.
-- **Routines** · création, réorganisation et suivi des étapes, points de vigilance et Face Chart utilisable au clavier. Indique un accessoire, une consigne et, pour les cheveux, la zone et le massage prévu.
+- **INCI** · affichage de la liste et de sa provenance. La recherche en ligne interroge [Open Beauty Facts](https://world.openbeautyfacts.org/). Le catalogue embarqué contient des références réelles issues d’Open Beauty Facts sous [licence ODbL](https://opendatacommons.org/licenses/odbl/1-0/), avec un lien par fiche, ainsi que des formules signalées comme indicatives. `OPEN_BEAUTY_FACTS_CONTACT` renseigne le contact envoyé par le serveur web.
+- **Simulation maquillage** · Face Chart SVG original avec plusieurs placements pour le blush, le contouring, le bronzer, l’enlumineur, la poudre et l’anticernes. Le guide affiche leurs zones. Les palettes de teintes prélevées sur une photo sont réutilisables par clic dans le Studio.
+- **Routines** · création, réorganisation et suivi des étapes, points de vigilance et Face Chart utilisable au clavier. Indique un placement de maquillage, un accessoire, une consigne et, pour les cheveux, la zone et le massage prévu.
 - **Mes listes** · listes à nom libre pour les favoris, les achats, une trousse ou les déceptions. Ajoute un produit ou du texte, note la raison et coche les éléments au fur et à mesure.
 - **Tutoriels** · suggestions à partir du nom et de la catégorie des produits possédés, puis personnalisation avant la création d’une routine.
 
@@ -51,7 +51,7 @@ Les repères INCI concernent les ingrédients déclarés et quelques superpositi
 
 ## Architecture
 
-Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. Les polices [Geist](public/fonts/geist-OFL.txt) et [Instrument Serif](public/fonts/instrument-serif-OFL.txt) sont hébergées avec l’application et intégrées au fichier portable.
+Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. Les polices [Instrument Sans](public/fonts/instrument-sans-OFL.txt) et [Hedvig Letters Serif](public/fonts/hedvig-letters-serif-OFL.txt) sont hébergées avec l’application et intégrées au fichier portable.
 
 Références techniques · [Next.js App Router](https://nextjs.org/docs/app), [Proxy](https://nextjs.org/docs/app/api-reference/file-conventions/proxy), [PWA](https://nextjs.org/docs/app/guides/progressive-web-apps), [Tailwind CSS](https://tailwindcss.com/docs/installation/framework-guides/nextjs), [Supabase Auth SSR](https://supabase.com/docs/guides/auth/server-side/nextjs), [Supabase Storage](https://supabase.com/docs/reference/javascript/storage-from-createsignedurl), [Zod](https://zod.dev/api) et [API Open Facts](https://openfoodfacts.github.io/openfoodfacts-server/api/).
 

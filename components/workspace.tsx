@@ -14,6 +14,7 @@ import { Plans } from "./plans";
 import { ProfileFields, RoutineCoach } from "./profile-coach";
 import { useBillingStatus } from "@/lib/billing-client";
 import { LocaleProvider, useLocale, type Locale } from "@/lib/i18n";
+import { isLocale, localeOptions } from "@/lib/locale";
 import { preferenceSchema, type Product, type Routine, type State } from "@/lib/model";
 import { getPalettePhotoUrl, removePalettePhoto, uploadPalettePhoto } from "@/lib/supabase/browser";
 import { useWorkspaceState } from "@/lib/use-workspace";
@@ -61,7 +62,9 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
 
   useEffect(() => {
     const onHistoryChange = () => {
-      setView(readView(portable));
+      const next = readView(portable);
+      setView(next);
+      if (next === "catalogue") setCatalogue((current) => current.query ? { query: "", revision: current.revision + 1 } : current);
       setStudioTab(location.hash === "#palette" ? "photo" : "look");
       setSelected(null);
       setGuide(undefined);
@@ -114,7 +117,8 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   function navClick(event: MouseEvent<HTMLAnchorElement>, next: View) {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    navigate(next);
+    if (next === "catalogue") openCatalogue();
+    else navigate(next);
   }
 
   function openCatalogue(query = "") {
@@ -206,10 +210,12 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
         </form>
         <div className="header-actions">
           <div className="language-switch" role="group" aria-label={t("Langue de l’interface", "Interface language")}>
-            <button type="button" lang="fr" aria-label="FR, Français" aria-pressed={locale === "fr"} disabled={!ready}
-              onClick={() => switchLanguage("fr")}>FR</button>
-            <button type="button" lang="en" aria-label="EN, English" aria-pressed={locale === "en"} disabled={!ready}
-              onClick={() => switchLanguage("en")}>EN</button>
+            {localeOptions.map(({ value, name }) => (
+              <button key={value} type="button" lang={value} aria-label={`${value.toUpperCase()}, ${name}`} title={name}
+                aria-pressed={locale === value} disabled={!ready} onClick={() => switchLanguage(value)}>
+                {value.toUpperCase()}
+              </button>
+            ))}
           </div>
           <a className={`icon-button header-settings${view === "preferences" ? " nav-current" : ""}`} href="#preferences"
             aria-label={label("preferences")} aria-current={view === "preferences" ? "page" : undefined}
@@ -248,7 +254,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
           {view === "accueil" && <HomeDiscovery state={state} onNavigate={(route) => route === "catalogue" ? openCatalogue() : navigate(route)}
             onProduct={(id) => { navigate("vanity"); setSelected(id); }}
             onRoutine={(routine) => { navigate("routines"); if (routine.steps.length) setGuide(routine.id); }}/>}
-          {view === "catalogue" && <Catalog key={catalogue.revision} initialQuery={catalogue.query} currentProducts={state.products} onSave={saveProduct} localOnly={portable}/>}
+          {view === "catalogue" && <Catalog key={catalogue.revision} initialQuery={catalogue.query} currentProducts={state.products} onSave={saveProduct} portable={portable}/>}
           {view === "vanity" && <>
             {!productEditor && <div className="page-heading">
               <div><h1>{t("Mes produits", "My products")}</h1><p>{t("Les produits que tu as enregistrés.", "Products you’ve saved.")}</p></div>
@@ -280,7 +286,11 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
             <div className="page-heading"><div><h1>{t("Paramètres", "Settings")}</h1><p>{t("Langue, préférences et données.", "Language, preferences and data.")}</p></div></div>
             <section className="settings-language" aria-labelledby="language-title">
               <div><h2 id="language-title">{t("Langue de l’interface", "Interface language")}</h2></div>
-              <select aria-labelledby="language-title" value={locale} onChange={(event) => switchLanguage(event.target.value === "en" ? "en" : "fr")}><option value="fr">Français</option><option value="en">English</option></select>
+              <select aria-labelledby="language-title" value={locale} onChange={(event) => {
+                if (isLocale(event.target.value)) switchLanguage(event.target.value);
+              }}>
+                {localeOptions.map(({ value, name }) => <option key={value} value={value} lang={value}>{name}</option>)}
+              </select>
             </section>
             <PreferencesForm state={state} portable={portable} onSave={(preferences) => {
               if (update((previous) => ({ ...previous, preferences }))) setNotice(t("Préférences enregistrées.", "Preferences saved."));
@@ -305,7 +315,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
 }
 
 function exportWorkspace(state: State) {
-  const palette = state.palette.map(({ id, hex, name }) => ({ id, hex, name }));
+  const palette = state.palette.map(({ id, hex, name, collection }) => ({ id, hex, name, collection }));
   const exported = { version: 1, exportedAt: new Date().toISOString(), ...state, palette };
   const url = URL.createObjectURL(new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" }));
   const anchor = document.createElement("a");

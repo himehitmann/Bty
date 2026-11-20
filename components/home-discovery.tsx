@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { BookOpen, Check, ChevronLeft, ChevronRight, Circle, Droplet, ListChecks, ScanLine, ShoppingBag, Sun, SwatchBook } from "lucide-react";
 import { useLocale } from "@/lib/i18n";
+import { FaceChart } from "./face-chart";
 import type { Routine, State } from "@/lib/model";
 import styles from "./home-discovery.module.css";
 
@@ -67,16 +68,11 @@ function ShadeArt() {
   return (
     <div className={styles.shadeArt} aria-hidden="true">
       <div className={styles.faceCard}>
-        <svg className={styles.faceSketch} viewBox="0 0 152 168" fill="none">
-          <path d="M43 119c-1 19-9 28-22 34m88-34c1 19 9 28 22 34" stroke="#372746" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M34 72c-3-20 2-36 14-44 8-7 18-10 28-10 17 0 30 7 38 19 6 9 7 22 4 35l-3 24c-3 20-17 41-33 49-4 2-8 2-12 0-16-8-30-29-33-49l-3-24Z" fill="#fcf0ef" stroke="#372746" strokeWidth="1.5" />
-          <path d="M32 76c-5-8-8-20-6-31C30 26 49 11 70 11c14 0 22 3 29 8 14 2 25 11 27 25 3 13-2 23-8 31l-3-19c-7-4-13-11-16-19C87 49 61 56 37 57l-5 19Z" fill="#d7c6ef" stroke="#372746" strokeWidth="1.35" strokeLinejoin="round" />
-          <path d="M42 69c-6-4-10 1-9 8 1 8 4 13 9 13m68-21c6-4 10 1 9 8-1 8-4 13-9 13" stroke="#372746" strokeWidth="1.45" strokeLinecap="round" />
-          <ellipse cx="52" cy="93" rx="11" ry="6" fill="#d37598" opacity=".7" transform="rotate(15 52 93)" />
-          <ellipse cx="100" cy="93" rx="11" ry="6" fill="#d37598" opacity=".7" transform="rotate(-15 100 93)" />
-          <path d="M45 67c7-4 15-4 21-1m20 0c6-3 14-3 21 1M46 77c7 5 14 5 20 0m20 0c6 5 13 5 20 0M75 80c1 7-2 13-3 17 2 3 6 3 9 2" stroke="#372746" strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M65 115c4-1 6-4 10-2 4-2 7 1 12 2-5 6-8 7-11 7-4 0-7-2-11-7Z" fill="#a64872" />
-        </svg>
+        <FaceChart className={styles.faceSketch} selected="joues" availableZones={[]} onSelect={() => {}}
+          layers={[
+            { effect: "tinted", kind: "blush", placement: "blush-lifted", hex: "#B45E62", opacity: .7, stepId: "preview-blush", productName: "", name: "", zone: "joues" },
+            { effect: "tinted", kind: "lip", hex: "#954950", opacity: .84, stepId: "preview-lips", productName: "", name: "", zone: "levres" },
+          ]}/>
       </div>
       <span className={styles.swatches}><i/><i/><i/></span>
     </div>

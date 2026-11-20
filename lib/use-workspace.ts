@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { emptyState, stateSchema, type State } from "./model";
 import { withoutUnchangedExamples } from "./guest-state";
 import { readBrowserLocale } from "./i18n";
+import { translate } from "./translations";
 import { getSupabaseBrowserClient, loadRemoteState, RemoteStateConflict, removePalettePhoto, saveRemoteState } from "./supabase/browser";
 
 type Sync = "loading" | "local" | "saving" | "synced" | "error" | "conflict";
@@ -12,7 +13,7 @@ type Draft = { state: State; version: string | null; dirty: boolean };
 const keyFor = (id: string | null) => `navier.v1.${id ?? "guest"}`;
 
 function draftMessage(draft: Draft | undefined, french: string, english: string) {
-  return (draft?.state.preferences.locale ?? readBrowserLocale()) === "en" ? english : french;
+  return translate(draft?.state.preferences.locale ?? readBrowserLocale(), french, english);
 }
 
 function readDraft(id: string | null): Draft | null {

@@ -499,105 +499,6 @@
   font-weight: 650;
 }
 
-.face {
-  display: block;
-  width: min(100%, 14rem);
-  height: auto;
-  overflow: visible;
-}
-
-.face path,
-.face circle {
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.silhouette {
-  fill: var(--face-skin, #fbfaf7);
-  stroke: var(--face-outline, #7b7d7b);
-  stroke-width: 1.2;
-}
-
-.hair {
-  fill: var(--face-hair, #edebe4);
-  stroke: var(--face-hair-outline, #7b7d7b);
-  stroke-width: 1.2;
-}
-
-.pigments {
-  pointer-events: none;
-}
-
-.faceZone {
-  outline: none;
-  cursor: pointer;
-}
-
-.faceZone path {
-  fill: transparent;
-  stroke: transparent;
-  stroke-width: 1.6;
-  transition: stroke 150ms ease-out;
-}
-
-.faceZone[data-active="true"] path {
-  stroke: var(--face-active, #345f87);
-  stroke-width: 1.8;
-  stroke-dasharray: 3.5 3.5;
-}
-
-.faceZone[data-guided="true"] path {
-  stroke: transparent;
-}
-
-.faceZone:hover path,
-.faceZone:focus-visible path {
-  stroke: var(--face-hover, #1e3f62);
-  stroke-width: 2.2;
-}
-
-.faceZone:focus-visible path {
-  stroke-dasharray: 5 3;
-}
-
-.faceDetails {
-  fill: none;
-  stroke: var(--face-details, #6a6e70);
-  stroke-width: 1.05;
-  pointer-events: none;
-}
-
-.faceDetails circle {
-  fill: var(--face-iris, var(--face-details, #6a6e70));
-  stroke: var(--face-iris-outline, none);
-  stroke-width: .65;
-}
-
-.applicationMarking {
-  fill: none;
-  stroke: #805896;
-  stroke-width: 1.9;
-  stroke-dasharray: 4 4;
-  pointer-events: none;
-  animation: applicationPulse 2.65s ease-in-out both;
-}
-
-.applicationMarking[data-application="hair"] {
-  stroke: #885174;
-  stroke-width: 2.4;
-}
-
-.massageArrows {
-  stroke-width: 1.55;
-  stroke-dasharray: none;
-}
-
-@keyframes applicationPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .57; }
-}
-
 .chartSelection {
   margin: 0;
   color: var(--brand-dark, #274662);
@@ -704,21 +605,10 @@
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   }
 
-  .face {
-    width: min(100%, 19rem);
-  }
 }
 
 @media (min-width: 461px) {
   .fields {
     grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .faceZone path {
-    transition: none;
-  }
-
-  .applicationMarking { animation: none; }
 }

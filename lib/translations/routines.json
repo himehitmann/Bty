@@ -1,0 +1,406 @@
+{
+  "Morning": [
+    "Mañana",
+    "Mattina"
+  ],
+  "Evening": [
+    "Noche",
+    "Sera"
+  ],
+  "Any time": [
+    "En cualquier momento",
+    "In qualsiasi momento"
+  ],
+  "Face": [
+    "Rostro",
+    "Viso"
+  ],
+  "Forehead": [
+    "Frente",
+    "Fronte"
+  ],
+  "Cheeks": [
+    "Mejillas",
+    "Guance"
+  ],
+  "Eyes": [
+    "Ojos",
+    "Occhi"
+  ],
+  "Lips": [
+    "Labios",
+    "Labbra"
+  ],
+  "Chin": [
+    "Barbilla",
+    "Mento"
+  ],
+  "Hair": [
+    "Pelo",
+    "Capelli"
+  ],
+  "Scalp": [
+    "Cuero cabelludo",
+    "Cuoio capelluto"
+  ],
+  "Lengths": [
+    "Medios",
+    "Lunghezze"
+  ],
+  "Ends": [
+    "Puntas",
+    "Punte"
+  ],
+  "My routines": [
+    "Mis rutinas",
+    "Le mie routine"
+  ],
+  "Organize your steps and follow them day to day.": [
+    "Organiza tus pasos y síguelos día a día.",
+    "Organizza i passaggi e seguili ogni giorno."
+  ],
+  "Create a routine": [
+    "Crear una rutina",
+    "Crea una routine"
+  ],
+  "Your workspace can hold up to 100 routines.": [
+    "Puedes guardar hasta 100 rutinas.",
+    "Puoi salvare fino a 100 routine."
+  ],
+  "Your first routine": [
+    "Tu primera rutina",
+    "La tua prima routine"
+  ],
+  "Choose your products and arrange them in the order you use them.": [
+    "Elige tus productos y ordénalos según cómo los usas.",
+    "Scegli i tuoi prodotti e mettili nell’ordine in cui li usi."
+  ],
+  "Add products to your vanity to use them in a routine.": [
+    "Añade productos a tu colección para usarlos en una rutina.",
+    "Aggiungi prodotti alla tua collezione per usarli in una routine."
+  ],
+  "step": [
+    "paso",
+    "passaggio"
+  ],
+  "steps": [
+    "pasos",
+    "passaggi"
+  ],
+  "Product removed from vanity": [
+    "Producto eliminado de la colección",
+    "Prodotto rimosso dalla collezione"
+  ],
+  "Delete this routine?": [
+    "¿Eliminar esta rutina?",
+    "Eliminare questa routine?"
+  ],
+  "Cancel": [
+    "Cancelar",
+    "Annulla"
+  ],
+  "Delete": [
+    "Eliminar",
+    "Elimina"
+  ],
+  "Start": [
+    "Empezar",
+    "Inizia"
+  ],
+  "Edit {0}": [
+    "Editar {0}",
+    "Modifica {0}"
+  ],
+  "Delete {0}": [
+    "Eliminar {0}",
+    "Elimina {0}"
+  ],
+  "Edit routine": [
+    "Editar rutina",
+    "Modifica la routine"
+  ],
+  "New routine": [
+    "Nueva rutina",
+    "Nuova routine"
+  ],
+  "Build a routine with the products in your vanity.": [
+    "Crea una rutina con los productos de tu colección.",
+    "Crea una routine con i prodotti della tua collezione."
+  ],
+  "Routine name": [
+    "Nombre de la rutina",
+    "Nome della routine"
+  ],
+  "E.g. My evening routine": [
+    "P. ej., mi rutina de noche",
+    "Ad es. la mia routine della sera"
+  ],
+  "Time of day": [
+    "Momento del día",
+    "Momento della giornata"
+  ],
+  "Steps": [
+    "Pasos",
+    "Passaggi"
+  ],
+  "Add a step": [
+    "Añadir un paso",
+    "Aggiungi un passaggio"
+  ],
+  "Add a step to get started.": [
+    "Añade un paso para empezar.",
+    "Aggiungi un passaggio per iniziare."
+  ],
+  "Add a product to your vanity first.": [
+    "Añade primero un producto a tu colección.",
+    "Aggiungi prima un prodotto alla tua collezione."
+  ],
+  "Step": [
+    "Paso",
+    "Passaggio"
+  ],
+  "Move step {0} up": [
+    "Subir el paso {0}",
+    "Sposta in alto il passaggio {0}"
+  ],
+  "Move step {0} down": [
+    "Bajar el paso {0}",
+    "Sposta in basso il passaggio {0}"
+  ],
+  "Remove step {0}": [
+    "Quitar el paso {0}",
+    "Rimuovi il passaggio {0}"
+  ],
+  "Product": [
+    "Producto",
+    "Prodotto"
+  ],
+  "Application area": [
+    "Zona de aplicación",
+    "Zona di applicazione"
+  ],
+  "Makeup placement": [
+    "Colocación del maquillaje",
+    "Posizionamento del trucco"
+  ],
+  "Use the selected area": [
+    "Usar la zona seleccionada",
+    "Usa la zona selezionata"
+  ],
+  "Placement guide": [
+    "Guía de colocación",
+    "Guida al posizionamento"
+  ],
+  "Weekly frequency": [
+    "Frecuencia semanal",
+    "Frequenza settimanale"
+  ],
+  "(optional)": [
+    "(opcional)",
+    "(facoltativo)"
+  ],
+  "Follow product instructions": [
+    "Seguir las instrucciones del producto",
+    "Segui le istruzioni del prodotto"
+  ],
+  "{0} {1} per week": [
+    "{0} {1} por semana",
+    "{0} {1} alla settimana"
+  ],
+  "{0} time per week": [
+    "{0} vez por semana",
+    "{0} volta alla settimana"
+  ],
+  "{0} times per week": [
+    "{0} veces por semana",
+    "{0} volte alla settimana"
+  ],
+  "Face Chart shade": [
+    "Tono de la carta facial",
+    "Tonalità della face chart"
+  ],
+  "Product shade": [
+    "Tono del producto",
+    "Tonalità del prodotto"
+  ],
+  "No shade selected": [
+    "Ningún tono seleccionado",
+    "Nessuna tonalità selezionata"
+  ],
+  "Shade removed from palette": [
+    "Tono eliminado de la paleta",
+    "Tonalità rimossa dalla palette"
+  ],
+  "Note": [
+    "Nota",
+    "Nota"
+  ],
+  "E.g. Apply a thin layer.": [
+    "P. ej., aplica una capa fina.",
+    "Ad es. applica uno strato sottile."
+  ],
+  "Tool and technique": [
+    "Herramienta y técnica",
+    "Strumento e tecnica"
+  ],
+  "Tool or accessory": [
+    "Herramienta o accesorio",
+    "Strumento o accessorio"
+  ],
+  "E.g. Brush or diffuser": [
+    "P. ej., cepillo o difusor",
+    "Ad es. spazzola o diffusore"
+  ],
+  "Hair area": [
+    "Zona del pelo",
+    "Zona dei capelli"
+  ],
+  "Unspecified": [
+    "Sin especificar",
+    "Non specificato"
+  ],
+  "Include a massage in this step": [
+    "Incluir un masaje en este paso",
+    "Includi un massaggio in questo passaggio"
+  ],
+  "Save": [
+    "Guardar",
+    "Salva"
+  ],
+  "Things to check": [
+    "Puntos a tener en cuenta",
+    "Aspetti da verificare"
+  ],
+  "These notes use the available ingredient lists and your profile preferences.": [
+    "Estas notas se basan en las listas de ingredientes disponibles y en las preferencias de tu perfil.",
+    "Queste note si basano sugli elenchi di ingredienti disponibili e sulle preferenze del tuo profilo."
+  ],
+  "Interactive face chart": [
+    "Carta facial interactiva",
+    "Face chart interattiva"
+  ],
+  "The outline marks where to apply the product.": [
+    "El contorno marca dónde aplicar el producto.",
+    "Il contorno indica dove applicare il prodotto."
+  ],
+  "Add a makeup type and finish in the vanity to preview a shade.": [
+    "Añade un tipo y un acabado de maquillaje en tu colección para ver un tono.",
+    "Aggiungi il tipo e il finish nella collezione per vedere la tonalità."
+  ],
+  "Transparent finish. The outline marks where to apply it.": [
+    "Acabado transparente. El contorno señala dónde aplicarlo.",
+    "Finish trasparente. Il contorno indica dove applicarlo."
+  ],
+  "Matte finish shown without added pigment.": [
+    "El acabado mate se muestra sin añadir pigmento.",
+    "Il finish opaco è rappresentato senza aggiungere pigmento."
+  ],
+  "This makeup type has no preview for the selected area.": [
+    "Este tipo de maquillaje no tiene vista previa en la zona seleccionada.",
+    "L’anteprima di questo tipo di trucco non è disponibile nella zona selezionata."
+  ],
+  "Choose a shade in the product details or in this step to preview it.": [
+    "Elige un tono en la ficha del producto o en este paso para previsualizarlo.",
+    "Scegli una tonalità nella scheda del prodotto o in questo passaggio per vederla in anteprima."
+  ],
+  "Visible shades": [
+    "Tonos visibles",
+    "Tonalità visibili"
+  ],
+  "The preview shows color placement. The finished look depends on the product, skin tone and lighting.": [
+    "La vista previa muestra dónde va el color. El acabado depende del producto, el tono de piel y la luz.",
+    "L’anteprima mostra dove applicare il colore. Il risultato dipende dal prodotto, dall’incarnato e dalla luce."
+  ],
+  "Routine complete": [
+    "Rutina completada",
+    "Routine completata"
+  ],
+  "You finished every step of “{0}”.": [
+    "Has completado todos los pasos de «{0}».",
+    "Hai completato tutti i passaggi di «{0}»."
+  ],
+  "Final Face Chart preview": [
+    "Vista final de la carta facial",
+    "Anteprima finale della face chart"
+  ],
+  "Back to routines": [
+    "Volver a las rutinas",
+    "Torna alle routine"
+  ],
+  "Packaging": [
+    "Envase",
+    "Confezione"
+  ],
+  "Manufacturer": [
+    "Fabricante",
+    "Produttore"
+  ],
+  "Use your products at your own pace.": [
+    "Usa tus productos a tu ritmo.",
+    "Usa i prodotti seguendo il tuo ritmo."
+  ],
+  "Step {0} of {1}": [
+    "Paso {0} de {1}",
+    "Passaggio {0} di {1}"
+  ],
+  "Routine progress": [
+    "Progreso de la rutina",
+    "Avanzamento della routine"
+  ],
+  "Tool": [
+    "Herramienta",
+    "Strumento"
+  ],
+  "Massage included in this step.": [
+    "Este paso incluye un masaje.",
+    "Questo passaggio comprende un massaggio."
+  ],
+  "Follow the directions on the product packaging.": [
+    "Sigue las indicaciones del envase del producto.",
+    "Segui le indicazioni sulla confezione del prodotto."
+  ],
+  "Skip to the next step or edit your routine.": [
+    "Pasa al siguiente paso o edita tu rutina.",
+    "Passa al passaggio successivo o modifica la routine."
+  ],
+  "Product directions": [
+    "Modo de empleo del producto",
+    "Istruzioni del prodotto"
+  ],
+  "View source": [
+    "Ver la fuente",
+    "Vedi la fonte"
+  ],
+  "Frequency": [
+    "Frecuencia",
+    "Frequenza"
+  ],
+  "follow product instructions": [
+    "sigue las instrucciones del producto",
+    "segui le istruzioni del prodotto"
+  ],
+  "Routine steps": [
+    "Pasos de la rutina",
+    "Passaggi della routine"
+  ],
+  "Product removed": [
+    "Producto eliminado",
+    "Prodotto rimosso"
+  ],
+  "Previous": [
+    "Anterior",
+    "Precedente"
+  ],
+  "Finish": [
+    "Terminar",
+    "Termina"
+  ],
+  "Next": [
+    "Siguiente",
+    "Avanti"
+  ],
+  "Application areas": [
+    "Zonas de aplicación",
+    "Zone di applicazione"
+  ]
+}

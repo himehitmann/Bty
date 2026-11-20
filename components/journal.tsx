@@ -89,7 +89,7 @@ function LockedJournal({ onOpenPlans }: { onOpenPlans: () => void }) {
 function PrivateJournal({
   userId, client, plus, entitlementLoading, products, routines, completed, onOpenPlans,
 }: Omit<JournalProps, "client" | "userId"> & { userId: string; client: SupabaseClient }) {
-  const { t, locale, intlLocale, formatNumber } = useLocale();
+  const { t, intlLocale, formatNumber } = useLocale();
   const [today] = useState(localDateKey);
   const [selectedDate, setSelectedDate] = useState(today);
   const [entries, setEntries] = useState<StoredJournalEntry[]>([]);
@@ -304,8 +304,8 @@ function PrivateJournal({
 
   return (
     <>
-      {error && <div className={styles.warning} role="alert">{journalErrors[error][locale]} <button className="text-button" onClick={() => setRetry((value) => value + 1)}>{t("Recharger", "Reload")}</button></div>}
-      {notice && <p className={styles.notice} role="status">{journalNotices[notice][locale]}</p>}
+      {error && <div className={styles.warning} role="alert">{t(journalErrors[error].fr, journalErrors[error].en)} <button className="text-button" onClick={() => setRetry((value) => value + 1)}>{t("Recharger", "Reload")}</button></div>}
+      {notice && <p className={styles.notice} role="status">{t(journalNotices[notice].fr, journalNotices[notice].en)}</p>}
       {!plus && (
         <div className={styles.readOnly}>
           <div><strong>{t("Ton historique reste accessible", "Your history stays available")}</strong><p>{t("Avec Navier Plus, tu peux ajouter et modifier tes observations.", "With Navier Plus, you can add and edit entries.")}</p></div>
@@ -324,9 +324,11 @@ function PrivateJournal({
             <div className={styles.calendar}>
               {days.map((day) => {
                 const entry = entries.find((entry) => entry.entry_date === day.date);
+                const comfort = entry ? journalComfort[entry.comfort] : undefined;
+                const description = comfort ? t(comfort.fr, comfort.en) : t("sans observation", "no entry");
                 return <button type="button" key={day.date} className={styles.day} aria-current={day.date === today ? "date" : undefined}
                   aria-pressed={day.date === selectedDate} disabled={Boolean(busy)}
-                  aria-label={`${journalDateLabel(day.date, intlLocale)}, ${entry ? journalComfort[entry.comfort][locale] : t("sans observation", "no entry")}`}
+                  aria-label={`${journalDateLabel(day.date, intlLocale)}, ${description}`}
                   onClick={() => selectDate(day.date)}>
                   <small>{day.weekday}</small><span>{day.label}</span>
                   <i data-comfort={entry?.comfort} aria-hidden="true"/>
@@ -403,10 +405,11 @@ function PrivateJournal({
 }
 
 function EntryDetails({ entry }: { entry: JournalEntry }) {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
+  const comfort = journalComfort[entry.comfort];
   return (
     <div className={styles.entryDetails}>
-      <span className={styles.comfortTag} data-comfort={entry.comfort}>{journalComfort[entry.comfort][locale]}</span>
+      <span className={styles.comfortTag} data-comfort={entry.comfort}>{t(comfort.fr, comfort.en)}</span>
       {entry.routine && <p className={styles.routineLabel}>{entry.routine.name}</p>}
       {entry.products.length > 0 && <ul aria-label={t("Produits utilisés", "Products used")} className={styles.products}>
         {entry.products.map((product, index) => <li key={`${product.id}-${index}`}>{product.name}</li>)}
@@ -425,7 +428,7 @@ function EntryForm({ date, entry, products, routines, completed, busy, onSave }:
   busy: boolean;
   onSave: (entry: JournalEntry, version?: string) => Promise<boolean>;
 }) {
-  const { t, locale, formatNumber } = useLocale();
+  const { t, formatNumber } = useLocale();
   const id = useId();
   const [comfort, setComfort] = useState<JournalComfort | "">(entry?.comfort ?? "");
   const [routineId, setRoutineId] = useState(entry?.routine?.id ?? "");
@@ -470,7 +473,7 @@ function EntryForm({ date, entry, products, routines, completed, busy, onSave }:
           {comfortOptions.map((value) => (
             <label key={value} className={styles.comfortChoice} data-comfort={value}>
               <input type="radio" name={`comfort-${id}`} required value={value} checked={comfort === value} onChange={() => setComfort(value)}/>
-              {journalComfort[value][locale]}
+              {t(journalComfort[value].fr, journalComfort[value].en)}
             </label>
           ))}
         </div>

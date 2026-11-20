@@ -16,7 +16,7 @@
 }
 
 .intro h1 {
-  font: 600 clamp(1.9rem, 3.5vw, 2.6rem)/1.12 var(--sans, system-ui, sans-serif);
+  font: 400 clamp(2.15rem, 4.2vw, 3.2rem)/1.04 var(--display, Georgia, serif);
   letter-spacing: -.035em;
 }
 
@@ -86,11 +86,6 @@
   font-size: .95rem;
   line-height: 1.55;
   list-style: decimal;
-}
-
-.guide strong {
-  color: var(--site-ink);
-  font-weight: 650;
 }
 
 .guide li::marker {

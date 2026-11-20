@@ -1,11 +1,8 @@
 .page {
-  --list-ink: #302443;
-  --list-lilac: #e8ddfd;
-  --list-rose: #fcf2f5;
-  --list-line: #e9e1ef;
+  --list-wash: color-mix(in srgb, var(--sage), var(--surface) 66%);
   display: grid;
   gap: 1.1rem;
-  color: var(--list-ink);
+  color: var(--ink);
   min-width: 0;
 }
 
@@ -19,7 +16,7 @@
 }
 
 .header h1 {
-  font: 575 clamp(2rem, 4.6vw, 3.7rem)/1.08 var(--serif, Georgia, serif);
+  font: 400 clamp(2rem, 4.6vw, 3.7rem)/1.08 var(--serif, Georgia, serif);
   letter-spacing: -.045em;
 }
 
@@ -55,7 +52,7 @@
   padding: .55rem .65rem;
   border: 1px solid transparent;
   border-radius: .6rem;
-  color: var(--list-ink);
+  color: var(--ink);
   text-align: left;
 }
 
@@ -67,15 +64,15 @@
 }
 
 .listPicker small {
-  color: var(--list-ink);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
-.listPicker:hover { background: var(--list-rose); }
+.listPicker:hover { background: var(--list-wash); }
 
 .listPicker[aria-pressed="true"] {
-  background: var(--list-lilac);
-  border-color: #d8c8f4;
+  background: var(--sage);
+  border-color: #c7d4ba;
 }
 
 .detail,
@@ -85,14 +82,14 @@
   gap: .85rem;
   min-width: 0;
   padding: clamp(.8rem, 2.5vw, 1.4rem);
-  border: 1px solid var(--list-line);
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background: var(--surface);
 }
 
 .create {
   max-width: 49rem;
-  background: var(--list-rose);
+  background: var(--list-wash);
 }
 
 .detailHeader,
@@ -105,7 +102,7 @@
 }
 
 .detail h2 {
-  font: 575 clamp(1.25rem, 2.4vw, 1.75rem)/1.2 var(--serif, Georgia, serif);
+  font: 400 clamp(1.25rem, 2.4vw, 1.75rem)/1.2 var(--serif, Georgia, serif);
   overflow-wrap: anywhere;
   margin-bottom: .2rem;
 }
@@ -133,12 +130,12 @@
 .suggestions button {
   min-height: 2rem;
   padding: .25rem .55rem;
-  border: 1px solid var(--list-line);
+  border: 1px solid var(--line);
   border-radius: .45rem;
   font-size: .83rem;
 }
 
-.suggestions button:hover { background: var(--list-lilac); }
+.suggestions button:hover { background: var(--sage); }
 
 .inputRow,
 .actions {
@@ -155,10 +152,10 @@
   min-width: 0;
   min-height: 2.65rem;
   padding: .5rem .65rem;
-  border: 1px solid var(--list-line);
+  border: 1px solid var(--line);
   border-radius: .55rem;
   background: var(--surface);
-  color: var(--list-ink);
+  color: var(--ink);
 }
 
 .inputRow input { flex: 1 1 12rem; }
@@ -171,9 +168,9 @@
   display: grid;
   gap: .55rem;
   padding: .65rem;
-  border: 1px solid var(--list-line);
+  border: 1px solid var(--line);
   border-radius: .7rem;
-  background: var(--list-rose);
+  background: var(--list-wash);
 }
 
 .search {
@@ -210,7 +207,7 @@
   border-radius: .55rem;
 }
 
-.productResults button:hover { background: var(--list-lilac); }
+.productResults button:hover { background: var(--sage); }
 
 .productResults span,
 .checkbox > span {
@@ -227,7 +224,7 @@
 
 .entry {
   padding: .45rem 0;
-  border-top: 1px solid var(--list-line);
+  border-top: 1px solid var(--line);
 }
 
 .entryRow {
@@ -256,7 +253,7 @@
   flex: none;
   width: 1rem;
   height: 1rem;
-  accent-color: var(--list-ink);
+  accent-color: var(--ink);
 }
 
 .checked {
@@ -266,7 +263,7 @@
 
 .reason {
   margin: 0 0 .35rem 1.6rem;
-  color: var(--list-ink);
+  color: var(--ink);
   font-size: .88rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -284,19 +281,19 @@
   height: 2.6rem;
   border-radius: .55rem;
   background: transparent;
-  color: var(--list-ink);
+  color: var(--ink);
 }
 
-.iconButton:hover { background: var(--list-lilac); }
+.iconButton:hover { background: var(--sage); }
 
 .confirm,
 .warning {
   display: grid;
   gap: .45rem;
-  border: 1px solid var(--list-line);
+  border: 1px solid var(--line);
   border-radius: .65rem;
   padding: .65rem;
-  background: var(--list-rose);
+  background: var(--list-wash);
 }
 
 @media (max-width: 700px) {

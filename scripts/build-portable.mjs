@@ -48,7 +48,7 @@ const { outputFiles } = await build({
 const script = outputFiles.find((file) => file.path.endsWith(".js")).text.replace(/<\/script/gi, "<\\/script");
 const css = outputFiles.find((file) => file.path.endsWith(".css")).text;
 const hash = createHash("sha256").update(script).digest("base64");
-const licenses = await Promise.all(["geist", "instrument-serif"].map((font) =>
+const licenses = await Promise.all(["instrument-sans", "hedvig-letters-serif"].map((font) =>
   readFile(path.join(root, "public", "fonts", `${font}-OFL.txt`), "utf8")));
 const license = licenses.join("\n\n").replaceAll("-->", "--&gt;");
 
@@ -58,7 +58,7 @@ await writeFile(destination + ".tmp", `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src https://world.openbeautyfacts.org; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Navier</title>
 <style>${css}</style>
 </head>

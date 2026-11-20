@@ -276,6 +276,28 @@
   color: #272727;
 }
 
+.collections,
+.collection {
+  display: grid;
+  gap: .75rem;
+}
+
+.collections {
+  gap: 1.35rem;
+}
+
+.collection + .collection {
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line, #e3e3e3);
+}
+
+.collection h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
 .colors {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
@@ -286,19 +308,29 @@
 }
 
 .colorCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: .7rem;
   min-width: 0;
-  overflow: hidden;
+  padding: .65rem;
   border: 1px solid var(--line, #e3e3e3);
   border-radius: .95rem;
 }
 
 .colorBlock {
-  height: 4rem;
-  border-bottom: 1px solid #15151518;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid #15151520;
+  border-radius: .6rem;
 }
 
 .colorInfo {
-  padding: .55rem .65rem;
+  min-width: 0;
+}
+
+.colorCard:has(.editForm) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .colorName {
@@ -344,8 +376,13 @@
 
 .editForm {
   grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
+  align-items: end;
   gap: .15rem;
+}
+
+.editFields {
+  display: grid;
+  gap: .35rem;
 }
 
 .srOnly {

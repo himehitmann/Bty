@@ -1,0 +1,91 @@
+.face {
+  display: block;
+  width: min(100%, 14rem);
+  height: auto;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.face path,
+.face circle {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.artwork,
+.placementGuide,
+.applicationMarking {
+  pointer-events: none;
+}
+
+.faceZone {
+  outline: none;
+  cursor: pointer;
+}
+
+.faceZone path,
+.placementGuide path,
+.applicationMarking path {
+  fill: transparent;
+  vector-effect: non-scaling-stroke;
+}
+
+.faceZone path {
+  stroke: transparent;
+  stroke-width: 1.7;
+}
+
+.faceZone[data-highlight="true"] path {
+  stroke: #633b40;
+  stroke-dasharray: 3 3;
+}
+
+.faceZone:hover path,
+.faceZone:focus-visible path {
+  stroke: #593040;
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+  paint-order: stroke;
+}
+
+.faceZone:focus-visible path {
+  stroke-width: 2.6;
+}
+
+.placementGuide,
+.applicationMarking {
+  stroke: #70424e;
+  stroke-width: 1.7;
+  stroke-dasharray: 4 3.5;
+}
+
+.placementGuide path,
+.applicationMarking path {
+  filter: drop-shadow(0 0 1px #fff4e9);
+}
+
+.applicationMarking {
+  animation: application-pulse 2.7s ease-in-out both;
+}
+
+.applicationMarking[data-application="hair"] {
+  stroke: #f5dbca;
+  stroke-width: 2.1;
+}
+
+.massageArrows {
+  stroke-dasharray: none;
+}
+
+@keyframes application-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .54; }
+}
+
+@media (min-width: 721px) {
+  .face { width: min(100%, 19rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .applicationMarking { animation: none; }
+}

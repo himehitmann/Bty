@@ -17,27 +17,27 @@ const guides = [
     icon: Smartphone,
     title: ["iPhone et iPad", "iPhone and iPad"],
     steps: [
-      <Localized fr={<>Ouvre cette page dans <strong>Safari</strong>.</>} en={<>Open this page in <strong>Safari</strong>.</>}/>,
-      <Localized fr={<>Ouvre <strong>Partager</strong> puis choisis <strong>Sur l’écran d’accueil</strong>.</>} en={<>Open <strong>Share</strong> and select <strong>Add to Home Screen</strong>.</>}/>,
-      <Localized fr={<>Active <strong>Ouvrir comme app web</strong> si cette option apparaît, puis touche <strong>Ajouter</strong>.</>} en={<>Turn on <strong>Open as Web App</strong> if prompted, then tap <strong>Add</strong>.</>}/>,
+      <Localized fr="Ouvre cette page dans Safari." en="Open this page in Safari."/>,
+      <Localized fr="Ouvre Partager puis choisis Sur l’écran d’accueil." en="Open Share and select Add to Home Screen."/>,
+      <Localized fr="Active Ouvrir comme app web si cette option apparaît, puis touche Ajouter." en="Turn on Open as Web App if prompted, then tap Add."/>,
     ],
   },
   {
     icon: TabletSmartphone,
     title: ["Android", "Android"],
     steps: [
-      <Localized fr={<>Ouvre cette page dans <strong>Chrome</strong>.</>} en={<>Open this page in <strong>Chrome</strong>.</>}/>,
-      <Localized fr={<>Dans le menu <strong>⋮</strong>, touche <strong>Ajouter à l’écran d’accueil</strong> ou <strong>Installer l’application</strong>.</>} en={<>In the <strong>⋮</strong> menu, tap <strong>Add to Home Screen</strong> or <strong>Install app</strong>.</>}/>,
-      <Localized fr={<>Valide pour retrouver Navier parmi tes applications.</>} en={<>Confirm to find Navier among your apps.</>}/>,
+      <Localized fr="Ouvre cette page dans Chrome." en="Open this page in Chrome."/>,
+      <Localized fr="Dans le menu ⋮, touche Ajouter à l’écran d’accueil ou Installer l’application." en="In the ⋮ menu, tap Add to Home Screen or Install app."/>,
+      <Localized fr="Valide pour retrouver Navier parmi tes applications." en="Confirm to find Navier among your apps."/>,
     ],
   },
   {
     icon: Monitor,
     title: ["Ordinateur", "Desktop"],
     steps: [
-      <Localized fr={<>Avec <strong>Chrome</strong> ou <strong>Edge</strong>, cherche l’icône d’installation dans la barre d’adresse.</>} en={<>In <strong>Chrome</strong> or <strong>Edge</strong>, look for the install icon in the address bar.</>}/>,
-      <Localized fr={<>Tu peux aussi ouvrir le menu du navigateur et chercher <strong>Installer Navier</strong> ou <strong>Applications</strong>.</>} en={<>You can also open the browser menu and look for <strong>Install Navier</strong> or <strong>Apps</strong>.</>}/>,
-      <Localized fr={<>Dans <strong>Safari</strong> sur macOS, utilise <strong>Fichier</strong> puis <strong>Ajouter au Dock</strong> si l’option est disponible.</>} en={<>In <strong>Safari</strong> on macOS, choose <strong>File</strong> and then <strong>Add to Dock</strong> if available.</>}/>,
+      <Localized fr="Avec Chrome ou Edge, cherche l’icône d’installation dans la barre d’adresse." en="In Chrome or Edge, look for the install icon in the address bar."/>,
+      <Localized fr="Tu peux aussi ouvrir le menu du navigateur et chercher Installer Navier ou Applications." en="You can also open the browser menu and look for Install Navier or Apps."/>,
+      <Localized fr="Dans Safari sur macOS, utilise Fichier puis Ajouter au Dock si l’option est disponible." en="In Safari on macOS, choose File and then Add to Dock if available."/>,
     ],
   },
 ];

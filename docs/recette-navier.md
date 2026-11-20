@@ -2,7 +2,7 @@
 
 ## Ouvrir le fichier portable
 
-Télécharge **Navier.html** dans la [dernière version publiée sur GitHub](https://github.com/himehitmann/Bty/releases/latest), puis double-clique sur le fichier. L’édition portable fonctionne avec le catalogue embarqué et la saisie manuelle. Les données sont locales au navigateur utilisé.
+Télécharge **Navier.html** dans la [dernière version publiée sur GitHub](https://github.com/himehitmann/Bty/releases/latest), puis double-clique sur le fichier. Une connexion permet de chercher dans Open Beauty Facts. Le catalogue embarqué et la saisie manuelle fonctionnent hors ligne. L’espace personnel reste dans le navigateur utilisé.
 
 ## Depuis le code source
 
@@ -28,6 +28,8 @@ Ouvre `http://localhost:3000` tant que le serveur tourne. Le site et le guide d�
 7. Depuis **Simulation maquillage**, change la carnation, puis superpose le fard et l’eyeliner dans la zone des yeux. Prélève une nuance via l’onglet photo et applique-la sur une zone du visage.
 8. Dans **Mes listes**, crée une liste et ajoute un produit avec une raison. Coche-le, recharge la page, puis retire le produit du vanity pour vérifier que la liste conserve son nom et la raison.
 9. Ajoute une étape capillaire à une routine. Choisis les pointes, saisis le nom de la brosse et coche le massage si c’est le geste prévu. Lance la routine et vérifie les informations et le repère visuel.
+10. Dans le Studio, compare le blush sur le bombé des joues et en haut des pommettes. Active le guide, puis teste une poudre translucide sous les yeux et le contour de la mâchoire. Enregistre deux teintes sous un même nom de palette et essaie-les depuis le nuancier.
+11. Dans le fichier **Navier.html** connecté à Internet, cherche une référence absente de la sélection embarquée, puis répète hors connexion avec le code `3337875795456`. Vérifie le retour du catalogue embarqué et la saisie manuelle.
 
 ## Inventaire des fonctions
 

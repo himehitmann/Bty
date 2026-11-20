@@ -1,0 +1,42 @@
+{
+  "Back to Navier": [
+    "Volver a Navier",
+    "Torna a Navier"
+  ],
+  "Privacy and data": [
+    "Privacidad y datos",
+    "Privacy e dati"
+  ],
+  "Local workspace": [
+    "Espacio local",
+    "Spazio locale"
+  ],
+  "Products, routines, lists, palettes and settings are saved in your browser. The web app can keep resources so you can reopen it offline.": [
+    "Los productos, rutinas, listas, paletas y ajustes se guardan en tu navegador. La aplicación web puede conservar recursos para abrirse sin conexión.",
+    "Prodotti, routine, liste, palette e impostazioni vengono salvati nel browser. L’app web può conservare le risorse per riaprirsi offline."
+  ],
+  "Account and sync": [
+    "Cuenta y sincronización",
+    "Account e sincronizzazione"
+  ],
+  "If you create an account, Supabase manages sign-in and stores your synced data. Photos you choose to save are kept in private storage. The journal uses a separate private space accessible to its owner.": [
+    "Si creas una cuenta, Supabase gestiona el acceso y guarda los datos sincronizados. Las fotos que decides guardar se conservan en un espacio privado. El diario usa un espacio privado independiente al que accede su propietario.",
+    "Se crei un account, Supabase gestisce l’accesso e conserva i dati sincronizzati. Le foto che scegli di salvare vengono archiviate in uno spazio privato. Il diario usa uno spazio privato separato accessibile al titolare."
+  ],
+  "Catalogue and payments": [
+    "Catálogo y pagos",
+    "Catalogo e pagamenti"
+  ],
+  "Submitted product searches by name, brand or barcode may be sent to Open Beauty Facts. The portable file can contact this service directly. If you subscribe to Plus, Stripe processes the payment and sends the subscription status to Navier.": [
+    "Las búsquedas de productos que envíes por nombre, marca o código de barras pueden transmitirse a Open Beauty Facts. El archivo portátil puede contactar directamente con este servicio. Si te suscribes a Plus, Stripe procesa el pago y envía el estado de la suscripción a Navier.",
+    "Le ricerche avviate per nome, marca o codice a barre possono essere inviate a Open Beauty Facts. Il file portatile può contattare direttamente questo servizio. Se ti abboni a Plus, Stripe elabora il pagamento e comunica a Navier lo stato dell’abbonamento."
+  ],
+  "Export your data": [
+    "Exportar tus datos",
+    "Esporta i tuoi dati"
+  ],
+  "You can download your workspace export from settings and export entries from the journal. The workspace export contains your shades without their linked photos.": [
+    "Puedes descargar los datos de tu espacio desde los ajustes y exportar las entradas desde el diario. La exportación de tu espacio incluye los tonos sin sus fotos asociadas.",
+    "Puoi scaricare i dati del tuo spazio dalle impostazioni ed esportare le voci dal diario. L’esportazione dello spazio include le tonalità senza le foto collegate."
+  ]
+}
