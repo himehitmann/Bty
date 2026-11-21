@@ -30,27 +30,35 @@ const fieldNames = [
 export const catalogSearchQuery = z.string().trim().max(120).refine((query) => !/\p{Cc}/u.test(query))
   .transform((query) => query.normalize("NFC").replace(/\s+/g, " "));
 export const catalogSearchMode = z.enum(["all", "brand"]);
-const optionalExternalText = z.string().nullish().catch(undefined);
+const optionalExternalText = (max: number) => z.string().max(max).nullish().catch(undefined);
+const externalName = z.string().max(1024).refine((value) => !/[\p{Cc}\p{Bidi_Control}]/u.test(value.trim()))
+  .nullish().catch(undefined);
+const externalTags = z.preprocess(
+  (value) => Array.isArray(value) && value.length > 128 ? undefined : value,
+  z.array(z.string().max(160)).nullish().catch(undefined),
+);
 const externalProduct = z.object({
   code: z.string().regex(/^\d{8,14}$/),
-  product_name_fr: z.string().nullish(),
-  product_name: z.string().nullish(),
-  brands: z.string().nullish(),
-  brands_tags: z.array(z.string()).nullish().catch(undefined),
-  ingredients_text_fr: z.string().nullish(),
-  ingredients_text: z.string().nullish(),
-  image_front_small_url: optionalExternalText,
-  categories_tags: z.array(z.string()).nullish(),
-  labels_tags: z.array(z.string()).nullish().catch(undefined),
-  usage_fr: optionalExternalText,
-  usage: optionalExternalText,
-  directions_fr: optionalExternalText,
-  directions: optionalExternalText,
-  instructions_fr: optionalExternalText,
-  instructions: optionalExternalText,
+  product_name_fr: externalName,
+  product_name: externalName,
+  brands: externalName,
+  brands_tags: externalTags,
+  ingredients_text_fr: optionalExternalText(8192),
+  ingredients_text: optionalExternalText(8192),
+  image_front_small_url: optionalExternalText(700),
+  categories_tags: externalTags,
+  labels_tags: externalTags,
+  usage_fr: optionalExternalText(1600),
+  usage: optionalExternalText(1600),
+  directions_fr: optionalExternalText(1600),
+  directions: optionalExternalText(1600),
+  instructions_fr: optionalExternalText(1600),
+  instructions: optionalExternalText(1600),
 });
-const externalSearch = z.object({ products: z.array(z.unknown()) });
-const externalLookup = z.object({ status: z.number(), product: z.unknown().optional() });
+const externalSearch = z.object({
+  products: z.preprocess((value) => Array.isArray(value) ? value.slice(0, providerPageSize) : value, z.array(z.unknown())),
+});
+const externalLookup = z.object({ status: z.union([z.literal(0), z.literal(1)]), product: z.unknown().optional() });
 const genericProductNames = new Set([
   "product", "cosmetic", "cosmetics", "makeup", "shampoo", "shampooing", "conditioner", "lipstic", "lipstick",
   "unknown", "name unknown", "non renseigne", "sans nom",
@@ -106,11 +114,12 @@ function productNameIsUseful(name: string, brands: readonly string[]): boolean {
     && !brands.some((brand) => normalizeCatalogQuery(brand.replace(/^[a-z]{2}:/i, "")) === title);
 }
 
-function normalizeProduct(product: unknown, barcodeLookup: boolean, brandQuery?: string): Product | null {
+function normalizeProduct(product: unknown, barcode?: string, brandQuery?: string): Product | null {
   const parsed = externalProduct.safeParse(product);
   if (!parsed.success) return null;
 
   const data = parsed.data;
+  if (barcode && data.code.padStart(14, "0") !== barcode.padStart(14, "0")) return null;
   const brands = [...(data.brands?.split(/[,;|]/) ?? []), ...(data.brands_tags ?? [])];
   const alias = brandQuery && catalogBrandAlias(brandQuery);
   if (alias) {
@@ -120,7 +129,7 @@ function normalizeProduct(product: unknown, barcodeLookup: boolean, brandQuery?:
 
   const reference = localCatalog.find(({ barcode }) => barcode === data.code);
   const titles = [data.product_name_fr, data.product_name].map((value) => value?.trim());
-  const name = (titles.find((value) => value && (barcodeLookup || productNameIsUseful(value, brands))) || reference?.name)?.slice(0, 140);
+  const name = (titles.find((value) => value && (barcode || productNameIsUseful(value, brands))) || reference?.name)?.slice(0, 140);
   if (!name) return null;
 
   const sourceUrl = new URL(`/product/${data.code}`, externalOrigin).href;
@@ -210,10 +219,12 @@ export async function searchOpenBeautyFacts(
     }
 
     const payload = await readExternalResponse(response);
-    const products = barcode ? [externalLookup.parse(payload).product] : externalSearch.parse(payload).products;
+    const lookup = barcode ? externalLookup.parse(payload) : undefined;
+    if (lookup?.status === 0) return [];
+    const products = lookup ? [lookup.product] : externalSearch.parse(payload).products;
     const brandQuery = mode === "brand" || catalogBrandAlias(raw) ? query : undefined;
-    return products.slice(0, providerPageSize).flatMap((product) => {
-      const normalized = normalizeProduct(product, Boolean(barcode), brandQuery);
+    return products.flatMap((product) => {
+      const normalized = normalizeProduct(product, barcode, brandQuery);
       return normalized ? [normalized] : [];
     }).slice(0, maxProducts);
   } finally {
@@ -224,14 +235,15 @@ export async function searchOpenBeautyFacts(
 
 async function readExternalResponse(response: Response): Promise<unknown> {
   const contentType = response.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
-  const contentLength = Number(response.headers.get("content-length"));
-  if (!response.body || contentType !== "application/json" || contentLength > maxResponseBytes) {
+  const contentLength = response.headers.get("content-length");
+  if (!response.body || contentType !== "application/json" ||
+    (contentLength !== null && (!/^\d+$/.test(contentLength) || Number(contentLength) > maxResponseBytes))) {
     void response.body?.cancel().catch(() => undefined);
     throw new Error("Réponse Open Beauty Facts non valide");
   }
 
   const reader = response.body.getReader();
-  const decoder = new TextDecoder();
+  const decoder = new TextDecoder("utf-8", { fatal: true });
   let size = 0;
   let json = "";
   try {
@@ -241,13 +253,15 @@ async function readExternalResponse(response: Response): Promise<unknown> {
 
       size += value.byteLength;
       if (size > maxResponseBytes) {
-        void reader.cancel().catch(() => undefined);
         throw new Error("Réponse Open Beauty Facts trop volumineuse");
       }
       json += decoder.decode(value, { stream: true });
     }
+    return JSON.parse(json + decoder.decode());
+  } catch (error) {
+    void reader.cancel().catch(() => undefined);
+    throw error;
   } finally {
     reader.releaseLock();
   }
-  return JSON.parse(json + decoder.decode());
 }

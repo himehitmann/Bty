@@ -1,4 +1,5 @@
 import type { Locale } from "../locale";
+import account from "./account.json";
 import analysis from "./analysis.json";
 import home from "./home.json";
 import inventory from "./inventory.json";
@@ -15,6 +16,7 @@ import tutorials from "./tutorials.json";
 import workspace from "./workspace.json";
 
 const translations: Readonly<Record<string, readonly string[]>> = {
+  ...account,
   ...analysis,
   ...publicAndProfile,
   ...journal,

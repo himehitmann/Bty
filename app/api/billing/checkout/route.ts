@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
         if (!customerId) throw new Error("Missing billing customer.");
       }
 
-      const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 });
-      if (subscriptions.has_more || subscriptions.data.some(({ status }) => !["canceled", "incomplete_expired"].includes(status))) {
+      const subscriptions = await stripe.subscriptions.list({ customer: customerId, limit: 100 });
+      if (subscriptions.has_more || subscriptions.data.some(({ status }) => status !== "canceled" && status !== "incomplete_expired")) {
         throw new BillingProblem(409, "Ce compte possède déjà un abonnement. Ouvre la gestion de l’abonnement Stripe.");
       }
 
@@ -59,8 +59,11 @@ export async function POST(request: NextRequest) {
 
       if (!lease.claimed) {
         if (lease.session_id) {
-          const existing = await stripe.checkout.sessions.retrieve(lease.session_id);
-          if (existing.customer === customerId && existing.status === "open" && existing.metadata?.interval === input.interval) {
+          const existing = await stripe.checkout.sessions.retrieve(lease.session_id, { expand: ["line_items"] });
+          const items = existing.line_items;
+          if (existing.customer === customerId && existing.livemode === billing.live && existing.mode === "subscription" &&
+            existing.status === "open" && items?.data.length === 1 && !items.has_more &&
+            items.data[0]?.price?.id === price.id && items.data[0].quantity === 1) {
             return session.applyCookies(billingJson({ url: stripeRedirect(existing.url, "checkout.stripe.com") }));
           }
         }
@@ -70,6 +73,8 @@ export async function POST(request: NextRequest) {
       const checkout = await stripe.checkout.sessions.create({
         mode: "subscription",
         customer: customerId,
+        currency: "eur",
+        adaptive_pricing: { enabled: false },
         line_items: [{ price: price.id, quantity: 1 }],
         metadata: { interval: input.interval },
         success_url: `${billing.origin}/?billing=success#offres`,
@@ -77,11 +82,20 @@ export async function POST(request: NextRequest) {
         expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
         locale: "fr",
       }, { idempotencyKey: `navier-checkout-${nonce}` });
-      const { error: recordError } = await admin.from("billing_customers").update({ checkout_session_id: checkout.id })
-        .eq("user_id", session.user.id).eq("live_mode", billing.live).eq("checkout_nonce", nonce);
-      if (recordError) throw recordError;
-
-      return session.applyCookies(billingJson({ url: stripeRedirect(checkout.url, "checkout.stripe.com") }));
+      try {
+        const url = stripeRedirect(checkout.url, "checkout.stripe.com");
+        const { data: recorded, error: recordError } = await admin.from("billing_customers")
+          .update({ checkout_session_id: checkout.id }).eq("user_id", session.user.id)
+          .eq("live_mode", billing.live).eq("checkout_nonce", nonce).select("checkout_session_id").maybeSingle();
+        if (recordError || recorded?.checkout_session_id !== checkout.id) {
+          throw recordError ?? new Error("Could not associate the new checkout with the billing customer.");
+        }
+        return session.applyCookies(billingJson({ url }));
+      } catch (error) {
+        // Do not give out a checkout URL until this lease owns the stored session.
+        await stripe.checkout.sessions.expire(checkout.id).catch(() => {});
+        throw error;
+      }
     } catch (error) {
       return session.applyCookies(billingFailure(error, "checkout"));
     }

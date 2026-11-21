@@ -1,9 +1,16 @@
 import type { NextRequest } from "next/server";
 import type Stripe from "stripe";
+import { z } from "zod";
 import {
-  BillingProblem, billingFailure, billingJson, getBillingAdmin, getStripe, readBillingBody, requireBillingConfig, requireBillingMode,
+  BillingProblem, billingFailure, billingJson, getBillingAdmin, getStripe, matchesBillingPrice,
+  readBillingBody, requireBillingConfig, requireBillingMode,
 } from "@/lib/billing-server";
-import { billingPlans } from "@/lib/billing-plans";
+
+const subscriptionDelivery = z.object({
+  eventId: z.string().max(255).regex(/^evt_[a-zA-Z0-9_]+$/),
+  customerId: z.string().max(255).regex(/^cus_[a-zA-Z0-9_]+$/),
+  subscriptionId: z.string().max(255).regex(/^sub_[a-zA-Z0-9_]+$/),
+});
 
 const subscriptionEvents = new Set([
   "customer.subscription.created",
@@ -48,20 +55,23 @@ export async function POST(request: NextRequest) {
 
     const reference = subscriptionReference(event);
     if (!reference?.customerId || !reference.subscriptionId) return billingJson({ received: true });
+    const delivery = subscriptionDelivery.safeParse({ ...reference, eventId: event.id });
+    if (!delivery.success) throw new BillingProblem(400, "Identifiants Stripe invalides.");
+    const { eventId, customerId, subscriptionId } = delivery.data;
 
     const admin = getBillingAdmin(config);
     await requireBillingMode(admin, config.live);
-    const { data: version, error: beginError } = await admin.rpc("begin_billing_reconciliation", {
-      customer_id: reference.customerId,
-      subscription_id: reference.subscriptionId,
+    const { data: version, error: beginError } = await admin.rpc("reserve_billing_event", {
+      event_id: eventId,
+      customer_id: customerId,
       request_live: config.live,
     });
     if (beginError) throw beginError;
     if (version == null) return billingJson({ received: true });
 
     // Read current Stripe state so delayed events cannot re-grant an ended subscription.
-    const subscription = await stripe.subscriptions.retrieve(reference.subscriptionId);
-    if (stripeId(subscription.customer) !== reference.customerId || subscription.livemode !== config.live) {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    if (subscription.id !== subscriptionId || stripeId(subscription.customer) !== customerId || subscription.livemode !== config.live) {
       throw new Error("Unexpected subscription ownership or mode.");
     }
 
@@ -69,15 +79,17 @@ export async function POST(request: NextRequest) {
       ? subscription.items.data[0] : undefined;
     const interval = item?.price.id === config.prices.monthly ? "monthly"
       : item?.price.id === config.prices.yearly ? "yearly" : null;
-    const plan = interval ? billingPlans[interval] : null;
-    const eligible = Boolean(item && plan && item.quantity === 1 && item.price.currency === "eur" &&
-      item.price.unit_amount === plan.amount && item.price.recurring?.interval === plan.interval &&
-      item.price.recurring.interval_count === 1);
-    const { error: applyError } = await admin.from("billing_subscriptions").update({
-      status: subscription.status,
-      plus_price: eligible,
-      period_end: item ? new Date(item.current_period_end * 1000).toISOString() : null,
-    }).eq("stripe_subscription_id", subscription.id).eq("reconciliation_version", version);
+    const eligible = Boolean(item && interval && item.quantity === 1 && matchesBillingPrice(item.price, config, interval));
+    const { error: applyError } = await admin.rpc("apply_billing_event", {
+      event_id: eventId,
+      customer_id: customerId,
+      subscription_id: subscriptionId,
+      request_live: config.live,
+      observed_version: version,
+      subscription_status: subscription.status,
+      eligible_price: eligible,
+      eligible_period_end: eligible && item ? new Date(item.current_period_end * 1000).toISOString() : null,
+    });
     if (applyError) throw applyError;
 
     return billingJson({ received: true });

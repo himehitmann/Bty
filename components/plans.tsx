@@ -1,25 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Check, CreditCard, LockKeyhole } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { BookOpen, Check, CreditCard, Info, Layers3 } from "lucide-react";
 import { billingPlans, type BillingInterval } from "@/lib/billing-plans";
 import type { BillingStatus } from "@/lib/billing-client";
 import { useLocale } from "@/lib/i18n";
 import styles from "./plans.module.css";
 
 const essentials = [
-  ["Vanity, catalogue et compositions INCI", "Beauty collection, catalogue and ingredient lists"],
-  ["Routines guidées et Face Chart", "Guided routines and Face Chart"],
-  ["Pipette photo, teintes et tutoriels", "Photo colour picker, shades and tutorials"],
-  ["Synchronisation du vanity et des routines avec un compte", "Account sync for your collection and routines"],
+  ["Ma trousse, catalogue et compositions INCI", "My collection, catalogue and ingredient lists"],
+  ["Routines guidées et simulation maquillage", "Guided routines and makeup simulator"],
+  ["Listes beauté, looks enregistrés, teintes photo et tutoriels", "Beauty lists, saved looks, shades from photos and tutorials"],
+  ["Synchronisation des produits et routines avec un compte", "Account sync for your collection and routines"],
 ] as const;
 
 const plusBenefits = [
-  ["Journal personnel de tolérance et d’usage", "Personal journal for product use and skin comfort"],
-  ["Historique des observations par produit", "Find your observations by product"],
-  ["Tes observations restent consultables après l’arrêt de Plus", "Keep access to your observations after cancelling Plus"],
+  ["Écris et modifie tes observations du jour", "Write and edit your daily observations"],
+  ["Retrouve ton historique par produit ou routine", "Search your history by product or routine"],
+  ["Compare tes observations sur les deux dernières semaines", "Compare your observations over the past two weeks"],
 ] as const;
 
+type BillingAction = BillingInterval | "portal";
 type Props = {
   signedIn: boolean;
   billing: BillingStatus;
@@ -28,11 +29,19 @@ type Props = {
 
 export function Plans({ signedIn, billing, onSignIn }: Props) {
   const { t, locale, formatNumber } = useLocale();
-  const euros = (amount: number) => formatNumber(amount / 100, { style: "currency", currency: "EUR" });
-  const annualSavings = euros(12 * billingPlans.monthly.amount - billingPlans.yearly.amount);
-  const [busy, setBusy] = useState<BillingInterval | "portal" | null>(null);
+  const euros = (amount: number) => formatNumber(amount / 100, {
+    style: "currency", currency: "EUR", minimumFractionDigits: amount === 0 ? 0 : 2,
+  });
+  const annualSavings = 12 * billingPlans.monthly.amount - billingPlans.yearly.amount;
+  const [busy, setBusy] = useState<BillingAction | "status" | null>(null);
   const [returnState, setReturnState] = useState<"success" | "cancel" | null>(null);
   const [error, setError] = useState("");
+  const request = useRef<AbortController | null>(null);
+  const active = signedIn && billing.plus;
+  const pendingConfirmation = returnState === "success" && signedIn && !active;
+  const paymentsReady = billing.available && !billing.loading && !billing.error;
+  const canChoose = signedIn && !active && !pendingConfirmation && paymentsReady;
+  const canManage = signedIn && billing.manageable && paymentsReady;
 
   useEffect(() => {
     const url = new URL(location.href);
@@ -44,29 +53,34 @@ export function Plans({ signedIn, billing, onSignIn }: Props) {
   }, []);
 
   useEffect(() => {
-    if (returnState !== "success" || billing.plus || !signedIn) return;
+    if (!pendingConfirmation) return;
     const timers = [1_000, 3_000, 7_000].map((delay) => window.setTimeout(() => { void billing.refresh(); }, delay));
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [returnState, billing.plus, billing.refresh, signedIn]);
+  }, [pendingConfirmation, billing.refresh]);
 
-  async function openStripe(action: BillingInterval | "portal") {
-    if (!signedIn) {
-      onSignIn();
-      return;
-    }
+  useEffect(() => () => request.current?.abort(), []);
+
+  async function openStripe(action: BillingAction) {
+    const portal = action === "portal";
+    if (busy || request.current || (portal ? !canManage : !canChoose)) return;
+    const controller = new AbortController();
+    request.current = controller;
     setBusy(action);
     setError("");
     try {
-      const portal = action === "portal";
-      const response = await fetch(`/api/billing/${portal ? "portal" : "checkout"}`,
-        portal ? { method: "POST" } : {
-          method: "POST",
+      const response = await fetch(`/api/billing/${portal ? "portal" : "checkout"}`, {
+        method: "POST",
+        signal: controller.signal,
+        ...(portal ? {} : {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ interval: action }),
-        });
+        }),
+      });
       const result = await response.json();
-      if (!response.ok || typeof result.url !== "string") {
-        setError(locale === "fr" && typeof result.error === "string" ? result.error : t("Cette opération n’a pas pu aboutir.", "This operation could not be completed."));
+      if (controller.signal.aborted) return;
+      if (!response.ok || typeof result?.url !== "string") {
+        setError(locale === "fr" && typeof result?.error === "string" ? result.error
+          : t("Cette opération n’a pas pu aboutir.", "This operation could not be completed."));
         return;
       }
       const destination = new URL(result.url);
@@ -74,70 +88,117 @@ export function Plans({ signedIn, billing, onSignIn }: Props) {
       if (destination.origin !== `https://${expectedHost}` || destination.username || destination.password) throw new Error("Unexpected Stripe URL.");
       location.assign(destination.href);
     } catch {
-      setError(t("Cette opération n’a pas pu aboutir. Réessaie dans un instant.", "This operation could not be completed. Try again in a moment."));
+      if (!controller.signal.aborted) setError(t("Cette opération n’a pas pu aboutir. Réessaie dans un instant.", "This operation could not be completed. Try again in a moment."));
+    } finally {
+      request.current = null;
+      if (!controller.signal.aborted) setBusy(null);
+    }
+  }
+
+  async function refreshStatus() {
+    if (busy) return;
+    setBusy("status");
+    setError("");
+    try {
+      await billing.refresh();
+    } catch {
+      setError(t("Le statut des offres est momentanément indisponible.", "Plan status is temporarily unavailable."));
     } finally {
       setBusy(null);
     }
   }
 
+  const returnNotice = returnState === "cancel"
+    ? t("Tu es revenu de la page de paiement Stripe.", "You returned from Stripe checkout.")
+    : returnState === "success"
+      ? active ? t("Navier Plus est actif sur ton compte.", "Navier Plus is active on your account.")
+        : signedIn ? t("Confirmation de l’accès Plus en attente. Actualise le statut pour vérifier l’activation.", "Plus access is awaiting confirmation. Refresh the status to check activation.")
+          : t("Connecte-toi pour vérifier si Plus est actif sur ton compte.", "Sign in to check whether Plus is active on your account.")
+      : "";
+  const availabilityNotice = billing.loading
+    ? t("Vérification de l’offre…", "Checking your plan…")
+    : billing.error
+      ? t("Le statut des offres est momentanément indisponible.", "Plan status is temporarily unavailable.")
+      : !billing.available
+        ? t("Le paiement n’est pas activé sur cette version de Navier.", "Payments are unavailable in this version of Navier.")
+        : "";
+
   return (
     <div className={styles.shell}>
-      <div className={styles.heading}>
-        <p className={styles.eyebrow}>{t("Offres Navier", "Navier plans")}</p>
-        <h1>{t("Un vanity, à ton rythme.", "Your beauty routine, at your pace.")}</h1>
-        <p>{t("Organise tes produits et tes routines gratuitement. Ajoute un journal personnel si tu veux suivre tes observations au fil du temps.", "Organise your products and routines for free. Add a personal journal to track your observations over time.")}</p>
-      </div>
+      <header className={styles.heading}>
+        <h1>{t("Offres Navier", "Navier plans")}</h1>
+        <p>{t("Les outils d’Essentiel sont gratuits. Navier Plus ajoute le journal beauté pour garder une trace de tes observations.", "Essential tools are free. Navier Plus adds a beauty journal to keep track of your observations.")}</p>
+      </header>
 
-      {returnState === "success" && (
-        <p className={styles.notice} role="status">{billing.plus ? t("Navier Plus est actif sur ton compte.", "Navier Plus is active on your account.") : t("Nous vérifions la confirmation de Stripe. Tu peux actualiser le statut dans un instant.", "We’re checking Stripe’s confirmation. You can refresh the status in a moment.")}</p>
+      {(returnNotice || availabilityNotice || billing.mode === "test") && (
+        <div className={styles.notice}>
+          <Info size={19} strokeWidth={1.7} aria-hidden="true"/>
+          <div className={styles.noticeContent}>
+            <div role="status">
+              {returnNotice && <p>{returnNotice}</p>}
+              {availabilityNotice && <p>{availabilityNotice}</p>}
+              {billing.mode === "test" && <p>{t("Mode test Stripe. Aucun paiement réel.", "Stripe test mode. No real payments.")}</p>}
+            </div>
+            {(billing.error || pendingConfirmation) && <div className={styles.noticeActions}>
+              <button type="button" className="button button-secondary" disabled={Boolean(busy)} onClick={() => void refreshStatus()}>
+                {busy === "status" ? t("Actualisation…", "Refreshing…") : t("Actualiser le statut", "Refresh status")}
+              </button>
+              {pendingConfirmation && <button type="button" className="button button-secondary" disabled={Boolean(busy)} onClick={() => setReturnState(null)}>
+                {t("Revoir les formules", "See plans again")}
+              </button>}
+            </div>}
+          </div>
+        </div>
       )}
-      {returnState === "cancel" && <p className={styles.notice} role="status">{t("Tu es revenu de la page de paiement Stripe.", "You returned from Stripe checkout.")}</p>}
 
       <div className={styles.cards}>
         <section className={styles.card} aria-labelledby="navier-free-title">
-          <div className={styles.cardTop}>
+          <header className={styles.cardTop}>
+            <Layers3 size={24} strokeWidth={1.6} aria-hidden="true"/>
             <h2 id="navier-free-title">{t("Essentiel", "Essential")}</h2>
-            <span className={styles.badge}>{t("Gratuit", "Free")}</span>
-          </div>
-          <p>{t("Tout ce qu’il faut pour organiser et suivre tes rituels.", "Everything you need to organise and follow your routines.")}</p>
-          <ul>{essentials.map((item) => <li key={item[0]}><Check size={17} aria-hidden="true" />{t(item[0], item[1])}</li>)}</ul>
+          </header>
+          <p className={styles.freePrice}><strong>{euros(0)}</strong></p>
+          <ul className={styles.benefits}>{essentials.map(([fr, en]) => <li key={fr}><Check size={17} aria-hidden="true"/>{t(fr, en)}</li>)}</ul>
         </section>
 
-        <section className={`${styles.card} ${styles.plus}`} aria-labelledby="navier-plus-title">
-          <div className={styles.cardTop}>
+        <section className={styles.card + " " + styles.plus} aria-labelledby="navier-plus-title">
+          <header className={styles.cardTop}>
+            <BookOpen size={24} strokeWidth={1.6} aria-hidden="true"/>
             <h2 id="navier-plus-title">Navier Plus</h2>
-            {billing.plus && <span className={styles.badge}>{t("Actif", "Active")}</span>}
-          </div>
-          <p>{t("Observe comment tes habitudes beauté évoluent avec un journal daté.", "See how your beauty habits evolve with a dated journal.")}</p>
-          <ul>{plusBenefits.map((item) => <li key={item[0]}><Check size={17} aria-hidden="true" />{t(item[0], item[1])}</li>)}</ul>
-
-          <div className={styles.choices}>
-            {(["monthly", "yearly"] as const).map((interval) => (
-              <div key={interval} className={styles.choice}>
-                <div><strong>{euros(billingPlans[interval].amount)}</strong> <span>{interval === "monthly" ? t("par mois", "per month") : t("par an", "per year")}</span></div>
-                <small>{interval === "monthly" ? t("Paiement mensuel", "Billed monthly") : t(`Paiement annuel · ${annualSavings} d’économie sur 12 mois`, `Billed yearly · save ${annualSavings} over 12 months`)}</small>
-                {!billing.plus && <button type="button" className="button button-primary"
-                  disabled={Boolean(busy) || billing.loading || !billing.available}
-                  onClick={() => void openStripe(interval)}>
-                  {busy === interval ? t("Ouverture…", "Opening…") : interval === "monthly" ? t("Choisir le mensuel", "Choose monthly") : t("Choisir l’annuel", "Choose yearly")}
+            {active && <span className={styles.badge}>{t("Actif", "Active")}</span>}
+          </header>
+          <p className={styles.inclusion}>{t("Tout Essentiel, avec le journal beauté privé.", "Everything in Essential, with a private beauty journal.")}</p>
+          {!active && <ul className={styles.choices} aria-label={t("Fréquences de facturation", "Billing periods")}>
+            {(["monthly", "yearly"] as const).map((interval) => {
+              const monthly = interval === "monthly";
+              return <li key={interval} className={styles.choice}>
+                <h3>{monthly ? t("Mensuel", "Monthly") : t("Annuel", "Yearly")}</h3>
+                <p className={styles.price}><strong>{euros(billingPlans[interval].amount)}</strong>
+                  <span>{monthly ? t("par mois", "per month") : t("par an", "per year")}</span>
+                </p>
+                {!monthly && annualSavings > 0 && <p className={styles.note}>{t(
+                  `${euros(annualSavings)} d’économie par rapport à 12 mensualités.`,
+                  `Save ${euros(annualSavings)} compared with 12 monthly payments.`,
+                )}</p>}
+                {signedIn && <button type="button" className="button button-primary"
+                  disabled={Boolean(busy) || !canChoose} onClick={() => void openStripe(interval)}>
+                  {busy === interval ? t("Ouverture…", "Opening…") : monthly ? t("Choisir le mensuel", "Choose monthly") : t("Choisir l’annuel", "Choose yearly")}
                 </button>}
-              </div>
-            ))}
-          </div>
+              </li>;
+            })}
+          </ul>}
 
-          {billing.manageable && (
-            <button type="button" className="button button-secondary" disabled={Boolean(busy) || !billing.available}
-              onClick={() => void openStripe("portal")}>
-              <CreditCard size={17} aria-hidden="true" /> {busy === "portal" ? t("Ouverture…", "Opening…") : t("Gérer mon abonnement", "Manage my subscription")}
-            </button>
-          )}
-          {billing.loading ? <p role="status" className={styles.note}>{t("Vérification de l’offre…", "Checking your plan…")}</p>
-            : !billing.available && <p className={styles.note}><LockKeyhole size={15} aria-hidden="true" /> {t("Le paiement n’est pas activé sur cette version de Navier.", "Payments are unavailable in this version of Navier.")}</p>}
-          {billing.mode === "test" && <p className={styles.note}>{t("Mode test Stripe. Les paiements de cet environnement sont simulés.", "Stripe test mode. Payments in this environment are simulated.")}</p>}
-          {(billing.error || returnState === "success" && !billing.plus) &&
-            <button type="button" className="button button-secondary" onClick={() => void billing.refresh()}>{t("Actualiser le statut", "Refresh status")}</button>}
-          {error && <p className={styles.notice} role="alert">{error}</p>}
-          <p className={styles.note}>{t("Renouvellement automatique. Annulation depuis le portail Stripe. Le montant final est présenté avant la confirmation du paiement.", "Renews automatically. Cancel in the Stripe portal. The final total is shown before you confirm payment.")}</p>
+          {!signedIn && paymentsReady && <button type="button" className="button button-primary" onClick={onSignIn}>
+            {t("Se connecter pour continuer", "Sign in to continue")}
+          </button>}
+          {signedIn && billing.manageable && <button type="button" className="button button-secondary"
+            disabled={Boolean(busy) || !canManage} onClick={() => void openStripe("portal")}>
+            <CreditCard size={17} strokeWidth={1.7} aria-hidden="true"/>{busy === "portal" ? t("Ouverture…", "Opening…") : t("Gérer mon abonnement", "Manage my subscription")}
+          </button>}
+          {error && <p className={styles.error} role="alert">{error}</p>}
+          <ul className={styles.benefits}>{plusBenefits.map(([fr, en]) => <li key={fr}><Check size={17} aria-hidden="true"/>{t(fr, en)}</li>)}</ul>
+          <p className={styles.note}>{t("Après la fin de Plus, tu peux toujours consulter, exporter ou supprimer tes observations.", "After Plus ends, you can still read, export or delete your observations.")}</p>
+          <p className={styles.terms}>{t("L’abonnement se renouvelle automatiquement selon la fréquence choisie. Le portail Stripe permet de le gérer ou de l’annuler. Stripe affiche le total avant confirmation.", "The subscription renews automatically at the chosen frequency. Manage or cancel it in the Stripe portal. Stripe shows the total before confirmation.")}</p>
         </section>
       </div>
     </div>

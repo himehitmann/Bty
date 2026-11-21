@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwind from "@tailwindcss/postcss";
@@ -48,20 +48,26 @@ const { outputFiles } = await build({
 
 const script = outputFiles.find((file) => file.path.endsWith(".js")).text.replace(/<\/script/gi, "<\\/script");
 const css = outputFiles.find((file) => file.path.endsWith(".css")).text;
-const hash = createHash("sha256").update(script).digest("base64");
+if (/<\/style(?:[\s/>]|$)/i.test(css)) throw new Error("La feuille de style contient une balise de fermeture inattendue.");
+const scriptHash = createHash("sha256").update(script).digest("base64");
+const styleHash = createHash("sha256").update(css).digest("base64");
 const licenses = (await Promise.all([
   readFile(path.join(root, "public", "fonts", "tenor-sans-OFL.txt"), "utf8"),
   readFile(path.join(root, "public", "fonts", "dm-sans-OFL.txt"), "utf8"),
   readFile(path.join(root, "public", "licenses", "uiverse-MIT.txt"), "utf8"),
 ])).join("\n\n").replaceAll("-->", "--&gt;");
 
-await mkdir(path.dirname(destination), { recursive: true });
-await writeFile(destination + ".tmp", `<!doctype html>
+const directory = path.dirname(destination);
+await mkdir(directory, { recursive: true });
+const temporaryDirectory = await mkdtemp(path.join(directory, ".navier-build-"));
+const temporaryFile = path.join(temporaryDirectory, "Navier.html");
+try {
+  await writeFile(temporaryFile, `<!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; img-src data: blob: ${[...imageSources.community, ...Object.values(imageSources.manufacturer)].join(" ")}; font-src data:; connect-src https://world.openbeautyfacts.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; style-src-elem 'sha256-${styleHash}'; img-src data: blob: ${[...imageSources.community, ...Object.values(imageSources.manufacturer)].join(" ")}; font-src data:; connect-src https://world.openbeautyfacts.org; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Navier</title>
 <style>${css}</style>
 </head>
@@ -72,6 +78,9 @@ await writeFile(destination + ".tmp", `<!doctype html>
 <!-- ${licenses} -->
 </body>
 </html>
-`);
-await rename(destination + ".tmp", destination);
+`, { flag: "wx" });
+  await rename(temporaryFile, destination);
+} finally {
+  await rm(temporaryDirectory, { recursive: true, force: true });
+}
 console.log(destination);

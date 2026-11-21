@@ -1,0 +1,23 @@
+{
+  "If an account matches this address, you may receive a reset link. Check your inbox.": ["Si hay una cuenta asociada a esa dirección, podrías recibir un enlace para cambiar la contraseña. Revisa tu correo.", "Se a questo indirizzo è associato un account, potresti ricevere un link di reimpostazione. Controlla la posta."],
+  "A reset link couldn’t be requested right now. Try again in a moment.": ["No se pudo solicitar el enlace ahora. Vuelve a intentarlo en un momento.", "Non è stato possibile richiedere il link. Riprova tra poco."],
+  "Both passwords must match.": ["Las dos contraseñas deben coincidir.", "Le due password devono coincidere."],
+  "Your password has been updated.": ["Tu contraseña se ha actualizado.", "La password è stata aggiornata."],
+  "Your password couldn’t be changed. Check the password or request a new link.": ["No se pudo cambiar la contraseña. Revisa la contraseña o solicita un enlace nuevo.", "Non è stato possibile cambiare la password. Controlla la password o richiedi un nuovo link."],
+  "Reset your password": ["Restablecer la contraseña", "Reimposta la password"],
+  "Choose a new password": ["Elige una contraseña nueva", "Scegli una nuova password"],
+  "Sign out on this device": ["Cerrar sesión en este dispositivo", "Esci su questo dispositivo"],
+  "Signed out on this device. The server did not confirm revocation.": ["La sesión se cerró en este dispositivo. El servidor no confirmó su revocación.", "La sessione è stata chiusa su questo dispositivo. Il server non ha confermato la revoca."],
+  "Request a link to change my password": ["Solicitar un enlace para cambiar mi contraseña", "Richiedi un link per cambiare la password"],
+  "The recovery session is unavailable. Request a new link.": ["La sesión de recuperación no está disponible. Solicita un enlace nuevo.", "La sessione di recupero non è disponibile. Richiedi un nuovo link."],
+  "Request a new link": ["Solicitar un enlace nuevo", "Richiedi un nuovo link"],
+  "Checking your session…": ["Verificando tu sesión…", "Verifica della sessione…"],
+  "New password": ["Contraseña nueva", "Nuova password"],
+  "Confirm the new password": ["Confirma la contraseña nueva", "Conferma la nuova password"],
+  "Open the link in the same browser to choose your new password.": ["Abre el enlace en el mismo navegador para elegir tu contraseña nueva.", "Apri il link nello stesso browser per scegliere la nuova password."],
+  "Working…": ["En curso…", "In corso…"],
+  "Send a reset link": ["Enviar un enlace de recuperación", "Invia un link di reimpostazione"],
+  "Save new password": ["Guardar la contraseña nueva", "Salva la nuova password"],
+  "Back to sign in": ["Volver a iniciar sesión", "Torna all’accesso"],
+  "Forgot your password?": ["¿Olvidaste tu contraseña?", "Hai dimenticato la password?"]
+}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
-import { BookOpen, Brush, CalendarCheck, ChevronDown, ClipboardList, Globe, House, Layers, ListChecks, LogIn, LogOut, Search, Settings, ShoppingBag, SwatchBook, UserRound, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { BookOpen, Brush, CalendarCheck, ChevronDown, ClipboardList, Globe, House, Layers, ListChecks, LogIn, Search, Settings, ShoppingBag, SwatchBook, UserRound, X } from "lucide-react";
+import { Account, type AccountEntry } from "./account";
 import { Catalog, Inventory } from "./inventory";
 import { Palette } from "./palette";
 import { HomeDiscovery } from "./home-discovery";
@@ -55,7 +56,7 @@ export function Workspace({ portable = false }: { portable?: boolean }) {
 
 function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boolean }) {
   const { t, locale } = useLocale();
-  const { state, user, client, ready, update, sync, notice, setNotice } = data;
+  const { state, user, client, ready, passwordRecovery, update, sync, notice, setNotice } = data;
   const billing = useBillingStatus(user?.id, !portable);
   const [motion, setMotion] = useMotionPreference();
   const activeAccount = user?.id;
@@ -72,7 +73,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   const saveStudioDraft = useCallback((draft: StudioDraft) => { studioDrafts.current.set(studioScope, draft); }, [studioScope]);
   const [preset, setPreset] = useState<{ account: string; value: MakeupStylePreset }>();
   const [guide, setGuide] = useState<string>();
-  const [auth, setAuth] = useState(false);
+  const [auth, setAuth] = useState<AccountEntry>();
   const accountDialog = useRef<HTMLDialogElement>(null);
   const conflictDialog = useRef<HTMLDialogElement>(null);
   const appShell = useRef<HTMLDivElement>(null);
@@ -116,8 +117,15 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   }, [portable]);
 
   useEffect(() => {
-    if (auth && !accountDialog.current?.open) accountDialog.current?.showModal();
+    const dialog = accountDialog.current;
+    if (!auth || !dialog || dialog.open) return;
+    dialog.showModal();
+    dialog.querySelector("input")?.focus();
   }, [auth]);
+
+  useEffect(() => {
+    if (passwordRecovery) setAuth("password");
+  }, [passwordRecovery]);
 
   useEffect(() => {
     const shell = appShell.current;
@@ -298,7 +306,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
             aria-label={label("preferences")} aria-current={view === "preferences" ? "page" : undefined}
             onClick={(event) => navClick(event, "preferences")}><Settings size={19} strokeWidth={1.7} aria-hidden="true"/></a>
           {!portable && client && <button type="button" className="button button-secondary account-control"
-            aria-label={user ? t("Compte", "Account") : t("Connexion", "Sign in")} onClick={() => setAuth(true)}>
+            aria-label={user ? t("Compte", "Account") : t("Connexion", "Sign in")} onClick={() => setAuth("login")}>
             <LogIn size={16} aria-hidden="true"/><span>{user ? t("Compte", "Account") : t("Connexion", "Sign in")}</span>
           </button>}
           {user && <span className="sr-only" role="status">{status}</span>}
@@ -366,16 +374,19 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
           {view === "tutoriels" && <Tutorials key={user?.id ?? "guest"} products={state.products} onCreateRoutine={createRoutine}/>}
           {view === "journal" && !portable && <Journal key={user?.id ?? "guest"} userId={user?.id} client={client} plus={billing.plus} entitlementLoading={billing.loading}
             products={state.products} routines={state.routines} completed={state.completed} onOpenPlans={() => navigate("offres")}/>}
-          {view === "offres" && !portable && <Plans key={user?.id ?? "guest"} signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth(true)}/>}
-          {view === "preferences" && <WorkspaceSettings state={state} portable={portable}
+          {view === "offres" && !portable && <Plans key={user?.id ?? "guest"} signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth("login")}/>}
+          {view === "preferences" && <WorkspaceSettings key={studioScope} state={state} portable={portable}
             account={portable || !client ? "local" : user ? "signed-in" : "guest"}
-            onLanguageChange={switchLanguage} onOpenAccount={() => setAuth(true)} onOpenProfile={(event) => navClick(event, "profile")}
+            sync={sync} billing={billing} onLanguageChange={switchLanguage} onOpenAccount={() => setAuth("login")}
+            onOpenPlans={(event) => navClick(event, "offres")} onOpenProfile={(event) => navClick(event, "profile")}
+            onRetrySync={() => void data.retry()} onReviewSyncConflict={() => conflictDialog.current?.showModal()}
             motion={motion} onMotionChange={setMotion}/>}
         </div>}
       </main>
     </div>
-    {!portable && <dialog ref={accountDialog} aria-labelledby="account-title" className="dialog" onClose={() => setAuth(false)}>
-      {auth && <Account user={user} client={client} onClose={() => accountDialog.current?.close()} onNotice={setNotice}/>}
+    {!portable && <dialog ref={accountDialog} aria-labelledby="account-title" className="dialog account-dialog" onClose={() => setAuth(undefined)}>
+      {auth && <Account key={auth} user={user} client={client} ready={ready} initialMode={auth}
+        onClose={() => accountDialog.current?.close()} onNotice={setNotice}/>}
     </dialog>}
     {!portable && <dialog ref={conflictDialog} className="dialog small-dialog" aria-labelledby="conflict-title">
       <h2 id="conflict-title">{t("Charger la version en ligne", "Load the online version")}</h2>
@@ -386,82 +397,4 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
       </form>
     </dialog>}
   </div>;
-}
-
-function Account({ user, client, onClose, onNotice }: {
-  user: ReturnType<typeof useWorkspaceState>["user"]; client: ReturnType<typeof useWorkspaceState>["client"];
-  onClose: () => void; onNotice: (message: string) => void;
-}) {
-  const { t } = useLocale();
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState("");
-  const [failed, setFailed] = useState(false);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!client) return;
-    const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") ?? "").trim();
-    const password = String(form.get("password") ?? "");
-    const firstName = String(form.get("name") ?? "").trim();
-    setPending(true);
-    setFailed(false);
-    setMessage("");
-    try {
-      const { data, error } = mode === "login"
-        ? await client.auth.signInWithPassword({ email, password })
-        : await client.auth.signUp({ email, password, options: {
-            emailRedirectTo: `${location.origin}/auth/confirm`, data: { first_name: firstName },
-          } });
-      if (error) throw error;
-      if (data.session) {
-        onNotice(t("Tu es connecté à ton espace Navier.", "You’re signed in to your Navier workspace."));
-        onClose();
-      } else {
-        setMessage(t("Consulte ta boîte mail pour confirmer ton adresse.", "Check your email to confirm your address."));
-      }
-    } catch {
-      setFailed(true);
-      setMessage(mode === "login"
-        ? t("Connexion impossible. Vérifie tes identifiants ou réessaie dans un instant.", "Unable to sign in. Check your credentials or try again in a moment.")
-        : t("La création du compte a échoué. Vérifie l’adresse et choisis un mot de passe d’au moins 8 caractères.", "Unable to create your account. Check the email address and choose a password with at least 8 characters."));
-    } finally { setPending(false); }
-  }
-
-  async function signOut() {
-    setPending(true);
-    setFailed(false);
-    try {
-      const { error } = await client!.auth.signOut();
-      if (error) throw error;
-      onClose();
-      onNotice(t("Tu es de retour dans ton espace local.", "You’re back in your local workspace."));
-    } catch {
-      setFailed(true);
-      setMessage(t("Déconnexion impossible. Réessaie dans un instant.", "Unable to sign out. Try again in a moment."));
-    } finally { setPending(false); }
-  }
-
-  return <>
-    <div className="dialog-heading">
-      <div><h2 id="account-title">{user ? t("Mon compte", "My account") : mode === "login" ? t("Se connecter", "Sign in") : t("Créer un compte", "Create an account")}</h2>
-        <p>{user?.email ?? t("Retrouve ton espace sur plusieurs appareils.", "Access your workspace on your different devices.")}</p></div>
-      <button className="icon-button" aria-label={t("Fermer", "Close")} onClick={onClose}><X size={21}/></button>
-    </div>
-    {!client ? <div className="product-detail-panel"><p>{t("La connexion nécessite une configuration Supabase. Les produits et routines de l’espace local sont conservés dans ce navigateur.", "Sign-in requires a Supabase configuration. Local products and routines are stored in this browser.")}</p></div>
-      : user ? <div className="stacked-form"><p>{t("Ton compte dispose de sa propre collection. L’espace local reste accessible après la déconnexion.", "Your account has its own collection. You can access your local workspace after signing out.")}</p>
-          <button type="button" className="button button-secondary" disabled={pending} onClick={() => void signOut()}><LogOut size={17}/>{t("Se déconnecter", "Sign out")}</button>
-        </div>
-      : <form className="stacked-form" onSubmit={(event) => void submit(event)}>
-          {mode === "signup" && <label>{t("Prénom", "First name")}<input name="name" autoComplete="given-name" maxLength={40}/></label>}
-          <label>{t("Adresse e-mail", "Email address")}<input type="email" name="email" autoComplete="email" maxLength={254} required/></label>
-          <label>{t("Mot de passe", "Password")}<input type="password" name="password" minLength={mode === "signup" ? 8 : 1} autoComplete={mode === "signup" ? "new-password" : "current-password"} maxLength={128} required/></label>
-          <button className="button button-primary" type="submit" disabled={pending}>{mode === "login" ? t("Se connecter", "Sign in") : t("Créer mon compte", "Create my account")}</button>
-          <button className="text-button" type="button" disabled={pending} onClick={() => {
-            setMode(mode === "login" ? "signup" : "login"); setMessage(""); setFailed(false);
-          }}>{mode === "login" ? t("Créer un compte", "Create an account") : t("J’ai déjà un compte", "I already have an account")}</button>
-        </form>}
-    {message && <p className={failed ? "form-error" : "muted"} role={failed ? "alert" : "status"}>{message}</p>}
-  </>;
 }

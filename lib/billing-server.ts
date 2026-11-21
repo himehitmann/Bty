@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { z } from "zod";
-import { getSupabaseConfig } from "@/lib/supabase/config";
+import { getSupabaseConfig, isSecureAuthOrigin, supabaseCookieOptions } from "@/lib/supabase/config";
 import { billingPlans, type BillingEntitlement, type BillingInterval } from "@/lib/billing-plans";
 
 const priceId = z.string().regex(/^price_[a-zA-Z0-9]+$/);
@@ -33,9 +33,8 @@ export function getBillingConfig() {
   if (!site) return null;
   try {
     const url = new URL(site);
-    const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
     if (url.username || url.password || url.pathname !== "/" || url.search || url.hash ||
-      (url.protocol !== "https:" && !(loopback && url.protocol === "http:" && !live))) return null;
+      !isSecureAuthOrigin(url) || (live && url.protocol !== "https:")) return null;
 
     return { secret, webhookSecret, supabaseUrl: supabase.url, serviceKey, live, origin: url.origin,
       prices: { monthly: monthly.data, yearly: yearly.data } };
@@ -78,11 +77,12 @@ export async function requireBillingMode(admin: SupabaseClient, live: boolean) {
 
 export async function getBillingSession(request: NextRequest) {
   const supabase = getSupabaseConfig();
-  if (!supabase || !request.cookies.getAll().some(({ name }) =>
+  if (!supabase || !isSecureAuthOrigin(request.nextUrl) || !request.cookies.getAll().some(({ name }) =>
     name === supabase.authCookieName || name.startsWith(`${supabase.authCookieName}.`))) return null;
 
   const cookies: { name: string; value: string; options: CookieOptions }[] = [];
   const client = createServerClient(supabase.url, supabase.key, {
+    cookieOptions: supabaseCookieOptions(request.nextUrl.protocol),
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (nextCookies) => {
@@ -123,24 +123,33 @@ export function billingFailure(error: unknown, action: string) {
 }
 
 export async function readBillingBody(request: NextRequest, maxBytes: number) {
+  const tooLarge = () => new BillingProblem(413, "La requête dépasse la taille autorisée.");
+  if (Number(request.headers.get("content-length")) > maxBytes) throw tooLarge();
   const reader = request.body?.getReader();
   if (!reader) return Buffer.alloc(0);
 
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  try {
+  const read = async () => {
+    const chunks: Uint8Array[] = [];
+    let length = 0;
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       length += value.length;
-      if (length > maxBytes) {
-        void reader.cancel().catch(() => {});
-        throw new BillingProblem(413, "La requête dépasse la taille autorisée.");
-      }
+      if (length > maxBytes) throw tooLarge();
       chunks.push(value);
     }
     return Buffer.concat(chunks, length);
+  };
+
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    deadline = setTimeout(() => reject(new BillingProblem(408, "La lecture de la requête a expiré.")), 10_000);
+  });
+  try {
+    return await Promise.race([read(), timeout]);
   } finally {
+    clearTimeout(deadline);
+    void reader.cancel().catch(() => {});
     reader.releaseLock();
   }
 }
@@ -153,12 +162,17 @@ export function stripeRedirect(url: string | null, host: "checkout.stripe.com" |
   throw new BillingProblem(502, "Le lien Stripe n’a pas pu être créé.");
 }
 
+export function matchesBillingPrice(price: Stripe.Price, billing: BillingConfig, interval: BillingInterval) {
+  const plan = billingPlans[interval];
+  return price.id === billing.prices[interval] && price.livemode === billing.live && price.currency === "eur" &&
+    price.type === "recurring" && price.billing_scheme === "per_unit" && !price.transform_quantity &&
+    price.unit_amount === plan.amount && price.recurring?.interval === plan.interval &&
+    price.recurring.interval_count === 1 && price.recurring.usage_type === "licensed";
+}
+
 export async function validateStripePrice(stripe: Stripe, billing: BillingConfig, interval: BillingInterval) {
   const price = await stripe.prices.retrieve(billing.prices[interval]);
-  const plan = billingPlans[interval];
-  if (!price.active || price.livemode !== billing.live || price.currency !== "eur" ||
-    price.unit_amount !== plan.amount || price.recurring?.interval !== plan.interval ||
-    price.recurring.interval_count !== 1 || price.recurring.usage_type !== "licensed") {
+  if (!price.active || !matchesBillingPrice(price, billing, interval)) {
     throw new BillingProblem(503, "Le prix de cette offre n’est pas disponible. Aucun paiement n’a été ouvert.");
   }
   return price;

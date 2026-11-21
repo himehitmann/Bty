@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseConfig } from "./config";
+import { getSupabaseConfig, isSecureAuthOrigin, supabaseCookieOptions } from "./config";
 
 const bucket = "palette-photos";
 const signedUrlLifetime = 15 * 60;
@@ -16,10 +16,11 @@ let browserClient: SupabaseClient | undefined;
 
 export function getSupabaseBrowserClient(): SupabaseClient | null {
   const config = getSupabaseConfig();
-  if (!config || typeof window === "undefined") return null;
+  if (!config || typeof window === "undefined" || !isSecureAuthOrigin(window.location)) return null;
 
   browserClient ??= createBrowserClient(config.url, config.key, {
-    cookieOptions: { secure: window.location.protocol === "https:" },
+    auth: { detectSessionInUrl: false },
+    cookieOptions: supabaseCookieOptions(window.location.protocol),
   });
   return browserClient;
 }
@@ -49,19 +50,9 @@ export async function saveRemoteState<T extends object>(
   client: SupabaseClient,
   userId: string,
   state: T,
-  expectedUpdatedAt?: string | null,
+  expectedUpdatedAt: string | null,
 ): Promise<string> {
   const table = client.from("user_workspaces");
-
-  if (expectedUpdatedAt === undefined) {
-    const { data, error } = await table
-      .upsert({ user_id: userId, state })
-      .select("updated_at")
-      .single();
-
-    if (error) throw error;
-    return data.updated_at;
-  }
 
   if (expectedUpdatedAt === null) {
     const { data, error } = await table

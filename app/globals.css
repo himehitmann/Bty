@@ -361,6 +361,11 @@ svg { flex-shrink: 0; }
 .dialog-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 9px; margin-bottom: 17px; }
 .dialog h2 { font: 400 1.55rem/1.2 var(--display); letter-spacing: -.02em; overflow-wrap: anywhere; }
 .dialog-heading p, .small-dialog p { margin-top: 5px; color: var(--muted); }
+.account-dialog .dialog-heading > div { min-width: 0; }
+.account-dialog .dialog-heading > button { flex: none; }
+.account-dialog p { overflow-wrap: anywhere; }
+.account-dialog .text-button { min-height: 44px; text-align: start; }
+.account-dialog > [role="alert"], .account-dialog > [role="status"] { margin-top: 0.8rem; }
 .small-dialog { width: min(26rem, calc(100% - 2rem)); }
 .small-dialog .form-actions { margin-top: 16px; }
 

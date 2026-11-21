@@ -32,9 +32,15 @@ function writeDraft(id: string | null, draft: Draft) {
   catch { return false; }
 }
 
+function sortJsonKeys(_key: string, value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  return Object.fromEntries(Object.entries(value).sort(([first], [second]) => first.localeCompare(second)));
+}
+
 function matchesDraft(remote: unknown, draft: State) {
   const validated = stateSchema.safeParse(remote);
-  return validated.success && JSON.stringify(validated.data) === JSON.stringify(draft);
+  // PostgreSQL JSONB may reorder object keys. Array order still reflects user choices.
+  return validated.success && JSON.stringify(validated.data, sortJsonKeys) === JSON.stringify(draft, sortJsonKeys);
 }
 
 export function useWorkspaceState(localOnly = false) {
@@ -42,9 +48,14 @@ export function useWorkspaceState(localOnly = false) {
   const [user, setUser] = useState<User | null>(null);
   const [sync, setSync] = useState<Sync>("loading");
   const [ready, setReady] = useState(false);
+  const [browserReady, setBrowserReady] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [notice, setNotice] = useState("");
   const scope = useRef<{ id: string | null; draft: Draft; running: boolean; writable: boolean; confirmed: State | null } | null>(null);
-  const client = localOnly ? null : getSupabaseBrowserClient();
+  // Use the same initial markup on the server and during browser hydration.
+  const client = !browserReady || localOnly ? null : getSupabaseBrowserClient();
+
+  useEffect(() => { setBrowserReady(true); }, []);
 
   const flush = useCallback(async () => {
     const current = scope.current;
@@ -138,7 +149,9 @@ export function useWorkspaceState(localOnly = false) {
   }, [client, flush]);
 
   useEffect(() => {
+    if (!browserReady) return;
     const params = new URLSearchParams(location.search);
+    if (client && params.get("auth") === "recovery") setPasswordRecovery(true);
     if (params.get("auth") === "confirmed") setNotice(draftMessage(undefined, "Ton adresse e-mail est confirmée.", "Your email address is confirmed."));
     if (params.get("auth") === "error") setNotice(draftMessage(undefined, "Le lien de confirmation est invalide ou a expiré.", "The confirmation link is invalid or has expired."));
     if (params.has("auth")) history.replaceState(null, "", location.pathname + location.hash);
@@ -160,7 +173,7 @@ export function useWorkspaceState(localOnly = false) {
       }, 0);
     });
     return () => { active = false; subscription.unsubscribe(); };
-  }, [activate, client]);
+  }, [activate, browserReady, client]);
 
   useEffect(() => {
     if (sync !== "error") return;
@@ -200,7 +213,7 @@ export function useWorkspaceState(localOnly = false) {
   }, [flush]);
 
   return {
-    state, user, client, ready, sync, notice, setNotice, update,
+    state, user, client, ready, passwordRecovery, sync, notice, setNotice, update,
     retry: () => scope.current?.writable ? flush() : activate(user?.id ?? null),
     reloadRemote: () => activate(user?.id ?? null, true),
   };

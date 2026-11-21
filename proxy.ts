@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import { catalogImageCspSources } from "@/lib/catalog-images";
-import { getSupabaseConfig } from "@/lib/supabase/config";
+import { getSupabaseConfig, isSecureAuthOrigin, supabaseCookieOptions } from "@/lib/supabase/config";
 
 export async function proxy(request: NextRequest) {
   const config = getSupabaseConfig();
@@ -28,6 +28,7 @@ export async function proxy(request: NextRequest) {
     "base-uri 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
+    ...(!development && request.nextUrl.protocol === "https:" ? ["upgrade-insecure-requests"] : []),
   ].join("; ");
 
   function next() {
@@ -41,12 +42,13 @@ export async function proxy(request: NextRequest) {
   }
 
   let response = next();
-  if (request.nextUrl.pathname !== "/" || !config || !request.cookies.getAll().some(({ name }) => name === config.authCookieName || name.startsWith(`${config.authCookieName}.`))) {
+  if (request.nextUrl.pathname !== "/" || !config || !isSecureAuthOrigin(request.nextUrl) ||
+    !request.cookies.getAll().some(({ name }) => name === config.authCookieName || name.startsWith(`${config.authCookieName}.`))) {
     return response;
   }
 
   const client = createServerClient(config.url, config.key, {
-    cookieOptions: { secure: request.nextUrl.protocol === "https:" },
+    cookieOptions: supabaseCookieOptions(request.nextUrl.protocol),
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet, headers) {
