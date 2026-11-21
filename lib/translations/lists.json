@@ -42,5 +42,8 @@
   "Confirm entry deletion": ["Confirmar eliminación del elemento", "Conferma eliminazione dell’elemento"],
   "Delete this entry from the list?": ["¿Eliminar este elemento de la lista?", "Eliminare questo elemento dalla lista?"],
   "Delete entry": ["Eliminar elemento", "Elimina elemento"],
-  "No entries yet.": ["Todavía no hay elementos.", "Nessun elemento per ora."]
+  "No entries yet.": ["Todavía no hay elementos.", "Nessun elemento per ora."],
+  "Want to try": ["Por probar", "Da provare"],
+  "Won’t repurchase": ["No volveré a comprar", "Da non ricomprare"],
+  "Try": ["Probar", "Prova"]
 }

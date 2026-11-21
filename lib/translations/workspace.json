@@ -78,5 +78,10 @@
   "The confirmation link is invalid or has expired.": ["El enlace de confirmación no es válido o ha caducado.", "Il link di conferma non è valido o è scaduto."],
   "This change exceeds the workspace limits. Check the field lengths or the number of entries.": ["Este cambio supera los límites de tu espacio. Revisa la longitud de los campos o la cantidad de elementos.", "La modifica supera i limiti del tuo spazio. Controlla la lunghezza dei campi o il numero di elementi."],
   "Your workspace is full. Shorten some ingredient lists or reduce your history.": ["Tu espacio está lleno. Acorta algunas listas de ingredientes o reduce tu historial.", "Il tuo spazio è pieno. Accorcia alcuni elenchi di ingredienti o riduci la cronologia."],
-  "The browser could not save a local copy.": ["El navegador no pudo guardar una copia local.", "Il browser non ha potuto salvare una copia locale."]
+  "The browser could not save a local copy.": ["El navegador no pudo guardar una copia local.", "Il browser non ha potuto salvare una copia locale."],
+  "My collection": ["Mi neceser", "Il mio beauty case"],
+  "Makeup styles": ["Estilos de maquillaje", "Stili di trucco"],
+  "Beauty profile": ["Perfil de belleza", "Profilo di bellezza"],
+  "Products you use, available in the Studio and your routines.": ["Los productos que usas, disponibles en el Estudio y en tus rutinas.", "I prodotti che usi, disponibili nello Studio e nelle tue routine."],
+  "Interface language, account and data.": ["Idioma de la interfaz, cuenta y datos.", "Lingua dell’interfaccia, account e dati."]
 }

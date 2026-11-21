@@ -154,12 +154,37 @@
   color: #454545;
 }
 
-.sample code {
-  padding: .3rem .55rem;
-  border-radius: .45rem;
-  background: #fff;
-  color: #292929;
-  font-size: .9rem;
+/* The swatch-to-copy interaction is adapted from Fabio Cobb's Copy Color (MIT).
+   https://uiverse.io/Cobp/horrible-quail-18
+   License notice in public/licenses/uiverse-MIT.txt. */
+.sampleCode {
+  display: grid;
+  gap: .4rem;
+  margin-top: .68rem;
+}
+
+.sampleCode label {
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.sampleCode > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  align-items: stretch;
+}
+
+.sampleCode input {
+  flex: 1 1 7ch;
+  width: 0;
+  min-width: 7ch;
+  padding: .45rem .6rem;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  background: var(--background);
+  color: var(--ink);
+  font: .875rem ui-monospace, monospace;
 }
 
 .suggestions {

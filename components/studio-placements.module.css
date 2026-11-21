@@ -1,0 +1,102 @@
+.editor {
+  display: grid;
+  min-width: 0;
+  gap: .7rem;
+  padding: .8rem;
+  border: 1px solid var(--line, #e7e2ec);
+  border-radius: .72rem;
+  background: var(--surface, #fff);
+}
+
+.editor legend {
+  padding-inline: .3rem;
+  color: var(--ink, #201826);
+  font-size: .875rem;
+  font-weight: 680;
+}
+
+.field,
+.range {
+  display: grid;
+  gap: .3rem;
+  color: var(--ink, #201826);
+  font-size: .875rem;
+  font-weight: 640;
+}
+
+.field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.65rem;
+  padding: .45rem .55rem;
+  border: 1px solid var(--line, #e7e2ec);
+  border-radius: .55rem;
+  color: inherit;
+  background: var(--surface, #fff);
+  font: inherit;
+  font-weight: 480;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.buttons button,
+.reset {
+  display: inline-flex;
+  min-height: 2.6rem;
+  align-items: center;
+  justify-content: center;
+  gap: .34rem;
+  padding: .35rem .52rem;
+  border: 1px solid var(--line, #e7e2ec);
+  border-radius: .52rem;
+  background: var(--surface, #fff);
+  color: var(--ink, #201826);
+  font-size: .815rem;
+  font-weight: 650;
+}
+
+.buttons button:hover,
+.reset:hover {
+  border-color: var(--brand, #5632c1);
+}
+
+.buttons button[aria-pressed="true"] {
+  border-color: var(--brand, #5632c1);
+  color: var(--brand-dark, #382375);
+  background: var(--lavender, #efe7fd);
+}
+
+.adjustments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
+  gap: .42rem .75rem;
+}
+
+.range span {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .2rem;
+}
+
+.range output,
+.hint {
+  color: var(--muted, #595366);
+  font-size: .81rem;
+  font-weight: 480;
+}
+
+.range input {
+  width: 100%;
+  min-height: 1.85rem;
+  accent-color: var(--brand, #5632c1);
+  cursor: pointer;
+}
+
+.reset {
+  justify-self: start;
+}

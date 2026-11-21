@@ -150,6 +150,7 @@ function boundedPoint(x: number, y: number, { width, height }: ImageData): Point
 export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolvePhoto }: PaletteProps) {
   const { t, formatNumber } = useLocale();
   const uploader = useRef<HTMLInputElement>(null);
+  const selectedCode = useRef<HTMLInputElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const photoTask = useRef<AbortController | null>(null);
   const focusPhoto = useRef(false);
@@ -157,6 +158,7 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
   const fileHelp = useId();
   const canvasHelp = useId();
   const nameId = useId();
+  const selectedCodeId = useId();
   const collectionId = useId();
   const collectionOptionsId = useId();
   const editId = useId();
@@ -343,13 +345,19 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
     }
   }
 
-  async function copyColor(hex: string) {
+  async function copyColor(hex: string, fallback?: HTMLInputElement | null) {
     setNotice(null);
     setError(null);
     try {
       await navigator.clipboard.writeText(hex);
       setNotice([`Code ${hex} copié.`, `Copied code ${hex}.`]);
     } catch {
+      if (fallback?.isConnected && fallback.value === hex) {
+        fallback.focus();
+        fallback.select();
+        setNotice(["Code sélectionné. Tu peux le copier avec la commande de copie de ton appareil.", "Code selected. Use your device’s copy command."]);
+        return;
+      }
       setError([`La copie automatique a échoué. Le code est ${hex}.`, `The code could not be copied automatically. The code is ${hex}.`]);
     }
   }
@@ -456,9 +464,18 @@ export function Palette({ colors, onChange, onUpload, onDiscardUpload, onResolve
 
         <section className={styles.panel} aria-label={t("Teinte sélectionnée", "Selected shade")}>
           <div className={styles.panelHeader}><h2>{t("Teinte prélevée", "Sampled shade")}</h2></div>
-          <div className={styles.sample} style={selected ? { backgroundColor: selected } : undefined}>
-            {selected ? <code>{selected}</code> : <Pipette size={28} strokeWidth={1.4} aria-hidden="true" />}
+          <div className={styles.sample} style={selected ? { backgroundColor: selected } : undefined} aria-hidden="true">
+            {!selected && <Pipette size={28} strokeWidth={1.4}/>}
           </div>
+          {selected && <div className={styles.sampleCode}>
+            <label htmlFor={selectedCodeId}>{t("Code hexadécimal", "Hexadecimal code")}</label>
+            <div>
+              <input id={selectedCodeId} ref={selectedCode} value={selected} readOnly spellCheck={false}/>
+              <button type="button" className="button button-secondary" onClick={() => void copyColor(selected, selectedCode.current)}>
+                <Copy size={16} aria-hidden="true"/> {t("Copier le code", "Copy code")}
+              </button>
+            </div>
+          </div>}
           {photo && photo.suggestions.length > 0 && (
             <div className={styles.suggestions}>
               <p>{t("Teintes dominantes", "Dominant shades")}</p>

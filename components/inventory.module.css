@@ -299,7 +299,7 @@
 
 .cardActions {
   display: grid;
-  justify-items: start;
+  justify-items: stretch;
   gap: 0.3rem;
   margin-top: auto;
 }
@@ -325,7 +325,9 @@
 }
 
 .cardLink {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
   padding: 0.3rem 0;
   color: var(--brand-dark);
   font-size: 0.79rem;
@@ -336,9 +338,55 @@
 }
 
 .cardError { color: var(--ink); font-size: 0.79rem; }
+.catalogAttribution a { text-decoration: underline; text-underline-offset: .15em; }
+
+.catalogVisual {
+  position: relative;
+  display: grid;
+  min-height: 7rem;
+  place-items: center;
+  padding: .9rem;
+  gap: .5rem;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--product-tone) 12%, white), color-mix(in srgb, var(--product-tone) 24%, white));
+}
+
+.catalogGlyph {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  color: color-mix(in srgb, var(--product-tone) 48%, var(--ink));
+  border: 1px solid #ffffffad;
+  border-radius: 45% 45% 35% 35%;
+  background: #ffffff70;
+}
+
+.catalogSwatches { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.catalogSwatches > span, .shadeChip { width: 1rem; height: 1rem; flex: none; border: 1px solid #21173528; border-radius: 50%; }
+.shadeSelect { display: flex; align-items: center; min-width: 0; gap: .35rem; }
+.catalogField { display: grid; gap: .3rem; min-width: 0; }
+.catalogField label { font-size: .82rem; font-weight: 650; color: var(--ink); }
+.catalogField small { color: var(--muted); font-size: .75rem; }
+.catalogField select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding: .33rem .45rem;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  background: var(--background);
+  font-size: .82rem;
+  color: var(--ink);
+  text-overflow: ellipsis;
+}
+.destinationLine, .destinationActions { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; }
+.destinationLine { justify-content: space-between; color: var(--muted); font-size: .78rem; }
+.destinationLine > span { overflow-wrap: anywhere; }
+.destinationActions :global(.button), .cardActions > :global(.button-secondary) { min-height: 2.5rem; font-size: .8rem; }
 
 @media (min-width: 620px) {
-  .catalogResults { grid-template-columns: repeat(auto-fill, minmax(11.75rem, 1fr)); }
+  .catalogResults { grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr)); }
 }
 
 .inventoryFilter {

@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { isDefaultBeautyList } from "./beauty-list-destinations";
 import { makeupPlacementIds } from "./makeup-placements";
 import { savedStudioLookSchema, studioLookLimits } from "./studio-looks";
 
 export const categories = ["soin", "maquillage", "cheveux", "parfums"] as const;
 export const categoryLabels = { soin: "Soin", maquillage: "Maquillage", cheveux: "Cheveux", parfums: "Parfums" };
-export const sourceLabels = { manuel: "Saisie manuelle", local: "Catalogue local · formule indicative", "open-beauty-facts": "Open Beauty Facts" };
+export const sourceLabels = { manuel: "Saisie manuelle", local: "Catalogue local · formule indicative", "open-beauty-facts": "Open Beauty Facts", manufacturer: "Site officiel de la marque" };
 
 export const makeupKinds = ["foundation", "concealer", "blush", "contour", "bronzer", "highlighter", "eyeshadow", "eyeliner", "mascara", "lip", "powder", "other"] as const;
 export const makeupEffects = ["tinted", "transparent", "mattifying", "unknown"] as const;
@@ -32,6 +33,8 @@ const evidenceUrl = z.string().trim().max(700).refine((value) => {
   }
 });
 const catalogSourceUrl = evidenceUrl.regex(/^https:\/\/world\.openbeautyfacts\.org\/product\/\d{8,14}\/?$/i);
+const manufacturerProductUrl = evidenceUrl.regex(/^https:\/\/(?:hudabeauty\.com\/en-us|www\.rarebeauty\.com|fentybeauty\.com)\/products\/[a-z0-9-]+$/);
+const manufacturerVariantUrl = evidenceUrl.regex(/^https:\/\/(?:hudabeauty\.com\/en-us|www\.rarebeauty\.com|fentybeauty\.com)\/products\/[a-z0-9-]+(?:\?variant=\d{1,20})?$/);
 const catalogEvidence = z.object({ source: z.literal("open-beauty-facts"), url: catalogSourceUrl });
 const manufacturerEvidence = z.object({ source: z.literal("manufacturer"), url: evidenceUrl });
 const claimEvidence = z.discriminatedUnion("source", [
@@ -42,6 +45,15 @@ const instructionText = z.string().trim().min(1).max(1200);
 
 export const productFeedbackOptions = ["favorite", "liked", "disappointed"] as const;
 export const personalProductNoteLimit = 800;
+const productBarcode = z.string().trim().regex(/^\d{8,14}$/);
+const manufacturerVariantSchema = z.object({
+  id: identifier,
+  name,
+  sourceUrl: manufacturerVariantUrl,
+  barcode: productBarcode.optional(),
+  shadeHex: hex.optional(),
+  shadeApproximate: z.literal(true).optional(),
+});
 
 export function declaredProductText(value: string): string {
   const text = value.trim();
@@ -56,7 +68,7 @@ export const productInput = z.object({
   brand: z.string().trim().max(140),
   category: z.enum(categories),
   ingredients: z.string().trim().max(6500).transform(declaredProductText),
-  barcode: z.string().trim().regex(/^\d{8,14}$/).optional(),
+  barcode: productBarcode.optional(),
   openedOn: z.iso.date().optional(),
   paoMonths: z.number().int().min(1).max(60).optional(),
   expiresOn: z.iso.date().optional(),
@@ -77,10 +89,33 @@ export const productInput = z.object({
 export const productSchema = productInput.extend({
   id: identifier,
   imageUrl: productImage.catch("").transform((image) => image || undefined).optional(),
-  source: z.enum(["manuel", "local", "open-beauty-facts"]),
+  source: z.enum(["manuel", "local", "open-beauty-facts", "manufacturer"]),
   sourceUrl: catalogSourceUrl.optional(),
+  manufacturerUrl: manufacturerProductUrl.optional(),
+  variants: z.array(manufacturerVariantSchema).max(80).optional(),
+  selectedVariantId: identifier.optional(),
   tint: hex.optional(),
 }).superRefine((product, context) => {
+  if (product.source === "manufacturer" && !product.manufacturerUrl) {
+    context.addIssue({ code: "custom", path: ["manufacturerUrl"], message: "Le lien officiel du produit est requis." });
+  }
+  const seenVariantIds = new Set<string>();
+  for (const [index, variant] of (product.variants ?? []).entries()) {
+    const [variantProductUrl, variantQuery] = variant.sourceUrl.split("?");
+    if (variantProductUrl !== product.manufacturerUrl || (variantQuery && variantQuery !== `variant=${variant.id}`)) {
+      context.addIssue({ code: "custom", path: ["variants", index, "sourceUrl"], message: "La teinte doit correspondre à la fiche officielle du produit." });
+    }
+    if (seenVariantIds.has(variant.id)) {
+      context.addIssue({ code: "custom", path: ["variants", index, "id"], message: "Chaque teinte doit avoir un identifiant distinct." });
+    }
+    if (Boolean(variant.shadeHex) !== Boolean(variant.shadeApproximate)) {
+      context.addIssue({ code: "custom", path: ["variants", index, "shadeApproximate"], message: "Le rendu numérique d’une teinte est indicatif." });
+    }
+    seenVariantIds.add(variant.id);
+  }
+  if (product.selectedVariantId && !seenVariantIds.has(product.selectedVariantId)) {
+    context.addIssue({ code: "custom", path: ["selectedVariantId"], message: "La teinte sélectionnée doit exister sur cette fiche." });
+  }
   const links = [
     { url: product.sourceUrl, path: ["sourceUrl"] },
     { url: product.claims?.vegan?.source === "open-beauty-facts" ? product.claims.vegan.url : undefined, path: ["claims", "vegan", "url"] },
@@ -119,6 +154,7 @@ const beautyListItemSchema = z.object({
   reason: z.string().trim().max(beautyListLimits.reason).optional(),
   checked: z.boolean(),
   productId: identifier.optional(),
+  product: productSchema.optional(),
 });
 const beautyListSchema = z.object({
   id: identifier,
@@ -137,13 +173,15 @@ export const preferenceSchema = z.object({
   skinFeel: z.enum(skinFeels).optional(),
   skinConcerns: z.array(z.enum(skinConcerns)).max(skinConcerns.length).optional(),
   undertone: z.enum(undertones).optional(),
+  catalogueDestination: identifier.optional(),
 });
 export const stateSchema = z.object({
   products: z.array(productSchema).max(500),
   routines: z.array(routineSchema).max(100),
   palette: z.array(colorSchema).max(200),
-  lists: z.array(beautyListSchema).max(beautyListLimits.lists)
-    .refine((lists) => new Set(lists.map((list) => list.id)).size === lists.length).optional(),
+  lists: z.array(beautyListSchema).max(beautyListLimits.lists + 3)
+    .refine((lists) => new Set(lists.map((list) => list.id)).size === lists.length &&
+      lists.filter(({ id }) => !isDefaultBeautyList(id)).length <= beautyListLimits.lists).optional(),
   looks: z.array(savedStudioLookSchema).max(studioLookLimits.looks)
     .refine((looks) => new Set(looks.map((look) => look.id)).size === looks.length).optional(),
   preferences: preferenceSchema,

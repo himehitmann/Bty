@@ -48,8 +48,10 @@ const { outputFiles } = await build({
 const script = outputFiles.find((file) => file.path.endsWith(".js")).text.replace(/<\/script/gi, "<\\/script");
 const css = outputFiles.find((file) => file.path.endsWith(".css")).text;
 const hash = createHash("sha256").update(script).digest("base64");
-const license = (await readFile(path.join(root, "public", "fonts", "bricolage-grotesque-OFL.txt"), "utf8"))
-  .replaceAll("-->", "--&gt;");
+const licenses = (await Promise.all([
+  readFile(path.join(root, "public", "fonts", "bricolage-grotesque-OFL.txt"), "utf8"),
+  readFile(path.join(root, "public", "licenses", "uiverse-MIT.txt"), "utf8"),
+])).join("\n\n").replaceAll("-->", "--&gt;");
 
 await mkdir(path.dirname(destination), { recursive: true });
 await writeFile(destination + ".tmp", `<!doctype html>
@@ -65,7 +67,7 @@ await writeFile(destination + ".tmp", `<!doctype html>
 <div id="navier"></div>
 <noscript>Active JavaScript dans ton navigateur pour ouvrir Navier.</noscript>
 <script>${script}</script>
-<!-- ${license} -->
+<!-- ${licenses} -->
 </body>
 </html>
 `);

@@ -204,6 +204,7 @@
 .skinTones {
   display: flex;
   min-width: 0;
+  max-width: 23rem;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
@@ -255,6 +256,13 @@
 .customSkinTone::-webkit-color-swatch-wrapper { padding: 0; }
 .customSkinTone::-webkit-color-swatch { border: 1px dashed var(--brand-dark); border-radius: 50%; }
 .customSkinTone::-moz-color-swatch { border: 1px dashed var(--brand-dark); border-radius: 50%; }
+
+.skinValue {
+  flex-basis: 100%;
+  color: var(--studio-muted);
+  font: 0.75rem ui-monospace, monospace;
+  text-align: center;
+}
 
 .portraitOptions {
   text-align: center;
@@ -360,16 +368,13 @@
   border: 0;
 }
 
-.swatches legend,
 .colourField label,
-.shadeSources label,
+.productShades legend,
+.productShades label,
+.swatchCard label,
 .range {
   font-size: 0.875rem;
   font-weight: 650;
-}
-
-.swatches legend {
-  margin-bottom: 0.34rem;
 }
 
 .shade {
@@ -415,7 +420,8 @@
 }
 
 .colourInputs input,
-.shadeSources select {
+.productShades select,
+.swatchCard select {
   min-width: 0;
   min-height: 2.75rem;
   padding: 0.46rem 0.55rem;
@@ -438,14 +444,127 @@
   text-transform: uppercase;
 }
 
-.shadeSources label {
+.productShades label,
+.swatchCard label {
   display: grid;
+  min-width: 0;
   gap: 0.3rem;
 }
 
-.shadeSources select {
+.productShades select,
+.swatchCard select {
   width: 100%;
   font-weight: 450;
+}
+
+.productShades,
+.swatchComparison,
+.exampleShades {
+  display: grid;
+  min-width: 0;
+  gap: 0.45rem;
+  padding: 0.65rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 0.7rem;
+  background: var(--background);
+}
+
+.productShades legend { padding-inline: 0.2rem; }
+
+.swatchComparison,
+.exampleShades { padding-block: 0.18rem; }
+
+.swatchComparison[open],
+.exampleShades[open] { padding-bottom: 0.65rem; }
+
+.sourceHint {
+  color: var(--studio-muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.swatchComparison summary,
+.exampleShades summary {
+  min-height: 2.6rem;
+  padding: 0.54rem 0.2rem;
+  color: var(--brand-dark);
+  font-size: 0.9rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.swatchPair {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+}
+
+.swatchCard {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 0.35rem;
+  padding: 0.48rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 0.6rem;
+  background: var(--surface);
+}
+
+.swatchCard select { font-size: 0.84rem; }
+
+.swatchName {
+  color: var(--studio-ink);
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.swatchLabel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.38rem;
+  color: var(--studio-ink);
+  font: 0.8rem ui-monospace, monospace;
+}
+
+.swatchLabel span {
+  width: 1.05rem;
+  height: 1.05rem;
+  border: 1px solid #20182636;
+  border-radius: 0.3rem;
+}
+
+.swatchLabel small {
+  color: var(--studio-muted);
+  font: 0.75rem var(--sans);
+}
+
+.onSkinSwatch {
+  display: grid;
+  min-height: 3.5rem;
+  padding: 0.4rem;
+  place-items: center;
+  border-radius: 0.5rem;
+  background: var(--complexion);
+}
+
+.onSkinSwatch::before {
+  width: 77%;
+  height: 72%;
+  border: 1px solid #20182636;
+  border-radius: 0.32rem;
+  background: var(--swatch);
+  content: "";
+}
+
+.swatchCard button { justify-content: center; }
+
+@media (max-width: 360px) {
+  .swatchPair { grid-template-columns: minmax(0, 1fr); }
 }
 
 .photoShortcut {

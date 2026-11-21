@@ -1,5 +1,6 @@
 import type { FaceZone, PaletteColor, Product, RoutineStep } from "./model";
 import { findMakeupPlacement, type MakeupPlacement } from "./makeup-placements";
+import type { StudioPlacementDetails } from "./studio-advanced";
 
 const complexionZones = ["visage", "front", "joues", "menton"] as const;
 const shapes = {
@@ -21,7 +22,9 @@ type MakeupAppearance =
   | { effect: "none" | "unknown" | "transparent" | "mattifying" | "wrong-zone" | "no-shade" }
   | { effect: "tinted"; kind: PigmentKind; hex: string; name: string; opacity: number; placement?: MakeupPlacement };
 
-export type PigmentLayer = Extract<MakeupAppearance, { effect: "tinted" }> & {
+export type PigmentLayer = Omit<Extract<MakeupAppearance, { effect: "tinted" }>, "kind"> & {
+  kind: PigmentKind | "brow";
+  details?: StudioPlacementDetails;
   stepId: string;
   productName: string;
   zone: FaceZone;

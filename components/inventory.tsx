@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Brush, CalendarClock, Check, ChevronRight, CircleAlert, Columns2, Droplets, Heart, Plus, Scissors, Search, SprayCan, Trash2 } from "lucide-react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { ArrowLeft, Brush, CalendarClock, Check, ChevronRight, CircleAlert, Columns2, Droplets, ExternalLink, Heart, Plus, Scissors, Search, SprayCan, SwatchBook, Trash2 } from "lucide-react";
+import { beautyListName, sameProductVariant, vanityDestination } from "@/lib/beauty-list-destinations";
 import { analyzeProduct, ingredientList } from "@/lib/analysis";
 import { catalogImageUrl, normalizeCatalogQuery, normalizeCatalogText, rankCatalogProducts, searchLocalCatalog } from "@/lib/catalog";
 import { useLocale } from "@/lib/i18n";
-import { categories, categoryLabels, makeupEffectLabels, makeupKindLabels, productSchema, sourceLabels, type Preferences, type Product } from "@/lib/model";
+import { categories, categoryLabels, makeupEffectLabels, makeupKindLabels, productSchema, sourceLabels, type BeautyList, type Preferences, type Product } from "@/lib/model";
 import { searchOpenBeautyFacts } from "@/lib/open-beauty-facts";
 import { getProductLifecycle, lifecycleStatusLabels, localCalendarDate, upcomingWindowDays } from "@/lib/product-life";
 import styles from "./inventory.module.css";
@@ -15,7 +16,7 @@ type DateFilter = "all" | "soon" | "past";
 type FeedbackFilter = "all" | "purchased" | NonNullable<Product["feedback"]>;
 const categoryIcons = { soin: Droplets, maquillage: Brush, cheveux: Scissors, parfums: SprayCan };
 const categoryLabelsEn = { soin: "Skincare", maquillage: "Makeup", cheveux: "Haircare", parfums: "Fragrance" };
-const sourceLabelsEn = { manuel: "Manual entry", local: "Local catalogue · example formula", "open-beauty-facts": "Open Beauty Facts" };
+const sourceLabelsEn = { manufacturer: "Manufacturer", manuel: "Manual entry", local: "Local catalogue · example formula", "open-beauty-facts": "Open Beauty Facts" };
 const lifecycleLabelsEn = { past: "Past its date", today: "Due today", soon: "Check soon", upcoming: "Next date" };
 const makeupKindLabelsEn = {
   foundation: "Foundation", concealer: "Concealer", blush: "Blush", contour: "Contour", bronzer: "Bronzer", highlighter: "Highlighter", eyeshadow: "Eyeshadow",
@@ -60,7 +61,8 @@ function ProductPhoto({ product, size = "card" }: { product: Product; size?: "ca
 }
 
 function productSource(product: Product) {
-  return product.sourceUrl ?? (product.source === "open-beauty-facts" && product.barcode ? `https://world.openbeautyfacts.org/product/${product.barcode}` : undefined);
+  return product.variants?.find(({ id }) => id === product.selectedVariantId)?.sourceUrl
+    ?? product.manufacturerUrl ?? product.sourceUrl ?? (product.source === "open-beauty-facts" && product.barcode ? `https://world.openbeautyfacts.org/product/${product.barcode}` : undefined);
 }
 
 export function ProductTile({ product, onSelect, today }: { product: Product; onSelect: () => void; today?: string }) {
@@ -82,9 +84,10 @@ export function ProductTile({ product, onSelect, today }: { product: Product; on
   </button>;
 }
 
-export function Inventory({ products, preferences, selected, onSelect, onRemove }: {
+export function Inventory({ products, preferences, selected, onSelect, onRemove, onTry }: {
   products: Product[]; preferences: Preferences; selected: string | null; onSelect: (id: string | null) => void;
   onRemove: (id: string) => void;
+  onTry?: (product: Product) => void;
 }) {
   const { t } = useLocale();
   const [filter, setFilter] = useState<Filter>("all");
@@ -117,7 +120,7 @@ export function Inventory({ products, preferences, selected, onSelect, onRemove 
   }
 
   if (current) return <ProductDetail key={current.id} product={current} today={today} preferences={preferences}
-    onBack={() => returnToList(current.id)} onRemove={() => onRemove(current.id)}/>;
+    onBack={() => returnToList(current.id)} onRemove={() => onRemove(current.id)} onTry={onTry}/>;
   if (comparing && products.length >= 2) return <CompareProducts products={products} onBack={() => returnToList()}/>;
   if (!products.length) return <p className={styles.emptyState}>{t("Tes produits enregistrés apparaîtront ici.", "Your saved products will appear here.")}</p>;
 
@@ -168,8 +171,8 @@ export function Inventory({ products, preferences, selected, onSelect, onRemove 
   </>;
 }
 
-function ProductDetail({ product, today, preferences, onBack, onRemove }: {
-  product: Product; today: string; preferences: Preferences; onBack: () => void; onRemove: () => void;
+function ProductDetail({ product, today, preferences, onBack, onRemove, onTry }: {
+  product: Product; today: string; preferences: Preferences; onBack: () => void; onRemove: () => void; onTry?: (product: Product) => void;
 }) {
   const { t, locale } = useLocale();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -190,6 +193,11 @@ function ProductDetail({ product, today, preferences, onBack, onRemove }: {
       <div><h2 id="product-title" ref={heading} tabIndex={-1}>{product.name}</h2>
         <p>{brandLabel(product.brand, t)} · {t(categoryLabels[product.category], categoryLabelsEn[product.category])}</p></div>
     </header>
+    {onTry && product.category === "maquillage" && <div className="form-actions">
+      <button type="button" className="button button-primary" onClick={() => onTry(product)}><Brush size={16} aria-hidden="true"/>
+        {t("Essayer dans le Studio", "Try in the Studio")}
+      </button>
+    </div>}
     <PersonalProductFeedback product={product}/>
     <section className="product-detail-panel">
       <h3>{t("Composition INCI", "INCI ingredients")}</h3>
@@ -392,13 +400,19 @@ type CatalogueResult = {
 
 function localMatches(query: string) {
   const items = searchLocalCatalog(query);
-  return query ? items : items.filter(({ source }) => source !== "local");
+  return query ? items : items.filter(({ source }) => source === "manufacturer");
 }
 
-export function Catalog({ currentProducts, onSave, onOpenProduct, initialQuery = "", portable = false }: {
+type CatalogueActions = {
   currentProducts: Product[];
-  onSave: (product: Product) => boolean;
-  onOpenProduct?: (productId: string) => void;
+  lists: BeautyList[];
+  destination?: string;
+  onSave: (product: Product, destination: string) => boolean;
+  onTry: (product: Product) => void;
+  onOpenDestination: (destination: string, product?: Product) => void;
+};
+
+export function Catalog({ initialQuery = "", portable = false, ...actions }: CatalogueActions & {
   initialQuery?: string;
   portable?: boolean;
 }) {
@@ -407,19 +421,15 @@ export function Catalog({ currentProducts, onSave, onOpenProduct, initialQuery =
     items: localMatches(initialQuery.trim()), origin: "local", query: initialQuery.trim(),
   }));
   const [pending, setPending] = useState(false);
-  const [failedSave, setFailedSave] = useState<string>();
-  const full = currentProducts.length >= 500;
-  const savedById = new Map(currentProducts.map((item) => [item.id, item]));
-  const savedByBarcode = new Map(currentProducts.flatMap((item) => item.barcode ? [[item.barcode.padStart(14, "0"), item] as const] : []));
 
   useEffect(() => {
     const input = initialQuery.trim().slice(0, 120);
     const normalized = normalizeCatalogQuery(input);
     const query = normalized ? input : "";
     const items = localMatches(query);
-    setFailedSave(undefined);
-    if (normalized.length < 2 || !navigator.onLine) {
-      setResult({ items, origin: normalized.length < 2 ? "local" : "unavailable", query });
+    const hasOfficialMatch = items.some(({ source }) => source === "manufacturer");
+    if (hasOfficialMatch || normalized.length < 2 || !navigator.onLine) {
+      setResult({ items, origin: hasOfficialMatch || normalized.length < 2 ? "local" : "unavailable", query });
       setPending(false);
       return;
     }
@@ -465,7 +475,6 @@ export function Catalog({ currentProducts, onSave, onOpenProduct, initialQuery =
       <div><h1 id="catalogue-title">{t("Catalogue", "Catalogue")}</h1>
         <p>{t("Recherche un produit, une marque ou un code-barres.", "Search for a product, brand or barcode.")}</p></div>
     </header>
-    {full && <p className="muted" role="status">{t("Tu as atteint la limite de 500 produits.", "You’ve reached the 500-product limit.")}</p>}
     <section className={styles.resultsPanel} aria-labelledby="catalogue-results-title">
       <h2 id="catalogue-results-title">{result.query || pending ? t("Résultats", "Results") : t("Produits à découvrir", "Products to explore")}</h2>
       <div role="status" className={styles.searchStatus}>
@@ -477,61 +486,117 @@ export function Catalog({ currentProducts, onSave, onOpenProduct, initialQuery =
         )}</p>}
       </div>
       {result.items.length > 0 ? <ul className={styles.catalogResults} aria-label={t("Produits du catalogue", "Catalogue products")} aria-busy={pending}>
-        {result.items.map((product) => {
-          const saved = savedById.get(product.id) ?? (product.barcode ? savedByBarcode.get(product.barcode.padStart(14, "0")) : undefined);
-          return <li key={product.id}>
-            <CatalogueCard product={product} saved={saved} full={full}
-              onSave={() => {
-                if (saved || full) return;
-                setFailedSave(onSave(product) ? undefined : product.id);
-              }} onOpenProduct={onOpenProduct} failed={failedSave === product.id}/>
-          </li>;
-        })}
+        {result.items.map((product) => <li key={product.id}><CatalogueCard product={product} {...actions}/></li>)}
       </ul> : !pending && <p className={styles.emptyState}>
         {t("Aucun produit trouvé. Essaie un autre nom, une marque ou un code-barres dans la barre de recherche.", "No products found. Try another name, brand or barcode in the search bar.")}
       </p>}
     </section>
-    <p className="muted">
-      <a href="https://world.openbeautyfacts.org/" target="_blank" rel="noreferrer">Open Beauty Facts</a> · {" "}
-      <a href="https://opendatacommons.org/licenses/odbl/1.0/" target="_blank" rel="noreferrer"
-        aria-label={t("Licence de données ODbL", "ODbL data licence")}>ODbL</a> · {" "}
-      <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noreferrer"
-        aria-label={t("Licence des photos CC BY-SA 3.0", "Photo licence CC BY-SA 3.0")}>CC BY-SA 3.0</a>
+    <p className={`muted ${styles.catalogAttribution}`}>{t("Fiches de marques et données complémentaires.", "Brand listings and supplementary data.")}{" "}
+      <a href="https://world.openbeautyfacts.org/data" target="_blank" rel="noreferrer">Open Beauty Facts · ODbL</a>
     </p>
   </section>;
 }
 
-function CatalogueCard({ product, saved, full, onSave, onOpenProduct, failed }: {
-  product: Product;
-  saved?: Product;
-  full: boolean;
-  onSave: () => void;
-  onOpenProduct?: (productId: string) => void;
-  failed: boolean;
-}) {
+function CatalogueCard({ product, currentProducts, lists, destination, onSave, onTry, onOpenDestination }: CatalogueActions & { product: Product }) {
   const { t } = useLocale();
-  const sourceUrl = productSource(product);
-  const disabled = Boolean(saved) || full;
+  const uid = useId();
+  const [variantId, setVariantId] = useState(product.selectedVariantId ?? "");
+  const [choosing, setChoosing] = useState(false);
+  const [target, setTarget] = useState("");
+  const [failed, setFailed] = useState(false);
+  const variants = product.variants ?? [];
+  const variant = variants.find(({ id }) => id === variantId);
+  const entry: Product = variant ? {
+    ...product,
+    id: `${product.id}:shade:${variant.id}`,
+    name: `${product.name} · ${variant.name}`.slice(0, 140),
+    variants: [variant],
+    selectedVariantId: variant.id,
+    barcode: variant.barcode,
+    shadeHex: variant.shadeHex,
+    makeupEffect: product.makeupEffect ?? (variant.shadeHex ? "tinted" : undefined),
+  } : product;
+  const needsShade = variants.length > 0 && !variant;
+  const destinationList = lists.find(({ id }) => id === destination);
+  const chosenDestination = destination === vanityDestination || destinationList ? destination : undefined;
+  const destinationName = destinationList ? beautyListName(destinationList, t) : t("Ma trousse", "My collection");
+  const savedProduct = chosenDestination === vanityDestination ? currentProducts.find((item) => sameProductVariant(item, entry)) : undefined;
+  const saved = !needsShade && Boolean(savedProduct || destinationList?.items.some((item) =>
+    item.product ? sameProductVariant(item.product, entry) : item.productId === entry.id));
+  const sourceUrl = productSource(entry);
+  const tone = variant?.shadeHex ?? variants.find(({ shadeHex }) => shadeHex)?.shadeHex ?? "#8062b9";
+  const Icon = categoryIcons[product.category];
+  const official = product.source === "manufacturer";
+
+  function save(into: string) {
+    if (!into || needsShade) return;
+    if (onSave(entry, into)) {
+      setChoosing(false);
+      setFailed(false);
+    } else setFailed(true);
+  }
+
+  function chooseDestination() {
+    setTarget(chosenDestination ?? "");
+    setFailed(false);
+    setChoosing(true);
+    requestAnimationFrame(() => document.getElementById(`${uid}-destination`)?.focus());
+  }
+
   return <article className={styles.catalogCard} data-catalog-product={product.id}>
-    <ProductPhoto product={product}/>
+    <div className={styles.catalogVisual} style={{ "--product-tone": tone } as CSSProperties} aria-hidden="true">
+      <span className={styles.catalogGlyph}><Icon size={38} strokeWidth={1.35}/></span>
+      {variants.some(({ shadeHex }) => shadeHex) && <span className={styles.catalogSwatches}>
+        {variants.filter(({ shadeHex }) => shadeHex).slice(0, 7).map(({ id, shadeHex }) => <span key={id} style={{ backgroundColor: shadeHex }}/>)}
+      </span>}
+    </div>
     <div className={styles.catalogBody}>
       <div className={styles.cardText}>
         <p className={styles.category}>{t(categoryLabels[product.category], categoryLabelsEn[product.category])}</p>
         <h3>{product.name}</h3>
         <p className={styles.cardBrand}>{brandLabel(product.brand, t)}</p>
       </div>
+      {variants.length > 0 && <div className={styles.catalogField}>
+        <label htmlFor={`${uid}-shade`}>{t("Teinte", "Shade")}<span className="sr-only"> · {product.name}</span></label>
+        <div className={styles.shadeSelect}>
+          {variant?.shadeHex && <span className={styles.shadeChip} style={{ backgroundColor: variant.shadeHex }} aria-hidden="true"/>}
+          <select id={`${uid}-shade`} value={variantId} onChange={(event) => { setVariantId(event.target.value); setFailed(false); }}>
+            <option value="">{t("Choisir une teinte", "Choose a shade")}</option>
+            {variants.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
+          </select>
+        </div>
+        {variant?.shadeHex && variant.shadeApproximate && <small>{t("Couleur indicative", "Approximate colour")}</small>}
+      </div>}
       <div className={styles.cardActions}>
-        <button type="button" className={`button button-primary ${styles.cardSave}`} aria-disabled={disabled}
-          aria-label={saved ? t(`${product.name} enregistré`, `${product.name} saved`) : t(`Enregistrer ${product.name}`, `Save ${product.name}`)}
-          onClick={onSave}>
+        <button type="button" className={`button button-primary ${styles.cardSave}`} disabled={needsShade}
+          onClick={() => saved && chosenDestination ? onOpenDestination(chosenDestination, savedProduct)
+            : chosenDestination ? save(chosenDestination) : chooseDestination()}>
           {saved ? <Check size={16} aria-hidden="true"/> : <Plus size={16} aria-hidden="true"/>}
-          {saved ? t("Enregistré", "Saved") : t("Enregistrer", "Save")}
+          {saved ? t("Voir l’enregistrement", "View saved product") : t("Enregistrer", "Save")}<span className="sr-only"> · {product.name}</span>
         </button>
-        {saved && onOpenProduct && <button type="button" className={styles.cardLink} onClick={() => onOpenProduct(saved.id)}>
-          <span>{t("Voir dans mes produits", "View in my products")}</span><span className="sr-only"> · {product.name}</span>
+        {chosenDestination && <div className={styles.destinationLine}>
+          <span>{destinationName}</span>
+          <button type="button" className={styles.cardLink} aria-expanded={choosing} disabled={needsShade} onClick={chooseDestination}>
+            {t("Changer", "Change")}<span className="sr-only"> · {product.name}</span>
+          </button>
+        </div>}
+        {choosing && <div className={styles.catalogField}>
+          <label htmlFor={`${uid}-destination`}>{t("Où enregistrer ?", "Where to save?")}</label>
+          <select id={`${uid}-destination`} value={target} onChange={(event) => setTarget(event.target.value)}>
+            <option value="">{t("Choisir une destination", "Choose a destination")}</option>
+            <option value={vanityDestination}>{t("Ma trousse", "My collection")}</option>
+            {lists.map((list) => <option key={list.id} value={list.id}>{beautyListName(list, t)}</option>)}
+          </select>
+          <div className={styles.destinationActions}>
+            <button type="button" className="button button-primary" disabled={!target || needsShade} onClick={() => save(target)}>{t("Ajouter ici", "Save here")}</button>
+            <button type="button" className="button button-secondary" onClick={() => { setChoosing(false); setFailed(false); }}>{t("Annuler", "Cancel")}</button>
+          </div>
+        </div>}
+        {product.category === "maquillage" && <button type="button" className="button button-secondary" disabled={needsShade} onClick={() => onTry(entry)}>
+          <SwatchBook size={16} aria-hidden="true"/>{t("Essayer dans le Studio", "Try in the Studio")}<span className="sr-only"> · {product.name}</span>
         </button>}
         {sourceUrl && <a className={styles.cardLink} href={sourceUrl} target="_blank" rel="noreferrer">
-          <span>{t("Fiche d’origine", "Original entry")}</span><span className="sr-only"> · {product.name}</span>
+          <ExternalLink size={14} aria-hidden="true"/>{official ? t("Voir chez la marque", "View on brand site") : t("Données communautaires", "Community data")}<span className="sr-only"> · {product.name}</span>
         </a>}
       </div>
       {failed && <p className={styles.cardError} role="alert">{t("L’enregistrement a échoué.", "This product couldn’t be saved.")}</p>}

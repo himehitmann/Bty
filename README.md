@@ -1,6 +1,6 @@
 # Navier
 
-Navier est une application web installable pour simuler un maquillage, composer des routines et organiser tes produits dans des listes personnelles. L’accueil présente ces outils en slides illustrées. Un nouvel espace démarre vide. Le menu de l’en-tête permet de choisir le français, l’anglais, l’espagnol ou l’italien.
+Navier est une application web installable pour composer des routines, organiser tes produits et préparer des looks. L’accueil affiche les trois outils dans cet ordre, sur des cartes fixes. Le menu de l’en-tête propose le français, l’anglais, l’espagnol et l’italien.
 
 ## Ouvrir Navier par double-clic
 
@@ -40,12 +40,13 @@ Chaque compte démarre avec un espace vide. L’espace invité reste sur le navi
 
 ## Fonctionnement
 
-- **Catalogue et Mes produits** · lance une recherche par nom, marque ou code-barres depuis l’en-tête. Le catalogue affiche les photos disponibles et permet d’enregistrer un produit en un clic. Les informations déjà enregistrées restent consultables. Les routines perdent les étapes d’un produit supprimé.
-- **INCI et photos** · la recherche interroge [Open Beauty Facts](https://world.openbeautyfacts.org/). Le catalogue embarqué contient des références de cette base sous [licence ODbL](https://opendatacommons.org/licenses/odbl/1.0/), ainsi que des formules signalées comme indicatives. Les photos du catalogue relèvent de la licence [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). Chaque référence renvoie à sa source. `OPEN_BEAUTY_FACTS_CONTACT` renseigne le contact envoyé par le serveur web.
-- **Simulation maquillage** · Face Chart SVG original avec plusieurs placements pour le blush, le contouring, le bronzer, l’enlumineur, la poudre et l’anticernes. Le guide affiche leurs zones. Essaie une teinte prélevée sur une photo et compare les vues **Visage nu** et **Look maquillé**.
+- **Catalogue et Ma trousse** · cherche par nom, marque, teinte ou code-barres. Choisis une variante et essaie-la dans le Studio ou enregistre-la dans la trousse ou dans une liste. Navier retient la dernière destination utilisée.
+- **Sources et teintes** · la sélection de marques embarquée propose des liens vers les pages officielles et des couleurs indicatives. Open Beauty Facts complète les recherches sans correspondance fabricante avec ses données sous licence ODbL. Les images produit sont consultables sur le site source. `OPEN_BEAUTY_FACTS_CONTACT` renseigne le contact envoyé par le serveur web. [Open Beauty Facts](https://world.openbeautyfacts.org/data) · [Licence ODbL](https://opendatacommons.org/licenses/odbl/1.0/)
+- **Simulation maquillage** · compare deux teintes sur le Face Chart SVG avec les produits de ta trousse, les essais du catalogue et les couleurs prélevées à la pipette. Ajuste le blush ou les sourcils sur le visage et reproduis le placement en miroir. Choisis la forme du liner et la zone du fard.
+- **Styles de maquillage** · huit exemples illustrés, de Douyin au liner graphique, avec étapes, sources éditoriales et ouverture du look dans le Studio. **Profil beauté** regroupe les critères de peau et la préparation d’une routine adaptée à tes produits.
 - **Mes looks** · dans le Studio, enregistre et rouvre jusqu’à 30 compositions nommées. Le look garde les réglages du portrait, les teintes et leur placement, même après la suppression des produits ou des teintes d’origine. Dans l’espace invité, l’enregistrement dépend du stockage du navigateur. Sur le web, les looks se synchronisent avec le compte lorsque Supabase est configuré. **Paramètres → Exporter mon espace** les inclut dans le JSON.
 - **Routines** · création, réorganisation et suivi des étapes, points de vigilance et Face Chart utilisable au clavier. Indique un placement de maquillage, un accessoire, une consigne et, pour les cheveux, la zone et le massage prévu.
-- **Mes listes** · listes à nom libre pour les favoris, les achats, une trousse ou les déceptions. Ajoute un produit ou du texte, note la raison et coche les éléments au fur et à mesure.
+- **Mes listes** · **Favoris**, **À essayer** et **Je ne rachète pas** sont proposés dès l’ouverture. Crée aussi tes propres listes, ajoute un produit ou du texte et note pourquoi tu souhaites le garder.
 - **Tutoriels** · suggestions à partir du nom et de la catégorie des produits possédés, puis personnalisation avant la création d’une routine.
 
 Les repères INCI concernent les ingrédients déclarés et quelques superpositions. Les données communautaires peuvent être incomplètes ou obsolètes. Les noms seuls ne permettent pas de déterminer une concentration, un pH ou une tolérance. Navier ne fournit aucun diagnostic ni garantie d’innocuité, d’efficacité ou de résultat esthétique.

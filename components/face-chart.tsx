@@ -1,10 +1,11 @@
 "use client";
 
-import { useId, type CSSProperties, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import type { PigmentLayer } from "@/lib/face-makeup";
 import { useLocale } from "@/lib/i18n";
 import type { MakeupPlacement } from "@/lib/makeup-placements";
 import type { FaceZone } from "@/lib/model";
+import { boundStudioAnchor, studioPlacementBounds, type StudioAnchor, type StudioPlacementMode } from "@/lib/studio-advanced";
 import { eye, head, lip, mirror, pair, pigmentShapes, placementShapes, portraitHeight, single, zoneGeometry, type Shape } from "./face-chart-geometry";
 import { FacePortrait, mix } from "./face-chart-portrait";
 import styles from "./face-chart.module.css";
@@ -27,7 +28,7 @@ function tone(value: string | number | undefined, fallback: string) {
   return typeof value === "string" && /^#[\da-f]{6}$/i.test(value) ? value : fallback;
 }
 
-export function FaceChart({ selected, layers, onSelect, availableZones, className, style, application, placementGuide, mattePlacement, showHair }: {
+export function FaceChart({ selected, layers, onSelect, availableZones, className, style, application, placementGuide, mattePlacement, showHair, placementMode, onPlace }: {
   selected: FaceZone;
   layers: PigmentLayer[];
   onSelect: (zone: FaceZone) => void;
@@ -38,9 +39,12 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
   placementGuide?: MakeupPlacement;
   mattePlacement?: MakeupPlacement;
   showHair?: boolean;
+  placementMode?: StudioPlacementMode;
+  onPlace?: (anchor: StudioAnchor) => void;
 }) {
   const { t } = useLocale();
   const id = useId();
+  const pointer = useRef<number | null>(null);
   const design = style as (CSSProperties & Record<string, string | number | undefined>) | undefined;
   const skin = tone(design?.["--face-skin"], "#EBC5B0");
   const iris = tone(design?.["--face-iris"], "#5A4359");
@@ -49,6 +53,10 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
   const targets = availableZones ?? guideZones;
   const markings = application?.kind === "hair" ? (application.hairArea ? hairGeometry[application.hairArea] : zoneGeometry.cheveux)
     : application?.kind === "care" ? zoneGeometry[selected] : [];
+  const editing = Boolean(placementMode && onPlace);
+  const placementBounds = editing && placementMode ? studioPlacementBounds(placementMode.tool, placementMode.side) : undefined;
+
+  useEffect(() => { pointer.current = null; }, [placementMode?.tool, placementMode?.side]);
 
   function activate(event: KeyboardEvent<SVGGElement>, zone: FaceZone) {
     if (event.key !== "Enter" && event.key !== " ") return;
@@ -56,7 +64,31 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
     onSelect(zone);
   }
 
-  return <svg className={className ? `${styles.face} ${className}` : styles.face} style={style}
+  function placeAt(event: PointerEvent<SVGRectElement>) {
+    const svg = event.currentTarget.ownerSVGElement;
+    const matrix = svg?.getScreenCTM();
+    if (!svg || !matrix || !placementMode || !onPlace) return;
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    const local = point.matrixTransform(matrix.inverse());
+    if (!Number.isFinite(local.x) || !Number.isFinite(local.y)) return;
+    onPlace(boundStudioAnchor(placementMode.tool, placementMode.side, { x: local.x / 320, y: local.y / portraitHeight }));
+  }
+
+  function beginPlacement(event: PointerEvent<SVGRectElement>) {
+    if (event.button !== 0 || pointer.current !== null) return;
+    event.preventDefault();
+    pointer.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    placeAt(event);
+  }
+
+  function endPlacement(event: PointerEvent<SVGRectElement>) {
+    if (pointer.current === event.pointerId) pointer.current = null;
+  }
+
+  return <svg className={className ? `${styles.face} ${className}` : styles.face} style={style} data-placing={editing}
     viewBox={`0 0 320 ${portraitHeight}`} role="group" aria-labelledby={`${id}-title`}>
     <title id={`${id}-title`}>{t("Carte interactive des zones du visage", "Interactive face chart")}</title>
     <defs>
@@ -87,18 +119,23 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
         </radialGradient>)}
     </defs>
     <g aria-hidden="true" className={styles.artwork}>
-      <FacePortrait id={id} skin={skin} iris={iris} hair={hair} hairVisible={hairVisible}>
+      <FacePortrait id={id} skin={skin} iris={iris} hair={hair} hairVisible={hairVisible}
+        hideBrows={layers.some((layer) => layer.kind === "brow" && layer.opacity > 0)}>
         <g clipPath={`url(#${id}-head)`}>
           {layers.map((layer, index) => {
             const isStroke = layer.kind === "mascara";
             const isLine = isStroke || layer.kind === "eyeliner";
             const isLip = layer.kind === "lip";
+            const isBrow = layer.kind === "brow";
             const blend = layer.kind === "contour" || layer.kind === "bronzer" ? "multiply" : undefined;
             const filter = blend || layer.kind === "blush" ? "diffuse" : "feather";
             return <g key={layer.stepId} data-pigment={layer.kind} data-zone={layer.zone} data-placement={layer.placement}
+              data-liner-style={layer.kind === "eyeliner" ? layer.details?.liner?.style : undefined}
+              data-shadow-zone={layer.kind === "eyeshadow" ? layer.details?.shadow?.zone : undefined}
+              data-brow-shape={isBrow ? layer.details?.brow?.shape ?? "natural" : undefined}
               opacity={layer.opacity} style={{ mixBlendMode: blend }}
-              filter={isLine || isLip ? undefined : `url(#${id}-${filter})`}
-              mask={isLine || isLip ? undefined : `url(#${id}-complexion)`}>
+              filter={isLine || isLip || isBrow ? undefined : `url(#${id}-${filter})`}
+              mask={isLine || isLip || isBrow ? undefined : `url(#${id}-complexion)`}>
               {pigmentShapes(layer).map(({ path, transform }, shapeIndex) =>
                 <path d={path} transform={transform} key={shapeIndex}
                   fill={isStroke ? "none" : isLine ? layer.hex : `url(#${id}-colour-${index})`}
@@ -122,7 +159,7 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
       {application.kind === "hair" && application.massage && <path className={styles.massageArrows}
         d="M113 63c-9 1-13-7-8-13 5-5 14-2 15 5m-6-3 6 4 3-5m78 4c1-7 10-10 15-5 5 6 1 14-8 13m1-5-4 5 6 2"/>}
     </g>}
-    {targets.filter((zone) => zone !== "cheveux" || hairVisible).map((zone) => {
+    {!editing && targets.filter((zone) => zone !== "cheveux" || hairVisible).map((zone) => {
       const highlight = !availableZones && !application && !placementGuide && zone === selected;
       return <g className={styles.faceZone} role="button" tabIndex={0} key={zone} data-zone={zone} data-active={selected === zone}
         data-highlight={highlight} data-guided={application?.kind === "care" && selected === zone}
@@ -131,5 +168,17 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
         {zoneGeometry[zone].map(({ path, transform }, index) => <path d={path} transform={transform} key={index}/>)}
       </g>;
     })}
+    {editing && placementMode && placementBounds && <g aria-hidden="true">
+      <rect className={styles.placementBounds} x={placementBounds.minX * 320} y={placementBounds.minY * portraitHeight}
+        width={(placementBounds.maxX - placementBounds.minX) * 320} height={(placementBounds.maxY - placementBounds.minY) * portraitHeight} rx="8"/>
+      <circle className={styles.placementMarker} data-studio-placement-marker={placementMode.tool} data-side={placementMode.side}
+        cx={placementMode.anchor.x * 320} cy={placementMode.anchor.y * portraitHeight} r="5.6"/>
+      <rect width="320" height={portraitHeight} fill="transparent" className={styles.placementTarget} data-studio-placement-target="true"
+        onPointerDown={beginPlacement} onPointerMove={(event) => { if (pointer.current === event.pointerId) placeAt(event); }}
+        onPointerUp={(event) => {
+          if (pointer.current === event.pointerId) placeAt(event);
+          endPlacement(event);
+        }} onPointerCancel={endPlacement} onLostPointerCapture={endPlacement}/>
+    </g>}
   </svg>;
 }

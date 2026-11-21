@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { eye, hairSilhouette, head, irisCenter, lip, mirror } from "./face-chart-geometry";
 
-const hairline = "M43 180C30 146 32 103 49 74C76 30 116 15 160 16C205 15 244 30 271 74C288 103 291 146 277 180C278 135 262 104 230 78C205 59 180 58 160 42C140 58 114 59 89 78C58 104 42 135 43 180Z";
+const leftLocks = "M46 183C26 155 20 124 29 93C42 39 103 5 166 12C172 13 176 17 176 21C139 25 123 54 97 71C72 88 48 118 46 151C45 162 48 173 46 183ZM44 174C51 198 44 228 40 254C35 291 52 301 60 326C40 320 29 298 27 283C22 263 33 231 35 210C36 195 34 184 35 177Z";
+const rightLocks = "M163 13C193 5 237 17 265 43C293 69 310 110 295 149C291 160 285 176 274 189C284 159 274 128 257 108C237 83 219 79 205 65C191 52 187 34 164 27Z M290 163C285 198 284 215 291 238C298 260 312 286 303 308C296 324 286 329 274 330C287 312 288 294 280 274C268 243 267 231 276 195Z";
+const leftStrands = "M155 21C143 19 118 25 93 38C68 52 50 70 42 101M163 24C141 34 129 50 111 62C84 79 63 105 52 132M82 53C62 69 44 87 36 122C31 144 35 157 39 168M42 194C47 221 32 251 35 275C37 291 44 303 50 314M26 248C19 289 29 307 41 321";
+const rightStrands = "M178 22C207 21 248 35 268 65C279 81 288 101 288 125M181 27C208 36 210 58 241 81C266 100 281 129 284 157M235 29C280 46 302 103 296 134M288 198C283 226 295 251 300 278C303 292 297 311 286 320M282 234C284 257 301 297 282 318";
 const ear = "M49 180C38 171 26 176 23 188C17 204 26 225 42 236C48 241 55 241 61 238L60 223Z";
 const upperLid = "M77 189C85 181 94 174 107 174C122 173 134 182 143 197";
 const lowerLid = "M79 191C88 201 97 207 106 207C120 207 134 200 142 197";
@@ -26,12 +29,13 @@ export function mix(first: string, second: string, amount: number) {
   return mixed;
 }
 
-export function FacePortrait({ id, skin, iris, hair, hairVisible, children }: {
+export function FacePortrait({ id, skin, iris, hair, hairVisible, hideBrows, children }: {
   id: string;
   skin: string;
   iris: string;
   hair: string;
   hairVisible: boolean;
+  hideBrows?: boolean;
   children: ReactNode;
 }) {
   const ink = mix(skin, "#261924", .87);
@@ -42,6 +46,7 @@ export function FacePortrait({ id, skin, iris, hair, hairVisible, children }: {
   const blush = `url(#${id}-bare-rose)`;
   const softShadow = `url(#${id}-skin-shadow)`;
   const highlight = `url(#${id}-skin-light)`;
+  const hairGloss = mix(hair, "#F3C9A6", .53);
   const hairFill = `url(#${id}-hair)`;
 
   return <>
@@ -86,6 +91,10 @@ export function FacePortrait({ id, skin, iris, hair, hairVisible, children }: {
       <linearGradient id={`${id}-hair`} x2=".79" y2="1">
         <stop stopColor={mix(hair, light, .27)}/><stop offset="47%" stopColor={hair}/><stop offset="100%" stopColor={mix(hair, "#23191E", .45)}/>
       </linearGradient>
+      <radialGradient id={`${id}-lock`} cx="49%" cy="23%" r="72%">
+        <stop stopColor={mix(hair, hairGloss, .62)}/><stop offset="41%" stopColor={hair}/>
+        <stop offset="100%" stopColor={mix(hair, "#1C1420", .46)}/>
+      </radialGradient>
       <clipPath id={`${id}-eye`}><path d={eye}/></clipPath>
       <filter id={`${id}-lip-edge`} x="-12%" y="-22%" width="124%" height="144%">
         <feGaussianBlur stdDeviation="1.3"/>
@@ -127,8 +136,10 @@ export function FacePortrait({ id, skin, iris, hair, hairVisible, children }: {
       stroke="#FFF3E9" strokeWidth=".92" fill="none" opacity=".53"/>
     {[undefined, mirror].map((transform, index) => <g key={index} transform={transform} data-face-feature="eye">
       <ellipse cx="107" cy="173" rx="38" ry="16" fill={softShadow} opacity=".43"/>
-      <path d={brow} fill={mix(skin, hair, .52)} opacity=".46"/>
-      <path d={browHairs} stroke={mix(hair, ink, .36)} strokeWidth=".52" opacity=".54" fill="none"/>
+      {!hideBrows && <>
+        <path d={brow} fill={mix(skin, hair, .52)} opacity=".38"/>
+        <path d={browHairs} stroke={mix(hair, ink, .36)} strokeWidth=".52" opacity=".53" fill="none"/>
+      </>}
       <path d="M78 179C91 166 109 163 122 170C132 174 138 182 142 187" stroke={ink} strokeWidth="1" opacity=".63" fill="none"/>
       <path d={eye} fill={`url(#${id}-sclera)`}/>
       <g clipPath={`url(#${id}-eye)`}>
@@ -150,10 +161,13 @@ export function FacePortrait({ id, skin, iris, hair, hairVisible, children }: {
       <path d="M82 186q-3-1-4-3m7 1q-3-2-3.1-4m7 1q-2.1-2.1-2.1-4.1" fill="none"
         stroke={lashInk} strokeWidth=".61" opacity=".84"/>
     </g>)}
-    {hairVisible && <>
-      <path d={hairline} fill={hairFill}/>
-      <path d="M156 46C129 57 93 65 73 95M166 45C195 53 229 68 247 98M43 158C36 218 54 264 44 297M277 158C284 218 266 264 276 297"
-        stroke={mix(hair, light, .35)} strokeWidth="1" fill="none" opacity=".65"/>
-    </>}
+    {hairVisible && <g aria-hidden="true">
+      <path d={leftLocks} fill={`url(#${id}-lock)`}/>
+      <path d={rightLocks} fill={`url(#${id}-lock)`}/>
+      <path d={leftStrands} stroke={hairGloss} strokeWidth=".9" fill="none" opacity=".42"/>
+      <path d={rightStrands} stroke={hairGloss} strokeWidth="1.05" fill="none" opacity=".37"/>
+      <path d="M132 24C83 34 45 70 36 113M197 25C247 33 279 67 288 105" stroke={hairGloss}
+        strokeWidth="2.2" fill="none" opacity=".21"/>
+    </g>}
   </>;
 }

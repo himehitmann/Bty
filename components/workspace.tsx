@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
-import { BookOpen, Brush, CalendarCheck, ChevronDown, ClipboardList, Download, Globe, House, Layers, ListChecks, LogIn, LogOut, Search, Settings, ShoppingBag, X } from "lucide-react";
+import { BookOpen, Brush, CalendarCheck, ChevronDown, ClipboardList, Download, Globe, House, Layers, ListChecks, LogIn, LogOut, Search, Settings, ShoppingBag, SwatchBook, UserRound, X } from "lucide-react";
 import { Catalog, Inventory } from "./inventory";
 import { Palette } from "./palette";
 import { HomeDiscovery } from "./home-discovery";
@@ -11,21 +11,25 @@ import { Routines } from "./routines";
 import { Tutorials } from "./tutorials";
 import { Journal } from "./journal";
 import { Plans } from "./plans";
-import { ProfileFields, RoutineCoach } from "./profile-coach";
+import { BeautyProfile } from "./beauty-profile";
+import { MakeupStyles, type MakeupStylePreset } from "./makeup-styles";
+import { beautyListsWithDefaults, productListSnapshot, sameProductVariant, storedBeautyLists, vanityDestination } from "@/lib/beauty-list-destinations";
 import { useBillingStatus } from "@/lib/billing-client";
 import { LocaleProvider, useLocale, type Locale } from "@/lib/i18n";
 import { isLocale, localeOptions } from "@/lib/locale";
-import { preferenceSchema, type Product, type Routine, type State } from "@/lib/model";
+import { beautyListLimits, type Product, type Routine, type State } from "@/lib/model";
 import { getPalettePhotoUrl, removePalettePhoto, uploadPalettePhoto } from "@/lib/supabase/browser";
 import { useWorkspaceState } from "@/lib/use-workspace";
 
 const navigation = [
   { id: "accueil", fr: "Accueil", en: "Home", icon: House },
-  { id: "studio", fr: "Simulation maquillage", en: "Makeup simulator", icon: Brush },
   { id: "routines", fr: "Mes routines", en: "My routines", icon: ListChecks },
   { id: "listes", fr: "Mes listes", en: "My lists", icon: ClipboardList },
+  { id: "studio", fr: "Simulation maquillage", en: "Makeup simulator", icon: Brush },
+  { id: "styles", fr: "Styles de maquillage", en: "Makeup styles", icon: SwatchBook },
   { id: "catalogue", fr: "Catalogue", en: "Catalogue", icon: Search },
-  { id: "vanity", fr: "Mes produits", en: "My products", icon: ShoppingBag },
+  { id: "vanity", fr: "Ma trousse", en: "My collection", icon: ShoppingBag },
+  { id: "profile", fr: "Profil beauté", en: "Beauty profile", icon: UserRound },
   { id: "tutoriels", fr: "Tutoriels", en: "Tutorials", icon: BookOpen },
   { id: "journal", fr: "Journal", en: "Journal", icon: CalendarCheck },
   { id: "preferences", fr: "Paramètres", en: "Settings", icon: Settings },
@@ -54,6 +58,9 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   const [catalogue, setCatalogue] = useState({ query: "", revision: 0 });
   const [searchTerm, setSearchTerm] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedList, setSelectedList] = useState<string>();
+  const [trialProducts, setTrialProducts] = useState<Product[]>([]);
+  const [preset, setPreset] = useState<MakeupStylePreset>();
   const [guide, setGuide] = useState<string>();
   const [auth, setAuth] = useState(false);
   const accountDialog = useRef<HTMLDialogElement>(null);
@@ -71,6 +78,8 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
       }
       setStudioTab(location.hash === "#palette" ? "photo" : "look");
       setSelected(null);
+      setSelectedList(undefined);
+      setPreset(undefined);
       setGuide(undefined);
     };
     onHistoryChange();
@@ -101,6 +110,9 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   const activeAccount = user?.id;
   useEffect(() => {
     setSelected(null);
+    setSelectedList(undefined);
+    setTrialProducts([]);
+    setPreset(undefined);
     setGuide(undefined);
   }, [activeAccount]);
 
@@ -108,6 +120,8 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     setView(next);
     setStudioTab("look");
     setSelected(null);
+    setSelectedList(undefined);
+    setPreset(undefined);
     setGuide(undefined);
     setNotice("");
     if (location.hash !== `#${next}`) history.pushState(null, "", `#${next}`);
@@ -135,13 +149,43 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     searchInput.current?.focus();
   }
 
-  function saveProduct(product: Product) {
-    const barcode = product.barcode?.padStart(14, "0");
-    return update((previous) => {
-      const alreadySaved = previous.products.some((item) => item.id === product.id ||
-        Boolean(barcode && item.barcode?.padStart(14, "0") === barcode));
-      return alreadySaved ? previous : { ...previous, products: [product, ...previous.products] };
-    });
+  function saveProduct(product: Product, destination: string) {
+    let saved = false;
+    const applied = update((previous) => {
+      const preferences = { ...previous.preferences, catalogueDestination: destination };
+      if (destination === vanityDestination) {
+        const exists = previous.products.some((item) => sameProductVariant(item, product));
+        if (!exists && previous.products.length >= 500) return previous;
+        saved = true;
+        return { ...previous, preferences, products: exists ? previous.products : [product, ...previous.products] };
+      }
+      const lists = beautyListsWithDefaults(previous.lists);
+      const target = lists.find(({ id }) => id === destination);
+      if (!target) return previous;
+      const exists = target.items.some((item) => item.product ? sameProductVariant(item.product, product) : item.productId === product.id);
+      if (!exists && target.items.length >= beautyListLimits.items) return previous;
+      saved = true;
+      if (exists) return { ...previous, preferences };
+      const entry = { id: crypto.randomUUID(), text: product.name, checked: false, productId: product.id, product: productListSnapshot(product) };
+      return { ...previous, preferences, lists: storedBeautyLists(lists.map((list) => list.id === destination
+        ? { ...list, items: [...list.items, entry] } : list)) };
+    }, user?.id ?? null, { requireLocalCopy: !user });
+    return applied && saved;
+  }
+
+  function tryProduct(product: Product) {
+    navigate("studio");
+    setTrialProducts((current) => [...current.filter(({ id }) => id !== product.id), product].slice(-12));
+  }
+
+  function openDestination(destination: string, product?: Product) {
+    if (destination === vanityDestination) {
+      navigate("vanity");
+      setSelected(product?.id ?? null);
+    } else {
+      navigate("listes");
+      setSelectedList(destination);
+    }
   }
 
   function removeProduct(id: string) {
@@ -183,6 +227,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     return t(item.fr, item.en);
   };
   const availableNavigation = portable ? navigation.filter(({ id }) => id !== "journal" && id !== "offres") : navigation;
+  const lists = beautyListsWithDefaults(state.lists);
   const status = {
     loading: t("Chargement", "Loading"),
     local: t("Sur cet appareil", "On this device"),
@@ -259,19 +304,19 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
             onProduct={(id) => { navigate("vanity"); setSelected(id); }}
             onRoutine={(routine) => { navigate("routines"); if (routine.steps.length) setGuide(routine.id); }}/>}
           {view === "catalogue" && <Catalog key={catalogue.revision} initialQuery={catalogue.query} currentProducts={state.products}
-            onSave={saveProduct} portable={portable}
-            onOpenProduct={(id) => { navigate("vanity"); setSelected(id); }}/>}
+            lists={lists} destination={state.preferences.catalogueDestination} onSave={saveProduct} portable={portable}
+            onTry={tryProduct} onOpenDestination={openDestination}/>}
           {view === "vanity" && <>
             <div className="page-heading">
-              <div><h1>{t("Mes produits", "My products")}</h1><p>{t("Les produits que tu as enregistrés.", "Products you’ve saved.")}</p></div>
+              <div><h1>{t("Ma trousse", "My collection")}</h1><p>{t("Les produits que tu utilises, disponibles dans le Studio et les routines.", "Products you use, available in the Studio and your routines.")}</p></div>
               <button className="button button-primary" type="button" onClick={() => openCatalogue("", true)}><Search size={17} aria-hidden="true"/>{t("Chercher un produit", "Find a product")}</button>
             </div>
-            <Inventory products={state.products} preferences={state.preferences} selected={selected} onSelect={setSelected} onRemove={removeProduct}/>
+            <Inventory products={state.products} preferences={state.preferences} selected={selected} onSelect={setSelected} onRemove={removeProduct} onTry={tryProduct}/>
           </>}
           {view === "routines" && <Routines products={state.products} routines={state.routines} preferences={state.preferences} palette={state.palette}
             onChange={(routines) => update((previous) => ({ ...previous, routines }))}
             startRoutineId={guide} onStartGuide={setGuide} onExitGuide={() => setGuide(undefined)} onComplete={complete}/>}
-          {view === "studio" && <MakeupStudio key={`${user?.id ?? "guest"}:${studioTab}`} products={state.products}
+          {view === "studio" && <MakeupStudio key={`${user?.id ?? "guest"}:${studioTab}`} products={state.products} trialProducts={trialProducts} preset={preset}
             savedLooks={state.looks ?? []}
             onChangeLooks={(apply) => update((previous) => ({ ...previous, looks: apply(previous.looks ?? []) }), user?.id ?? null, { requireLocalCopy: !user })}
             palette={state.palette} initialTab={studioTab} paletteEditor={
@@ -281,14 +326,18 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
                 onDiscardUpload={client && user ? (path) => removePalettePhoto(client, path) : undefined}
                 onResolvePhoto={client && user ? (path) => getPalettePhotoUrl(client, path) : undefined}/>
             }/>}
-          {view === "listes" && <BeautyLists key={user?.id ?? "guest"} lists={state.lists ?? []} products={state.products}
-            onChange={(apply) => update((previous) => ({ ...previous, lists: apply(previous.lists ?? []) }), user?.id ?? null)}/>}
+          {view === "listes" && <BeautyLists key={`${user?.id ?? "guest"}:${selectedList ?? "overview"}`} lists={lists} products={state.products}
+            firstListId={selectedList} onTryProduct={tryProduct}
+            onChange={(apply) => update((previous) => ({ ...previous, lists: storedBeautyLists(apply(beautyListsWithDefaults(previous.lists))) }), user?.id ?? null)}/>}
+          {view === "styles" && <MakeupStyles onTry={(look) => { navigate("studio"); setPreset(look); }}/>}
+          {view === "profile" && <BeautyProfile key={user?.id ?? "guest"} preferences={state.preferences} products={state.products} onCreate={createRoutine}
+            onSave={(preferences) => update((previous) => ({ ...previous, preferences }), user?.id ?? null)}/>}
           {view === "tutoriels" && <Tutorials products={state.products} onCreateRoutine={createRoutine}/>}
           {view === "journal" && !portable && <Journal key={user?.id ?? "guest"} userId={user?.id} client={client} plus={billing.plus} entitlementLoading={billing.loading}
             products={state.products} routines={state.routines} completed={state.completed} onOpenPlans={() => navigate("offres")}/>}
           {view === "offres" && !portable && <Plans signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth(true)}/>}
           {view === "preferences" && <>
-            <div className="page-heading"><div><h1>{t("Paramètres", "Settings")}</h1><p>{t("Langue, préférences et données.", "Language, preferences and data.")}</p></div></div>
+            <div className="page-heading"><div><h1>{t("Paramètres", "Settings")}</h1><p>{t("Langue de l’interface, compte et données.", "Interface language, account and data.")}</p></div></div>
             <section className="settings-language" aria-labelledby="language-title">
               <div><h2 id="language-title">{t("Langue de l’interface", "Interface language")}</h2></div>
               <select aria-labelledby="language-title" value={locale} onChange={(event) => {
@@ -297,10 +346,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
                 {localeOptions.map(({ value, name }) => <option key={value} value={value} lang={value}>{name}</option>)}
               </select>
             </section>
-            <PreferencesForm state={state} portable={portable} onSave={(preferences) => {
-              if (update((previous) => ({ ...previous, preferences }))) setNotice(t("Préférences enregistrées.", "Preferences saved."));
-            }}/>
-            <RoutineCoach preferences={state.preferences} products={state.products} onCreate={createRoutine}/>
+            <WorkspaceSettings state={state} portable={portable}/>
           </>}
         </div>}
       </main>
@@ -332,36 +378,9 @@ function exportWorkspace(state: State) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function PreferencesForm({ state, portable, onSave }: {
-  state: State; portable: boolean; onSave: (preferences: State["preferences"]) => void;
-}) {
+function WorkspaceSettings({ state, portable }: { state: State; portable: boolean }) {
   const { t } = useLocale();
-  const { locale: _locale, ...criteria } = state.preferences;
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const parsed = preferenceSchema.safeParse({
-      ...state.preferences,
-      fragranceFree: form.has("fragranceFree"), sensitive: form.has("sensitive"), avoid: form.get("avoid"),
-      skinFeel: form.get("skinFeel") || undefined, skinConcerns: form.getAll("skinConcerns"), undertone: form.get("undertone") || undefined,
-    });
-    if (parsed.success) onSave(parsed.data);
-  }
-
-  return <div className="preferences-layout">
-    <form className="dashboard-card stacked-form" onSubmit={submit} key={JSON.stringify(criteria)}>
-      <h2>{t("Mes critères", "My preferences")}</h2>
-      <label className="check-field"><input type="checkbox" name="fragranceFree" defaultChecked={state.preferences.fragranceFree}/>
-        <span>{t("Je préfère éviter le parfum", "I prefer to avoid fragrance")}</span></label>
-      <label className="check-field"><input type="checkbox" name="sensitive" defaultChecked={state.preferences.sensitive}/>
-        <span>{t("Ma peau réagit facilement", "My skin reacts easily")}</span></label>
-      <label>{t("Ingrédients à éviter", "Ingredients to avoid")}
-        <textarea name="avoid" maxLength={600} rows={3} defaultValue={state.preferences.avoid} placeholder={t("Ex. Parfum, Limonene", "E.g. Parfum, Limonene")}/>
-        <small className="muted">{t("Sépare les noms par des virgules.", "Separate names with commas.")}</small>
-      </label>
-      <ProfileFields preferences={state.preferences}/>
-      <div className="form-actions"><button className="button button-primary" type="submit">{t("Enregistrer", "Save preferences")}</button></div>
-    </form>
+  return (
     <aside className="dashboard-card preference-help">
       <h2>{t("Mes données", "My data")}</h2>
       <button className="button button-secondary" type="button" onClick={() => exportWorkspace(state)}><Download size={16}/>{t("Exporter mon espace", "Export my workspace")}</button>
@@ -373,7 +392,7 @@ function PreferencesForm({ state, portable, onSave }: {
         <a href="/confidentialite">{t("Confidentialité", "Privacy")}</a>
       </>}
     </aside>
-  </div>;
+  );
 }
 function Account({ user, client, onClose, onNotice }: {
   user: ReturnType<typeof useWorkspaceState>["user"]; client: ReturnType<typeof useWorkspaceState>["client"];

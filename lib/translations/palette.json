@@ -14,6 +14,8 @@
   "The shade could not be saved. Try again.": ["No se pudo guardar el tono. Inténtalo de nuevo.", "Impossibile salvare la tonalità. Riprova."],
   "Removed {0} from your shades.": ["Se ha eliminado {0} de tus tonos.", "Hai rimosso {0} dalle tue tonalità."],
   "Copied code {0}.": ["Código {0} copiado.", "Codice {0} copiato."],
+  "Hexadecimal code": ["Código hexadecimal", "Codice esadecimale"],
+  "Code selected. Use your device’s copy command.": ["Código seleccionado. Puedes copiarlo con la función de copia de tu dispositivo.", "Codice selezionato. Puoi copiarlo con il comando di copia del tuo dispositivo."],
   "The code could not be copied automatically. The code is {0}.": ["No se pudo copiar el código automáticamente. El código es {0}.", "Impossibile copiare il codice automaticamente. Il codice è {0}."],
   "Photo to sample": ["Foto para tomar muestras", "Foto da campionare"],
   "Makeup photo": ["Foto del maquillaje", "Foto del trucco"],

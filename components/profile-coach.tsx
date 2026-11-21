@@ -4,10 +4,25 @@ import { useState } from "react";
 import { analyzeProduct } from "@/lib/analysis";
 import { useLocale } from "@/lib/i18n";
 import { skinConcerns, skinFeels, undertones, type Preferences, type Product, type Routine } from "@/lib/model";
+import styles from "./beauty-profile.module.css";
 
 const feels = { seche: ["Tiraille facilement", "Often feels tight"], brillante: ["Brille facilement", "Often looks shiny"], mixte: ["Variable selon les zones", "Varies by area"], equilibree: ["Plutôt stable", "Usually feels balanced"], incertaine: ["Je ne sais pas", "I’m not sure"] } as const;
 const concerns = { tiraillements: ["Tiraillements", "Tightness"], brillance: ["Brillance", "Shine"], rougeurs: ["Rougeurs", "Redness"], imperfections: ["Imperfections", "Blemishes"], texture: ["Texture irrégulière", "Uneven texture"] } as const;
 const tones = { froid: ["Froid", "Cool"], chaud: ["Chaud", "Warm"], neutre: ["Neutre", "Neutral"], olive: ["Olive", "Olive"], incertain: ["À explorer", "Not sure yet"] } as const;
+
+export function ProfileCheckbox({ name, value, checked, label }: {
+  name: string; value?: string; checked?: boolean; label: string;
+}) {
+  return <label className="check-field">
+    <span className={styles.checkbox}>
+      <input type="checkbox" name={name} value={value} defaultChecked={checked}/>
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+        <polyline points="5.5,10.5 8.5,13.5 14.5,6.5" pathLength="1"/>
+      </svg>
+    </span>
+    <span>{label}</span>
+  </label>;
+}
 
 export function ProfileFields({ preferences }: { preferences: Preferences }) {
   const { t } = useLocale();
@@ -20,9 +35,8 @@ export function ProfileFields({ preferences }: { preferences: Preferences }) {
     </label>
     <fieldset className="profile-checklist">
       <legend>{t("Ce que tu observes sur ta peau", "What you notice about your skin")}</legend>
-      {skinConcerns.map((value) => <label className="check-field" key={value}>
-        <input type="checkbox" name="skinConcerns" value={value} defaultChecked={preferences.skinConcerns?.includes(value)}/><span>{t(concerns[value][0], concerns[value][1])}</span>
-      </label>)}
+      {skinConcerns.map((value) => <ProfileCheckbox key={value} name="skinConcerns" value={value}
+        checked={preferences.skinConcerns?.includes(value)} label={t(concerns[value][0], concerns[value][1])}/>)}
     </fieldset>
     <label>{t("Sous-ton de teint, selon ton observation", "Undertone, based on what you notice")}
       <select name="undertone" defaultValue={preferences.undertone ?? ""}>
@@ -64,10 +78,10 @@ export function RoutineCoach({ preferences, products, onCreate }: {
   function create() {
     const selectedSteps = selections.flatMap(({ product, note }) => product
       ? [{ id: crypto.randomUUID(), productId: product.id, zone: "visage" as const, note: t(note[0], note[1]) }] : []);
-    if (selectedSteps.length) onCreate({ id: crypto.randomUUID(), name: t("Mon matin avec mon vanity", "My morning beauty routine"), period: "matin", steps: selectedSteps });
+    if (selectedSteps.length) onCreate({ id: crypto.randomUUID(), name: t("Ma routine du matin", "My morning beauty routine"), period: "matin", steps: selectedSteps });
   }
   return <section className="dashboard-card profile-coach" aria-labelledby="profile-coach-title">
-    <h2 id="profile-coach-title">{t("Préparer une routine avec mon vanity", "Build a routine from my collection")}</h2>
+    <h2 id="profile-coach-title">{t("Préparer une routine avec mes produits", "Build a routine from my collection")}</h2>
     <p>{focusReactive ? t("Si ta peau réagit facilement, garde les gestes que tu connais et observe un changement à la fois.", "If your skin reacts easily, stick to familiar steps and observe one change at a time.")
       : focusComfort ? t("Si tu observes des tiraillements, commence par repérer un hydratant dont tu connais déjà la façon de l’utiliser.", "If your skin feels tight, start by picking a moisturiser you already know how to use.")
       : focusShine ? t("Si la brillance te gêne, observe quand elle apparaît avant de multiplier les étapes.", "If shine bothers you, note when it appears before adding more steps.")
@@ -78,7 +92,7 @@ export function RoutineCoach({ preferences, products, onCreate }: {
       {selections.map(({ id, label, candidates, product }) => <div key={id}>
         <label>{t(label[0], label[1])}
           <select value={picked[id] ?? ""} onChange={(event) => setPicked((current) => ({ ...current, [id]: event.target.value }))} disabled={!candidates.length}>
-            <option value="">{candidates.length ? t("Choisir dans mon vanity", "Choose from my collection") : t("Aucun produit identifié", "No matching products")}</option>
+            <option value="">{candidates.length ? t("Choisir dans ma trousse", "Choose from my collection") : t("Aucun produit identifié", "No matching products")}</option>
             {candidates.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
         </label>

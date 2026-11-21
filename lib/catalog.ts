@@ -1,9 +1,10 @@
 import type { Product } from "@/lib/model";
+import { manufacturerCatalog } from "./manufacturer-catalog";
 
 export type CatalogSearchMode = "all" | "brand";
 
-// Open Beauty Facts product metadata (ODbL) and links to its community photos (CC BY-SA).
-function offlineProduct(name: string, brand: string, barcode: string, category: Product["category"], frontPhoto?: string): Product {
+// Open Beauty Facts product metadata (ODbL).
+function offlineProduct(name: string, brand: string, barcode: string, category: Product["category"]): Product {
   return {
     id: `obf-${barcode}`,
     name,
@@ -13,19 +14,18 @@ function offlineProduct(name: string, brand: string, barcode: string, category: 
     ingredients: "",
     source: "open-beauty-facts",
     sourceUrl: `https://world.openbeautyfacts.org/product/${barcode}`,
-    imageUrl: frontPhoto ? `https://images.openbeautyfacts.org/images/products/${frontPhoto}` : undefined,
   };
 }
 
 export const localCatalog: readonly Product[] = [
-  offlineProduct("SA Smoothing Cleanser", "CeraVe", "3337875795456", "soin", "333/787/579/5456/front_en.14.200.jpg"),
-  offlineProduct("Skin Renewing Night Cream", "CeraVe", "3337875903509", "soin", "333/787/590/3509/front_fr.3.200.jpg"),
-  offlineProduct("Effaclar Duo+", "La Roche-Posay", "3337875863377", "soin", "333/787/586/3377/front_fr.3.200.jpg"),
-  offlineProduct("Cicaplast Baume B5+", "La Roche-Posay", "3337875816847", "soin", "333/787/581/6847/front_fr.12.200.jpg"),
-  offlineProduct("Rouge Blush", "Dior", "3348901607339", "maquillage", "334/890/160/7339/front_en.5.200.jpg"),
-  offlineProduct("Forever Nude Bronze", "Dior", "3348901746687", "maquillage", "334/890/174/6687/front_en.3.200.jpg"),
-  offlineProduct("Baby Blush Duo", "Huda Beauty", "6294018409120", "maquillage", "629/401/840/9120/front_en.3.200.jpg"),
-  offlineProduct("Blush Filter", "Huda Beauty", "88176321", "maquillage", "000/008/817/6321/front_en.3.200.jpg"),
+  offlineProduct("SA Smoothing Cleanser", "CeraVe", "3337875795456", "soin"),
+  offlineProduct("Skin Renewing Night Cream", "CeraVe", "3337875903509", "soin"),
+  offlineProduct("Effaclar Duo+", "La Roche-Posay", "3337875863377", "soin"),
+  offlineProduct("Cicaplast Baume B5+", "La Roche-Posay", "3337875816847", "soin"),
+  offlineProduct("Rouge Blush", "Dior", "3348901607339", "maquillage"),
+  offlineProduct("Forever Nude Bronze", "Dior", "3348901746687", "maquillage"),
+  offlineProduct("Baby Blush Duo", "Huda Beauty", "6294018409120", "maquillage"),
+  offlineProduct("Blush Filter", "Huda Beauty", "88176321", "maquillage"),
   offlineProduct("Desert Dusk Palette", "Huda Beauty", "6291106031454", "maquillage"),
   {
     id: "local-gel-nettoyant",
@@ -201,6 +201,9 @@ function rankProduct(product: Product, query: string, words: string[], mode: Cat
   if (` ${name} `.includes(` ${query} `)) return 82;
   if (brand === 78) return brand;
   if (matchesName) return 72;
+  const variants = (product.variants ?? []).map((variant) => normalizeCatalogQuery(variant.name));
+  if (variants.includes(query)) return 84;
+  if (variants.some((variant) => matchWords(words, `${variant} ${brandedName}`))) return 68;
   if (brand) return brand;
   const other = normalizeCatalogQuery(`${product.category} ${product.ingredients}`);
   return matchWords(words, `${brandedName} ${other}`) ? 20 : 0;
@@ -232,7 +235,9 @@ export function rankCatalogProducts(
     const imageUrl = catalogImageUrl(product.imageUrl, product.barcode) ?? (productGtin ? photosByGtin.get(productGtin) : undefined);
     const entry = imageUrl === product.imageUrl ? product : { ...product, imageUrl };
     return [{ product: entry, key, score, hasPhoto: Boolean(imageUrl) }];
-  }).sort((left, right) => right.score - left.score || Number(right.hasPhoto) - Number(left.hasPhoto));
+  }).sort((left, right) => right.score - left.score
+    || Number(right.product.source === "manufacturer") - Number(left.product.source === "manufacturer")
+    || Number(right.hasPhoto) - Number(left.hasPhoto));
 
   const seen = new Set<string>();
   return ranked.flatMap(({ product, key }) => {
@@ -242,6 +247,25 @@ export function rankCatalogProducts(
   });
 }
 
+export function searchOfficialCatalog(query: string, mode: CatalogSearchMode = "all"): Product[] {
+  const barcode = mode === "all" ? catalogBarcode(query) : undefined;
+  if (!barcode) return rankCatalogProducts(manufacturerCatalog, query, mode, false);
+
+  const gtin = barcode.padStart(14, "0");
+  return manufacturerCatalog.flatMap((product) => {
+    const variant = product.variants?.find((item) => item.barcode?.padStart(14, "0") === gtin);
+    if (!variant) return [];
+    return [{
+      ...product,
+      barcode: variant.barcode,
+      selectedVariantId: variant.id,
+      shadeHex: variant.shadeHex,
+    }];
+  });
+}
+
 export function searchLocalCatalog(query: string, mode: CatalogSearchMode = "all"): Product[] {
+  const official = searchOfficialCatalog(query, mode);
+  if (official.length) return official;
   return rankCatalogProducts(localCatalog, query, mode, false);
 }

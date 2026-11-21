@@ -34,7 +34,7 @@ async function cachedExternalSearch(query: string, mode: CatalogSearchMode, barc
   budget.used += 1;
 
   const contact = process.env.OPEN_BEAUTY_FACTS_CONTACT?.trim() || "https://github.com/himehitmann/Bty";
-  const operation = searchOpenBeautyFacts(query, mode, { userAgent: `Navier/1.0 (${contact})`, includeImages: true }).then((products) => {
+  const operation = searchOpenBeautyFacts(query, mode, { userAgent: `Navier/1.0 (${contact})` }).then((products) => {
     resultCache.set(key, { products, expires: Date.now() + cacheLifetime });
     if (resultCache.size > maxCacheEntries) {
       const oldest = resultCache.keys().next();
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
   const normalizedQuery = normalizeCatalogQuery(query.data);
   const localResults = searchLocalCatalog(query.data, mode.data);
 
-  if (normalizedQuery.length < 2) {
+  if (normalizedQuery.length < 2 || localResults.some(({ source }) => source === "manufacturer")) {
     return NextResponse.json({ products: localResults, externalStatus: "not-requested" });
   }
 

@@ -1,12 +1,13 @@
 import type { PigmentLayer } from "@/lib/face-makeup";
 import type { MakeupPlacement } from "@/lib/makeup-placements";
 import type { FaceZone } from "@/lib/model";
+import { getStudioAnchor, type StudioAnchor, type StudioBrowShape, type StudioLinerStyle, type StudioShadowZone, type StudioSide } from "@/lib/studio-advanced";
 
 export type Shape = { path: string; transform?: string };
 
 export const portraitHeight = 356;
-export const head = "M159 25C111 24 75 42 55 74C33 108 36 150 46 183C52 206 56 226 63 248C71 275 85 293 106 310C124 324 140 338 157 338C174 340 189 325 212 308C236 289 249 274 257 247C264 225 270 202 275 182C285 152 288 110 265 74C244 42 207 24 159 25Z";
-export const hairSilhouette = "M160 16C117 13 80 26 57 52C35 77 28 108 32 147C38 186 35 217 29 257C26 282 27 313 36 339C52 329 66 326 81 327C66 298 67 268 68 235C70 200 62 160 71 125C83 79 119 54 160 48C201 54 237 79 249 125C258 160 250 200 252 235C253 268 254 298 239 327C254 326 268 329 284 339C293 313 294 282 291 257C285 217 282 186 288 147C292 108 285 77 263 52C240 26 203 13 160 16Z";
+export const head = "M159 25C111 24 75 41 55 73C33 108 37 150 47 183C53 207 57 228 65 249C75 275 90 295 115 311C133 324 145 338 159 338C175 338 188 325 207 311C232 294 248 275 257 247C265 225 270 202 275 182C285 152 288 110 265 74C244 42 207 24 159 25Z";
+export const hairSilhouette = "M159 10C105 2 66 20 42 50C14 86 13 126 22 166C31 201 21 230 13 263C3 298 15 327 37 342C34 329 37 312 45 302C45 321 54 334 74 341C60 311 83 277 79 254L243 248C245 278 267 311 254 345C275 338 282 323 283 309C293 316 294 328 290 343C313 324 318 299 309 268C300 236 291 207 300 168C313 112 302 78 281 48C256 15 209 1 159 10Z";
 export const eye = "M77 189C85 181 94 174 107 174C122 173 134 182 143 197C134 199 120 207 106 207C92 206 84 199 77 189Z";
 export const lip = "M128 287C136 283 141 274 150 273C155 272 158 275 160 276C163 275 165 272 170 273C179 274 184 283 192 287C184 299 173 305 160 305C147 305 136 299 128 287Z";
 
@@ -26,6 +27,25 @@ export function pair(path: string): Shape[] {
 export const eyeShade = pair("M68 188C75 173 88 161 106 162C123 162 137 173 144 193C134 185 123 179 109 179C94 179 80 187 74 192Z");
 export const liner = pair("M65 177C71 182 75 185 80 182C88 175 97 172 108 172C123 172 135 183 143 197C134 188 126 181 115 177C102 173 91 181 81 188C75 189 70 185 65 177Z");
 export const lashes = pair("M77 189C71 184 67 177 67 171M82 184C77 180 74 173 75 168M89 180C84 176 82 169 83 165M96 176C93 173 91 166 93 162M104 174C102 170 101 164 104 161M112 175C112 171 112 166 115 163M121 178C122 174 123 170 126 168M129 183C131 180 132 177 135 176");
+
+const linerVariants = {
+  classic: pair("M76 190C84 178 95 172 107 172C122 172 135 182 143 197C135 189 127 179 110 176C97 173 86 182 76 190Z"),
+  winged: liner,
+  puppy: pair("M63 199C69 196 73 191 78 185C89 176 97 172 109 172C124 173 135 183 143 197C136 188 127 179 110 176C97 174 87 181 79 189C76 194 71 199 63 199Z"),
+  graphic: [
+    ...liner,
+    ...pair("M63 167C73 172 79 172 87 167C96 161 105 159 115 161C126 163 135 171 139 178C135 175 130 172 125 169C113 162 99 163 88 169C79 174 72 174 63 167Z"),
+  ],
+} satisfies Record<StudioLinerStyle, Shape[]>;
+
+const shadowVariants = {
+  lid: pair("M77 188C86 175 96 168 109 169C122 169 135 181 143 195C131 185 121 176 107 177C94 177 84 184 77 188Z"),
+  crease: pair("M72 177C86 162 98 157 111 158C127 160 138 171 145 184C137 175 125 167 112 166C98 165 84 169 72 177Z"),
+  outer: pair("M66 186C72 172 80 170 91 168C98 171 102 177 99 182C91 184 82 187 77 194C72 195 69 191 66 186Z"),
+  inner: pair("M128 181C136 182 143 190 149 198C152 204 148 208 141 206C136 201 134 191 128 181Z"),
+  lower: pair("M75 193C84 202 97 210 108 210C121 209 134 203 142 200C136 210 122 217 107 218C93 217 82 208 75 193Z"),
+  whole: eyeShade,
+} satisfies Record<StudioShadowZone, Shape[]>;
 
 const forehead = single("M74 121C80 78 111 53 160 53C209 53 240 78 246 121C232 145 202 148 160 147C118 148 88 145 74 121Z");
 const centreForehead = single("M120 106C124 91 145 84 160 84C175 84 196 91 200 106C202 121 181 134 160 135C139 134 118 121 120 106Z");
@@ -96,10 +116,47 @@ export const zoneGeometry = {
   cheveux: single(hairSilhouette),
 } satisfies Record<FaceZone, Shape[]>;
 
+function moveShape(shape: Shape, from: StudioAnchor, to: StudioAnchor): Shape {
+  if (from.x === to.x && from.y === to.y) return shape;
+  const x = ((to.x - from.x) * 320).toFixed(2);
+  const y = ((to.y - from.y) * portraitHeight).toFixed(2);
+  return { ...shape, transform: `translate(${x} ${y})${shape.transform ? ` ${shape.transform}` : ""}` };
+}
+
+const browProfiles = {
+  natural: { peak: 105, lift: 8, inner: 164 },
+  arched: { peak: 111, lift: 14, inner: 163 },
+  straight: { peak: 103, lift: 3, inner: 159 },
+  soft: { peak: 103, lift: 10, inner: 169 },
+} satisfies Record<StudioBrowShape, { peak: number; lift: number; inner: number }>;
+
+function browGeometry(layer: PigmentLayer): Shape[] {
+  const config = layer.details?.brow;
+  const { peak, lift, inner } = browProfiles[config?.shape ?? "natural"];
+  const peakY = 157 - lift + (0.5 - (config?.arch ?? 0.5)) * 9;
+  const thickness = 2.2 + (config?.thickness ?? 0.5) * 9;
+  const lowerY = peakY + thickness;
+  const path = `M77 163 C86 ${peakY + 4} ${peak - 9} ${peakY} ${peak} ${peakY} C120 ${peakY + 1} 135 ${inner - 7} 143 ${inner} C134 ${inner - 2} 121 ${lowerY + 2} ${peak} ${lowerY} C94 ${lowerY} 85 161 77 163Z`;
+  return pair(path).map((shape, index) => {
+    const side: StudioSide = index === 0 ? "left" : "right";
+    return moveShape(shape, getStudioAnchor("brow", side), getStudioAnchor("brow", side, layer.details));
+  });
+}
+
 export function pigmentShapes(layer: PigmentLayer): Shape[] {
+  if (layer.kind === "brow") return browGeometry(layer);
+  if (layer.kind === "blush" && (layer.details?.blush?.left || layer.details?.blush?.right)) {
+    const shapes = layer.placement ? placementShapes[layer.placement] : apples;
+    return shapes.map((shape, index) => {
+      if (index > 1) return shape;
+      const side: StudioSide = index === 0 ? "left" : "right";
+      const from = getStudioAnchor("blush", side, undefined, layer.placement);
+      return moveShape(shape, from, getStudioAnchor("blush", side, layer.details, layer.placement));
+    });
+  }
   if (layer.placement) return placementShapes[layer.placement];
-  if (layer.kind === "eyeshadow") return eyeShade;
-  if (layer.kind === "eyeliner") return liner;
+  if (layer.kind === "eyeshadow") return shadowVariants[layer.details?.shadow?.zone ?? "whole"];
+  if (layer.kind === "eyeliner") return linerVariants[layer.details?.liner?.style ?? "winged"];
   if (layer.kind === "mascara") return lashes;
   if (layer.kind === "lip") return zoneGeometry.levres;
   if (layer.zone === "joues") {

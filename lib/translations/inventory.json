@@ -128,5 +128,17 @@
   "Saved": ["Guardado", "Salvato"],
   "View in my products": ["Ver en mis productos", "Vedi nei miei prodotti"],
   "Original entry": ["Ficha original", "Scheda originale"],
-  "This product couldn’t be saved.": ["No se ha podido guardar este producto.", "Non è stato possibile salvare questo prodotto."]
+  "This product couldn’t be saved.": ["No se ha podido guardar este producto.", "Non è stato possibile salvare questo prodotto."],
+  "Manufacturer": ["Fabricante", "Produttore"],
+  "Brand listings and supplementary data.": ["Fichas de marca y datos complementarios.", "Schede dei marchi e dati integrativi."],
+  "Try in the Studio": ["Probar en el Estudio", "Prova nello Studio"],
+  "Choose a shade": ["Elige un tono", "Scegli una tonalità"],
+  "Approximate colour": ["Color aproximado", "Colore indicativo"],
+  "View saved product": ["Ver producto guardado", "Vedi il prodotto salvato"],
+  "Where to save?": ["¿Dónde guardar?", "Dove salvare?"],
+  "Choose a destination": ["Elige un destino", "Scegli una destinazione"],
+  "Save here": ["Guardar aquí", "Salva qui"],
+  "View on brand site": ["Ver en la web de la marca", "Vedi sul sito del marchio"],
+  "Community data": ["Datos comunitarios", "Dati della community"],
+  "Change": ["Cambiar", "Cambia"]
 }

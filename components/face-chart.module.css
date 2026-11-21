@@ -23,6 +23,35 @@
   cursor: pointer;
 }
 
+.face[data-placing="true"] {
+  touch-action: none;
+  user-select: none;
+}
+
+.placementBounds {
+  fill: none;
+  stroke: var(--brand, #5632c1);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: .82;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.placementMarker {
+  fill: #fff;
+  stroke: var(--brand-dark, #382375);
+  stroke-width: 1.8;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.placementTarget {
+  cursor: crosshair;
+  pointer-events: all;
+  touch-action: none;
+}
+
 .faceZone path,
 .placementGuide path,
 .applicationMarking path {

@@ -19,13 +19,13 @@ Ouvre `http://localhost:3000` tant que le serveur tourne. Le site et le guide d�
 
 ## Recette rapide
 
-1. Dans la barre de recherche de l’en-tête, cherche `Huda`, `Cicaplast` ou le code `3337875795456`. Vérifie le nom, la marque et la photo lorsque la source en propose une. Enregistre un produit et retrouve-le dans **Mes produits**.
+1. Dans la barre de recherche, cherche `Huda`, sélectionne **Strawberry Latte** pour **Blush Filter**, puis enregistre la teinte dans **À essayer**. Ajoute une deuxième teinte en vérifiant que la même destination est utilisée. Utilise **Changer** pour enregistrer une teinte dans **Ma trousse**. Essaie aussi le code `6294018408802`.
 2. Ouvre la fiche d’un produit enregistré. Consulte sa provenance et l’INCI s’il est disponible. Repère l’état des mentions végane et cruelty-free selon les données de la source.
 3. Dans le Studio, essaie une poudre translucide puis un fard teinté. La poudre n’ajoute aucun pigment. Le fard dépose la couleur sélectionnée sur la zone choisie.
 4. Dans le menu des langues de l’en-tête, sélectionne **English**, recharge la page, puis repasse en **Français**. Dans **Paramètres**, renseigne une observation et un sous-ton, puis prépare une trame du matin à partir de tes produits.
 5. Pour tester le service worker, arrête le serveur de développement, lance `npm run build` puis `npm start`, ouvre l’espace une première fois en ligne, puis réessaie hors connexion. L’installation de la PWA et le service worker exigent HTTPS ou localhost.
 6. Pour tester les comptes et le journal Plus, suis la configuration Supabase et Stripe test du README. Sans configuration, aucun paiement n’est possible dans l’aperçu.
-7. Depuis **Simulation maquillage**, change la carnation et superpose le fard et l’eyeliner. Passe de **Visage nu** à **Look maquillé** pour comparer les deux vues et vérifier que tes calques reviennent. Prélève ensuite une nuance via l’onglet photo et applique-la dans le Studio.
+7. Dans **Simulation maquillage**, compare deux teintes. Déplace le blush, applique le miroir, choisis une zone de fard, une forme de liner et une forme de sourcils. Passe de **Visage nu** à **Look maquillé** pour retrouver tes calques. Essaie aussi un exemple depuis **Styles de maquillage** et prélève une couleur avec l’onglet **Prélever une teinte**.
 8. Dans **Mes listes**, crée une liste et ajoute un produit avec une raison. Coche-le, recharge la page, puis retire le produit du vanity pour vérifier que la liste conserve son nom et la raison.
 9. Ajoute une étape capillaire à une routine. Choisis les pointes, saisis le nom de la brosse et coche le massage si c’est le geste prévu. Lance la routine et vérifie les informations et le repère visuel.
 10. Dans le Studio, compare le blush sur le bombé des joues et en haut des pommettes. Active le guide, puis teste une poudre translucide sous les yeux et le contour de la mâchoire. Enregistre deux teintes sous un même nom de palette et essaie-les depuis le nuancier.
@@ -36,7 +36,7 @@ Ouvre `http://localhost:3000` tant que le serveur tourne. Le site et le guide d�
 
 | Espace | Ce que tu peux faire |
 | --- | --- |
-| **Catalogue et vanity** | Rechercher par nom, marque ou code-barres. Identifier les produits grâce aux photos disponibles et les enregistrer en un clic. Filtrer soins, maquillage, cheveux et parfums dans **Mes produits**. |
+| **Catalogue et trousse** | Rechercher par nom, marque, teinte ou code-barres. Ouvrir la fiche de marque, choisir une variante, l’essayer ou l’enregistrer dans une liste ou la trousse. |
 | **Compositions** | Lire la provenance, voir quelles données sont inconnues, comparer deux fiches et repérer des libellés INCI communs. Enregistrer des ingrédients à éviter et afficher les correspondances disponibles. |
 | **Conservation** | Consulter les dates d’ouverture, PAO et dates explicites déjà renseignées. Repérer les échéances proches ou dépassées. |
 | **Profil** | Noter son ressenti, ses observations et son sous-ton. Consulter la méthode de comparaison des sous-tons. Préparer une trame matinale avec les produits dont on confirme le rôle. |

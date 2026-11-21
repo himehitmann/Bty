@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { findMakeupPlacement, makeupPlacementIds } from "./makeup-placements";
+import { studioPlacementDetailsSchema } from "./studio-advanced";
 
 export const studioAreas = ["visage", "joues", "yeux", "levres"] as const;
 export type StudioArea = (typeof studioAreas)[number];
@@ -7,7 +8,7 @@ export type StudioArea = (typeof studioAreas)[number];
 export const studioToolsByArea = {
   visage: ["foundation", "concealer", "powder", "setting-powder"],
   joues: ["contour", "bronzer", "blush", "highlighter"],
-  yeux: ["eyeshadow", "eyeliner", "mascara"],
+  yeux: ["eyeshadow", "eyeliner", "mascara", "brow"],
   levres: ["lip"],
 } as const satisfies Record<StudioArea, readonly string[]>;
 
@@ -29,7 +30,10 @@ const studioLayerSchema = z.object({
   intensity: percentage,
   mix: z.object({ hex, amount: percentage }).optional(),
   productId: identifier.optional(),
+  variantId: identifier.optional(),
+  approximate: z.boolean().optional(),
   swatchId: identifier.optional(),
+  details: studioPlacementDetailsSchema.optional(),
 });
 
 const areaLayersSchema = z.partialRecord(z.enum(pigments), studioLayerSchema.optional());

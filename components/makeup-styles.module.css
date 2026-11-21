@@ -1,0 +1,235 @@
+.guide {
+  display: grid;
+  gap: clamp(16px, 3.25vw, 30px);
+  min-width: 0;
+}
+
+.heading {
+  max-width: 62ch;
+}
+
+.heading h1 {
+  margin: 0 0 .5rem;
+  color: var(--ink);
+  font: 750 clamp(1.65rem, 3.3vw, 2.45rem)/1.08 var(--display, system-ui, sans-serif);
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+
+.heading p,
+.details > p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .8rem 1.05rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.filters button {
+  min-height: 44px;
+  padding-inline: .85rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--surface, white);
+  font-size: .89rem;
+  font-weight: 650;
+}
+
+.filters button:hover,
+.filters button[aria-pressed="true"] {
+  border-color: #c7b3ef;
+  color: var(--brand-dark);
+  background: var(--lavender, #f0e8ff);
+}
+
+.tone {
+  display: grid;
+  gap: .35rem;
+  max-width: 100%;
+}
+
+.tone label {
+  color: var(--muted);
+  font-size: .85rem;
+  font-weight: 600;
+}
+
+.tone select {
+  appearance: none;
+  min-width: 12rem;
+  min-height: 44px;
+  padding: .5rem 2.1rem .5rem .75rem;
+  border: 1px solid var(--line);
+  border-radius: .65rem;
+  background: linear-gradient(45deg, transparent 49%, var(--brand-dark) 50%) right 15px center / 5px 5px no-repeat,
+    linear-gradient(-45deg, transparent 49%, var(--brand-dark) 50%) right 10px center / 5px 5px no-repeat,
+    var(--surface, white);
+  color: var(--ink);
+  font: inherit;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+
+.card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface, white);
+}
+
+.illustration {
+  display: grid;
+  gap: .35rem;
+  min-width: 0;
+  padding: .65rem .8rem .8rem;
+  border-bottom: 1px solid var(--line);
+  background: radial-gradient(ellipse at 50% 22%, #ffffffd9, transparent 74%), var(--look-backdrop, #efe6f9);
+}
+
+.portrait {
+  display: grid;
+  place-items: center;
+  min-height: 174px;
+}
+
+.portrait .chart {
+  width: min(100%, 10rem);
+  height: 176px;
+  overflow: hidden;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .28rem .4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.swatches li {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  max-width: 100%;
+  padding: .16rem .34rem;
+  border-radius: 999px;
+  color: #30253b;
+  background: #ffffffad;
+  font-size: .72rem;
+  line-height: 1.27;
+  overflow-wrap: anywhere;
+}
+
+.swatch {
+  width: .83rem;
+  height: .83rem;
+  flex: none;
+  border: 1px solid #16111c26;
+  border-radius: 50%;
+}
+
+.details {
+  display: grid;
+  gap: .65rem;
+  padding: .9rem 1rem 1rem;
+}
+
+.details h2 {
+  margin: 0;
+  color: var(--ink);
+  font: 730 1.3rem/1.14 var(--display, system-ui, sans-serif);
+  letter-spacing: -.022em;
+  overflow-wrap: anywhere;
+}
+
+.details > p {
+  min-height: 3em;
+  font-size: .9rem;
+}
+
+.details details {
+  border-block: 1px solid var(--line);
+  color: var(--muted);
+  font-size: .86rem;
+}
+
+.details summary {
+  display: list-item;
+  min-height: 44px;
+  padding-block: .7rem;
+  color: var(--brand-dark);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.details ol {
+  display: grid;
+  gap: .45rem;
+  margin: .15rem 0 .65rem;
+  padding-inline-start: 1.2rem;
+  list-style: decimal;
+  line-height: 1.42;
+}
+
+.details details p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem;
+  margin: 0 0 .75rem;
+}
+
+.details details a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 29px;
+  gap: .22rem;
+  color: var(--brand-dark);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.details button {
+  justify-content: center;
+  white-space: normal;
+}
+
+@media (max-width: 530px) {
+  .toolbar {
+    align-items: start;
+  }
+
+  .portrait {
+    min-height: 151px;
+  }
+
+  .portrait .chart {
+    height: 155px;
+  }
+
+  .details > p {
+    min-height: auto;
+  }
+}

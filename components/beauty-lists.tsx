@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, ListChecks, PackagePlus, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Brush, Check, ListChecks, PackagePlus, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useId, useRef, useState, type FormEvent } from "react";
 import { useLocale } from "@/lib/i18n";
+import { beautyListName, isDefaultBeautyList, productListSnapshot } from "@/lib/beauty-list-destinations";
 import { beautyListLimits, type BeautyList, type Product } from "@/lib/model";
 import styles from "./beauty-lists.module.css";
 
@@ -14,14 +15,16 @@ type Props = {
   lists: BeautyList[];
   products: Product[];
   onChange: Update;
+  firstListId?: string;
+  onTryProduct?: (product: Product) => void;
 };
 
 const normalizeSearch = (value: string) => value.trim().normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 const suggestedNames = [["À acheter", "Shopping"], ["Favoris", "Favourites"], ["Déceptions", "Disappointments"]] as const;
 
-export function BeautyLists({ lists, products, onChange }: Props) {
+export function BeautyLists({ lists, products, onChange, firstListId, onTryProduct }: Props) {
   const { t } = useLocale();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState(firstListId);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [failed, setFailed] = useState(false);
@@ -29,7 +32,7 @@ export function BeautyLists({ lists, products, onChange }: Props) {
   const listName = useRef<HTMLInputElement>(null);
   const createButton = useRef<HTMLButtonElement>(null);
   const selected = lists.find((list) => list.id === selectedId) ?? lists[0];
-  const listLimit = lists.length >= beautyListLimits.lists;
+  const listLimit = lists.filter(({ id }) => !isDefaultBeautyList(id)).length >= beautyListLimits.lists;
 
   const createVisible = !listLimit && (creating || !lists.length);
   const update: Update = (recipe) => {
@@ -102,17 +105,17 @@ export function BeautyLists({ lists, products, onChange }: Props) {
                 setFailed(false);
               }}>
                 <ListChecks size={18} aria-hidden="true"/>
-                <span>{list.name}</span>
+                <span>{beautyListName(list, t)}</span>
                 <small>{list.items.length}</small>
               </button>
             </li>)}
           </ul>
         </nav>
-        <ListDetail key={selected.id} list={selected} products={products}
+        <ListDetail key={selected.id} list={selected} products={products} onTryProduct={onTryProduct}
           onEdit={(recipe) => update((current) => current.map((item) => item.id === selected.id ? recipe(item) : item))}
           onDelete={() => {
             if (update((current) => current.filter((item) => item.id !== selected.id))) {
-              setSelectedId(null);
+              setSelectedId(undefined);
               requestAnimationFrame(() => createButton.current?.focus());
             }
           }}
@@ -122,11 +125,12 @@ export function BeautyLists({ lists, products, onChange }: Props) {
   );
 }
 
-function ListDetail({ list, products, onEdit, onDelete }: {
+function ListDetail({ list, products, onEdit, onDelete, onTryProduct }: {
   list: BeautyList;
   products: Product[];
   onEdit: (recipe: (current: BeautyList) => BeautyList) => boolean;
   onDelete: () => void;
+  onTryProduct?: (product: Product) => void;
 }) {
   const { t } = useLocale();
   const [listAction, setListAction] = useState<"rename" | "delete" | null>(null);
@@ -147,7 +151,7 @@ function ListDetail({ list, products, onEdit, onDelete }: {
   const atLimit = list.items.length >= beautyListLimits.items;
   const checked = list.items.filter((item) => item.checked).length;
   const storedProducts = new Set(list.items.flatMap((item) => item.productId ? [item.productId] : []));
-  const presentProducts = new Set(products.map((product) => product.id));
+  const presentProducts = new Map(products.map((product) => [product.id, product]));
   const search = normalizeSearch(query);
   const matches = picker ? products.filter((product) => !storedProducts.has(product.id)
     && normalizeSearch(`${product.name} ${product.brand}`).includes(search)) : [];
@@ -192,16 +196,16 @@ function ListDetail({ list, products, onEdit, onDelete }: {
     <section className={styles.detail} aria-labelledby={titleId}>
       <div className={styles.detailHeader}>
         <div>
-          <h2 id={titleId}>{list.name}</h2>
+          <h2 id={titleId}>{beautyListName(list, t)}</h2>
           <p className={styles.muted}>{t(`${checked} / ${list.items.length} cochés`, `${checked} / ${list.items.length} checked`)}</p>
         </div>
         {!listAction && <div className={styles.actions}>
-          <button type="button" className="button button-secondary" onClick={() => { setName(list.name); setListAction("rename"); }}>
+          <button type="button" className="button button-secondary" onClick={() => { setName(beautyListName(list, t)); setListAction("rename"); }}>
             <Pencil size={15} aria-hidden="true"/>{t("Renommer", "Rename")}
           </button>
-          <button type="button" className={styles.iconButton} aria-label={t("Supprimer la liste", "Delete list")} onClick={() => setListAction("delete")}>
+          {!isDefaultBeautyList(list.id) && <button type="button" className={styles.iconButton} aria-label={t("Supprimer la liste", "Delete list")} onClick={() => setListAction("delete")}>
             <Trash2 size={17} aria-hidden="true"/>
-          </button>
+          </button>}
         </div>}
       </div>
 
@@ -241,7 +245,7 @@ function ListDetail({ list, products, onEdit, onDelete }: {
         {!!products.length && !atLimit && <button type="button" className="button button-secondary" aria-expanded={picker} onClick={() => {
           setPicker(!picker);
           if (!picker) requestAnimationFrame(() => pickerSearch.current?.focus());
-        }}><PackagePlus size={16} aria-hidden="true"/>{t("Ajouter depuis mon vanity", "Add from my collection")}</button>}
+        }}><PackagePlus size={16} aria-hidden="true"/>{t("Ajouter depuis ma trousse", "Add from my collection")}</button>}
         {picker && !atLimit && <div className={styles.picker}>
           <label className={styles.search}>
             <Search size={16} aria-hidden="true"/>
@@ -254,6 +258,7 @@ function ListDetail({ list, products, onEdit, onDelete }: {
               {matches.slice(0, 8).map((product) => <li key={product.id}>
                 <button type="button" onClick={() => addItem({
                   productId: product.id,
+                  product: productListSnapshot(product),
                   text: product.brand ? `${product.name} · ${product.brand}` : product.name,
                 })}>
                   <span>{product.name}{product.brand && <small>{product.brand}</small>}</span>
@@ -273,7 +278,8 @@ function ListDetail({ list, products, onEdit, onDelete }: {
       {!!list.items.length ? <ul className={styles.entries}>
         {list.items.map((item) => {
           const action = entryAction?.id === item.id ? entryAction : null;
-          const fromVanity = item.productId && presentProducts.has(item.productId);
+          const fromVanity = item.productId ? presentProducts.get(item.productId) : undefined;
+          const product = fromVanity ?? item.product;
           return <li key={item.id} className={styles.entry}>
             <div className={styles.entryRow}>
               <div className={styles.entryCopy}>
@@ -284,12 +290,15 @@ function ListDetail({ list, products, onEdit, onDelete }: {
                   }}/>
                   <span>
                     <span className={item.checked ? styles.checked : undefined}>{item.text}</span>
-                    {fromVanity && <small>{t("Dans mon vanity", "In my collection")}</small>}
+                    {fromVanity && <small>{t("Dans ma trousse", "In my collection")}</small>}
                   </span>
                 </label>
                 {item.reason && <p className={styles.reason}>{item.reason}</p>}
               </div>
               {!action && <div className={styles.actions}>
+                {onTryProduct && product?.category === "maquillage" && <button type="button" className="button button-secondary" onClick={() => onTryProduct(product)}>
+                  <Brush size={15} aria-hidden="true"/>{t("Essayer", "Try")}<span className="sr-only"> · {item.text}</span>
+                </button>}
                 <button type="button" className={styles.iconButton} aria-label={t(`Modifier ${item.text}`, `Edit ${item.text}`)}
                   onClick={() => setEntryAction({ kind: "edit", id: item.id, text: item.text, reason: item.reason ?? "" })}><Pencil size={16} aria-hidden="true"/></button>
                 <button type="button" className={styles.iconButton} aria-label={t(`Supprimer ${item.text}`, `Delete ${item.text}`)}

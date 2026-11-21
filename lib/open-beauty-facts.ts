@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { catalogBarcode, catalogBrandAlias, catalogImageUrl, localCatalog, matchesCatalogBrand, normalizeCatalogQuery, normalizeCatalogText, type CatalogSearchMode } from "@/lib/catalog";
+import { catalogBarcode, catalogBrandAlias, localCatalog, matchesCatalogBrand, normalizeCatalogQuery, normalizeCatalogText, type CatalogSearchMode } from "@/lib/catalog";
 import { declaredProductText, productSchema, type Product } from "@/lib/model";
 
 const externalOrigin = "https://world.openbeautyfacts.org";
@@ -37,7 +37,6 @@ const externalProduct = z.object({
   brands_tags: z.array(z.string()).nullish().catch(undefined),
   ingredients_text_fr: z.string().nullish(),
   ingredients_text: z.string().nullish(),
-  image_front_small_url: z.string().nullish(),
   categories_tags: z.array(z.string()).nullish(),
   labels_tags: z.array(z.string()).nullish().catch(undefined),
   usage_fr: optionalExternalText,
@@ -104,7 +103,7 @@ function productNameIsUseful(name: string, brands: readonly string[]): boolean {
     && !brands.some((brand) => normalizeCatalogQuery(brand.replace(/^[a-z]{2}:/i, "")) === title);
 }
 
-function normalizeProduct(product: unknown, includeImages: boolean, barcodeLookup: boolean, brandQuery?: string): Product | null {
+function normalizeProduct(product: unknown, barcodeLookup: boolean, brandQuery?: string): Product | null {
   const parsed = externalProduct.safeParse(product);
   if (!parsed.success) return null;
 
@@ -128,10 +127,6 @@ function normalizeProduct(product: unknown, includeImages: boolean, barcodeLooku
   const instructions = [data.usage_fr, data.directions_fr, data.instructions_fr, data.usage, data.directions, data.instructions]
     .map((value) => declaredProductText(value ?? ""))
     .find((value) => value.length > 0 && value.length <= 1200);
-  const remoteImage = includeImages ? catalogImageUrl(data.image_front_small_url, data.code) : undefined;
-  const imageUrl = remoteImage?.startsWith("https://") ? remoteImage
-    : includeImages ? catalogImageUrl(reference?.imageUrl, data.code) : undefined;
-
   const normalized = productSchema.safeParse({
     id: `obf-${data.code}`,
     name,
@@ -139,7 +134,6 @@ function normalizeProduct(product: unknown, includeImages: boolean, barcodeLooku
     category: reference?.category ?? getCategory(name, data.categories_tags ?? []),
     ingredients,
     barcode: data.code,
-    imageUrl,
     source: "open-beauty-facts",
     sourceUrl,
     claims: getClaimEvidence(data.labels_tags ?? [], sourceUrl),
@@ -154,14 +148,14 @@ export function catalogProviderQuery(query: string, mode: CatalogSearchMode): st
   return catalogBrandAlias(query) ?? (mode === "brand" ? normalizeCatalogQuery(query) : query.replace(/[\u2010-\u2015]/g, "-").replace(/[‘’]/g, "'"));
 }
 
-function externalUrl(query: string, mode: CatalogSearchMode, barcode: string | undefined, includeImages: boolean): URL {
+function externalUrl(query: string, mode: CatalogSearchMode, barcode: string | undefined): URL {
   // The native Huda Beauty brand facet omits identifiable products returned by text search.
   const useBrandFacet = mode === "brand" && !catalogBrandAlias(query);
   const path = barcode ? `/api/v2/product/${barcode}.json`
     : useBrandFacet ? `/facets/brands/${encodeURIComponent(query.replaceAll(" ", "-"))}.json`
       : "/cgi/search.pl";
   const url = new URL(path, externalOrigin);
-  url.searchParams.set("fields", includeImages ? `${fieldNames},image_front_small_url` : fieldNames);
+  url.searchParams.set("fields", fieldNames);
 
   if (!barcode) {
     url.searchParams.set("page_size", String(providerPageSize));
@@ -176,10 +170,10 @@ function externalUrl(query: string, mode: CatalogSearchMode, barcode: string | u
   return url;
 }
 
-type SearchOptions = { signal?: AbortSignal; userAgent?: string; includeImages?: boolean };
+type SearchOptions = { signal?: AbortSignal; userAgent?: string };
 
 export async function searchOpenBeautyFacts(
-  input: string, mode: CatalogSearchMode, { signal, userAgent, includeImages = true }: SearchOptions = {},
+  input: string, mode: CatalogSearchMode, { signal, userAgent }: SearchOptions = {},
 ): Promise<Product[]> {
   const raw = catalogSearchQuery.parse(input);
   if (normalizeCatalogQuery(raw).length < 2) return [];
@@ -195,7 +189,7 @@ export async function searchOpenBeautyFacts(
   try {
     const headers = new Headers({ Accept: "application/json" });
     if (userAgent) headers.set("User-Agent", userAgent);
-    const response = await fetch(externalUrl(query, mode, barcode, includeImages), {
+    const response = await fetch(externalUrl(query, mode, barcode), {
       headers,
       mode: "cors",
       credentials: "omit",
@@ -215,7 +209,7 @@ export async function searchOpenBeautyFacts(
     const products = barcode ? [externalLookup.parse(payload).product] : externalSearch.parse(payload).products;
     const brandQuery = mode === "brand" || catalogBrandAlias(raw) ? query : undefined;
     return products.slice(0, providerPageSize).flatMap((product) => {
-      const normalized = normalizeProduct(product, includeImages, Boolean(barcode), brandQuery);
+      const normalized = normalizeProduct(product, Boolean(barcode), brandQuery);
       return normalized ? [normalized] : [];
     }).slice(0, maxProducts);
   } finally {
