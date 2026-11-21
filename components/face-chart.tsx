@@ -53,6 +53,8 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
   const targets = availableZones ?? guideZones;
   const markings = application?.kind === "hair" ? (application.hairArea ? hairGeometry[application.hairArea] : zoneGeometry.cheveux)
     : application?.kind === "care" ? zoneGeometry[selected] : [];
+  const guidedLayer = placementGuide && layers.find((layer) => layer.placement === placementGuide && layer.kind === "blush");
+  const guideShapes = guidedLayer ? pigmentShapes(guidedLayer) : placementGuide ? placementShapes[placementGuide] : [];
   const editing = Boolean(placementMode && onPlace);
   const placementBounds = editing && placementMode ? studioPlacementBounds(placementMode.tool, placementMode.side) : undefined;
 
@@ -151,7 +153,7 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
       </FacePortrait>
     </g>
     {placementGuide && <g className={styles.placementGuide} data-placement-guide={placementGuide} aria-hidden="true">
-      {placementShapes[placementGuide].map(({ path, transform }, index) => <path d={path} transform={transform} key={index}/>)}
+      {guideShapes.map(({ path, transform }, index) => <path d={path} transform={transform} key={index}/>)}
     </g>}
     {application && <g className={styles.applicationMarking} data-application={application.kind} data-hair-area={application.hairArea}
       key={`${application.kind}-${application.hairArea ?? selected}`} aria-hidden="true">

@@ -69,21 +69,33 @@ export function Routines({ products, routines, palette = emptyState.palette, pre
   const [guideId, setGuideId] = useState<string | undefined>(undefined);
   const [dismissedStartId, setDismissedStartId] = useState<string | undefined>(undefined);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const overviewHeading = useRef<HTMLHeadingElement>(null);
+  const deleteTrigger = useRef<HTMLButtonElement | null>(null);
   const requestedGuide = startRoutineId === dismissedStartId ? undefined : startRoutineId;
   const activeRoutineId = onStartGuide ? startRoutineId : requestedGuide ?? guideId;
   const activeRoutine = routines.find((routine) => routine.id === activeRoutineId);
+
+  function focusOverview() {
+    requestAnimationFrame(() => overviewHeading.current?.focus());
+  }
 
   function leaveGuide() {
     setGuideId(undefined);
     setDismissedStartId(startRoutineId);
     onExitGuide?.();
+    focusOverview();
   }
 
   function saveRoutine(routine: Routine) {
     const existing = routines.some((item) => item.id === routine.id);
     if (onChange(existing ? routines.map((item) => item.id === routine.id ? routine : item) : [...routines, routine])) {
-      setDraft(null);
+      closeEditor();
     }
+  }
+
+  function closeEditor() {
+    setDraft(null);
+    focusOverview();
   }
 
   if (activeRoutine?.steps.length) {
@@ -91,14 +103,14 @@ export function Routines({ products, routines, palette = emptyState.palette, pre
   }
 
   if (draft) {
-    return <RoutineEditor initial={draft} products={products} palette={palette} preferences={preferences} onSave={saveRoutine} onCancel={() => setDraft(null)} />;
+    return <RoutineEditor initial={draft} products={products} palette={palette} preferences={preferences} onSave={saveRoutine} onCancel={closeEditor} />;
   }
 
   return (
     <section className={styles.page} aria-labelledby="routines-title">
       <div className={styles.heading}>
         <div>
-          <h1 id="routines-title" className={styles.title}>{t("Mes routines", "My routines")}</h1>
+          <h1 id="routines-title" ref={overviewHeading} tabIndex={-1} className={styles.title}>{t("Mes routines", "My routines")}</h1>
           <p className={styles.subtitle}>{t("Organise tes gestes et retrouve leur ordre au quotidien.", "Organize your steps and follow them day to day.")}</p>
         </div>
         <button type="button" className="button button-primary" disabled={routines.length >= 100} onClick={() => {
@@ -135,26 +147,34 @@ export function Routines({ products, routines, palette = emptyState.palette, pre
                     ))}
                   </ol>
                 )}
-                {pendingDelete === routine.id ? (
-                  <div className={styles.confirm}>
+                {pendingDelete === routine.id && (
+                  <div className={styles.confirm} role="group" aria-label={t("Confirmer la suppression de la routine", "Confirm routine deletion")}>
                     <p>{t("Supprimer cette routine ?", "Delete this routine?")}</p>
                     <div className={styles.actions}>
-                      <button type="button" className="button button-secondary" onClick={() => setPendingDelete(null)}>{t("Annuler", "Cancel")}</button>
+                      <button type="button" className="button button-secondary" autoFocus onClick={() => {
+                        setPendingDelete(null);
+                        requestAnimationFrame(() => deleteTrigger.current?.focus());
+                      }}>{t("Annuler", "Cancel")}</button>
                       <button type="button" className={`${styles.danger} button button-secondary`} onClick={() => {
-                        if (onChange(routines.filter((item) => item.id !== routine.id))) setPendingDelete(null);
+                        if (onChange(routines.filter((item) => item.id !== routine.id))) {
+                          setPendingDelete(null);
+                          focusOverview();
+                        }
                       }}>{t("Supprimer", "Delete")}</button>
                     </div>
                   </div>
-                ) : (
-                  <div className={styles.cardActions}>
+                )}
+                  <div className={styles.cardActions} hidden={pendingDelete === routine.id}>
                     <button type="button" className="button button-primary" disabled={routine.steps.length === 0} onClick={() => {
                       if (onStartGuide) onStartGuide(routine.id);
                       else setGuideId(routine.id);
                     }}><Play size={16} aria-hidden="true" /> {t("Lancer", "Start")}</button>
                     <button type="button" className={styles.iconButton} aria-label={t(`Modifier ${routine.name}`, `Edit ${routine.name}`)} onClick={() => setDraft(routine)}><Pencil size={18} aria-hidden="true" /></button>
-                    <button type="button" className={styles.iconButton} aria-label={t(`Supprimer ${routine.name}`, `Delete ${routine.name}`)} onClick={() => setPendingDelete(routine.id)}><Trash2 size={18} aria-hidden="true" /></button>
+                    <button type="button" className={styles.iconButton} aria-label={t(`Supprimer ${routine.name}`, `Delete ${routine.name}`)} onClick={(event) => {
+                      deleteTrigger.current = event.currentTarget;
+                      setPendingDelete(routine.id);
+                    }}><Trash2 size={18} aria-hidden="true" /></button>
                   </div>
-                )}
               </li>
             );
           })}
@@ -178,7 +198,7 @@ function RoutineEditor({ initial, products, palette, preferences, onSave, onCanc
   const id = useId();
 
   useEffect(() => {
-    heading.current?.focus({ preventScroll: true });
+    heading.current?.focus();
   }, []);
 
   function updateStep(stepId: string, change: Partial<RoutineStep>) {
@@ -384,7 +404,7 @@ function Vigilance({ notes }: { notes: string[] }) {
 
 const previewMessages = {
   none: ["Zone d’application indiquée par le contour.", "The outline marks where to apply the product."],
-  unknown: ["Renseigne un type et un effet de maquillage dans le vanity pour afficher une teinte.", "Add a makeup type and finish in the vanity to preview a shade."],
+  unknown: ["La source ne renseigne pas le type ou le fini de ce maquillage.", "The source doesn’t specify this product’s makeup type or finish."],
   transparent: ["Fini transparent. Le contour indique où l’appliquer.", "Transparent finish. The outline marks where to apply it."],
   mattifying: ["Fini matifiant représenté sans pigment supplémentaire.", "Matte finish shown without added pigment."],
   "wrong-zone": ["Aperçu indisponible pour ce type de maquillage sur cette zone.", "This makeup type has no preview for the selected area."],
@@ -420,12 +440,13 @@ function RoutineGuide({ routine, products, palette, preferences, onExit, onCompl
   onComplete?: (routine: Routine) => boolean;
 }) {
   const { t, locale } = useLocale();
-  const [index, setIndex] = useState(0);
+  const [position, setIndex] = useState(0);
   const [furthest, setFurthest] = useState(0);
   const [zone, setZone] = useState<FaceZone | null>(null);
   const [finished, setFinished] = useState(false);
   const [showPlacement, setShowPlacement] = useState(true);
   const heading = useRef<HTMLHeadingElement>(null);
+  const index = Math.min(position, routine.steps.length - 1);
   const step = routine.steps[index];
   const last = index === routine.steps.length - 1;
   const selectedZone = zone ?? step?.zone ?? "visage";
@@ -433,7 +454,7 @@ function RoutineGuide({ routine, products, palette, preferences, onExit, onCompl
   const layers = faceMakeupLayers(routine.steps, products, palette, index);
 
   useEffect(() => {
-    heading.current?.focus({ preventScroll: true });
+    heading.current?.focus();
   }, [finished]);
 
   function goTo(nextIndex: number) {
@@ -499,7 +520,7 @@ function RoutineGuide({ routine, products, palette, preferences, onExit, onCompl
                 : t("Tu peux passer à l’étape suivante ou mettre à jour ta routine.", "Skip to the next step or edit your routine."))}</p>
             )}
             {instructions && (
-              <details className={styles.instructions} open={!step.note || undefined}>
+              <details key={step.id} className={styles.instructions} open={!step.note || undefined}>
                 <summary>{t("Consignes du produit", "Product directions")} · {instructionSource}</summary>
                 <p>{instructions.text}</p>
                 {"url" in instructions && <a href={instructions.url} target="_blank" rel="noreferrer">{t("Voir la source", "View source")}</a>}

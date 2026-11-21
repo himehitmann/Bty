@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, Brush, CalendarClock, Check, ChevronRight, CircleAlert, Columns2, Droplets, ExternalLink, Heart, Plus, Scissors, Search, SprayCan, SwatchBook, Trash2 } from "lucide-react";
 import { beautyListName, sameProductVariant, vanityDestination } from "@/lib/beauty-list-destinations";
 import { analyzeProduct, ingredientList } from "@/lib/analysis";
@@ -46,14 +46,18 @@ function feedbackLabel(feedback: NonNullable<Product["feedback"]>, t: Translate)
 
 function ProductPhoto({ product, size = "card" }: { product: Product; size?: "card" | "thumb" | "detail" }) {
   const { t } = useLocale();
-  const validated = catalogImageUrl(product.imageUrl, product.barcode);
-  const url = product.barcode || validated?.startsWith("/") ? validated : undefined;
+  const url = catalogImageUrl(product.imageUrl, product.barcode, product.manufacturerUrl);
   const [failed, setFailed] = useState<string>();
   const Icon = categoryIcons[product.category];
+  const hasPhoto = Boolean(url && failed !== url);
+  const manufacturer = product.source === "manufacturer";
   return <span className={styles.productPhoto} data-size={size}>
-    {url && failed !== url ? <img src={url} alt="" loading="lazy" decoding="async" crossOrigin="anonymous" referrerPolicy="no-referrer"
-      onError={() => setFailed(url)}/>
-      : <span className={styles.photoPlaceholder}>
+    {hasPhoto ? <>
+      <img src={url} alt={size === "card" ? product.name : ""} loading="lazy" decoding="async" crossOrigin="anonymous" referrerPolicy="no-referrer"
+        onError={() => setFailed(url)}/>
+      {size === "card" && <small className={styles.photoCredit}>{manufacturer
+        ? t("Photo de la marque", "Brand photo") : t("Photo communautaire", "Community photo")}</small>}
+    </> : <span className={styles.photoPlaceholder}>
         <Icon size={size === "thumb" ? 20 : 34} strokeWidth={1.4} aria-hidden="true"/>
         {size !== "thumb" && <small>{t("Photo indisponible", "Photo unavailable")}</small>}
       </span>}
@@ -492,7 +496,9 @@ export function Catalog({ initialQuery = "", portable = false, ...actions }: Cat
       </p>}
     </section>
     <p className={`muted ${styles.catalogAttribution}`}>{t("Fiches de marques et données complémentaires.", "Brand listings and supplementary data.")}{" "}
-      <a href="https://world.openbeautyfacts.org/data" target="_blank" rel="noreferrer">Open Beauty Facts · ODbL</a>
+      <a href="https://world.openbeautyfacts.org/data" target="_blank" rel="noreferrer">Open Beauty Facts · ODbL</a>{" · "}
+      <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noreferrer"
+        aria-label={t("Licence des photos communautaires CC BY-SA 3.0", "Community photo licence CC BY-SA 3.0")}>CC BY-SA 3.0</a>
     </p>
   </section>;
 }
@@ -504,6 +510,10 @@ function CatalogueCard({ product, currentProducts, lists, destination, onSave, o
   const [choosing, setChoosing] = useState(false);
   const [target, setTarget] = useState("");
   const [failed, setFailed] = useState(false);
+  const [shadePrompt, setShadePrompt] = useState(false);
+  const primary = useRef<HTMLButtonElement>(null);
+  const shadeSelect = useRef<HTMLSelectElement>(null);
+  const destinationSelect = useRef<HTMLSelectElement>(null);
   const variants = product.variants ?? [];
   const variant = variants.find(({ id }) => id === variantId);
   const entry: Product = variant ? {
@@ -524,81 +534,96 @@ function CatalogueCard({ product, currentProducts, lists, destination, onSave, o
   const saved = !needsShade && Boolean(savedProduct || destinationList?.items.some((item) =>
     item.product ? sameProductVariant(item.product, entry) : item.productId === entry.id));
   const sourceUrl = productSource(entry);
-  const tone = variant?.shadeHex ?? variants.find(({ shadeHex }) => shadeHex)?.shadeHex ?? "#8062b9";
-  const Icon = categoryIcons[product.category];
   const official = product.source === "manufacturer";
 
+  function requireShade() {
+    if (!needsShade) return true;
+    setShadePrompt(true);
+    shadeSelect.current?.focus();
+    return false;
+  }
+
+  function closeDestination() {
+    setChoosing(false);
+    requestAnimationFrame(() => primary.current?.focus());
+  }
+
   function save(into: string) {
-    if (!into || needsShade) return;
+    if (!into || !requireShade()) return;
     if (onSave(entry, into)) {
-      setChoosing(false);
+      if (choosing) closeDestination();
       setFailed(false);
     } else setFailed(true);
   }
 
   function chooseDestination() {
+    if (!requireShade()) return;
     setTarget(chosenDestination ?? "");
     setFailed(false);
     setChoosing(true);
-    requestAnimationFrame(() => document.getElementById(`${uid}-destination`)?.focus());
+    requestAnimationFrame(() => destinationSelect.current?.focus());
   }
 
   return <article className={styles.catalogCard} data-catalog-product={product.id}>
-    <div className={styles.catalogVisual} style={{ "--product-tone": tone } as CSSProperties} aria-hidden="true">
-      <span className={styles.catalogGlyph}><Icon size={38} strokeWidth={1.35}/></span>
-      {variants.some(({ shadeHex }) => shadeHex) && <span className={styles.catalogSwatches}>
+    <div className={styles.catalogVisual}>
+      <ProductPhoto product={product}/>
+      {variants.some(({ shadeHex }) => shadeHex) && <span className={styles.catalogSwatches} aria-hidden="true">
         {variants.filter(({ shadeHex }) => shadeHex).slice(0, 7).map(({ id, shadeHex }) => <span key={id} style={{ backgroundColor: shadeHex }}/>)}
       </span>}
     </div>
-    <div className={styles.catalogBody}>
-      <div className={styles.cardText}>
-        <p className={styles.category}>{t(categoryLabels[product.category], categoryLabelsEn[product.category])}</p>
-        <h3>{product.name}</h3>
-        <p className={styles.cardBrand}>{brandLabel(product.brand, t)}</p>
+    <div className={styles.cardText}>
+      <p className={styles.category}>{t(categoryLabels[product.category], categoryLabelsEn[product.category])}</p>
+      <h3>{product.name}</h3>
+      <p className={styles.cardBrand}>{brandLabel(product.brand, t)}</p>
+    </div>
+    <div className={styles.catalogShade}>{variants.length > 0 && <div className={styles.catalogField}>
+      <label htmlFor={`${uid}-shade`}>{t("Teinte", "Shade")}<span className="sr-only"> · {product.name}</span></label>
+      <div className={styles.shadeSelect}>
+        {variant?.shadeHex && <span className={styles.shadeChip} style={{ backgroundColor: variant.shadeHex }} aria-hidden="true"/>}
+        <select ref={shadeSelect} id={`${uid}-shade`} value={variantId}
+          aria-invalid={shadePrompt || undefined} aria-describedby={shadePrompt || variant?.shadeApproximate ? `${uid}-shade-hint` : undefined}
+          onChange={(event) => { setVariantId(event.target.value); setShadePrompt(false); setFailed(false); }}>
+          <option value="">{t("Choisir une teinte", "Choose a shade")}</option>
+          {variants.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
+        </select>
       </div>
-      {variants.length > 0 && <div className={styles.catalogField}>
-        <label htmlFor={`${uid}-shade`}>{t("Teinte", "Shade")}<span className="sr-only"> · {product.name}</span></label>
-        <div className={styles.shadeSelect}>
-          {variant?.shadeHex && <span className={styles.shadeChip} style={{ backgroundColor: variant.shadeHex }} aria-hidden="true"/>}
-          <select id={`${uid}-shade`} value={variantId} onChange={(event) => { setVariantId(event.target.value); setFailed(false); }}>
-            <option value="">{t("Choisir une teinte", "Choose a shade")}</option>
-            {variants.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
-          </select>
-        </div>
-        {variant?.shadeHex && variant.shadeApproximate && <small>{t("Couleur indicative", "Approximate colour")}</small>}
-      </div>}
-      <div className={styles.cardActions}>
-        <button type="button" className={`button button-primary ${styles.cardSave}`} disabled={needsShade}
-          onClick={() => saved && chosenDestination ? onOpenDestination(chosenDestination, savedProduct)
-            : chosenDestination ? save(chosenDestination) : chooseDestination()}>
-          {saved ? <Check size={16} aria-hidden="true"/> : <Plus size={16} aria-hidden="true"/>}
-          {saved ? t("Voir l’enregistrement", "View saved product") : t("Enregistrer", "Save")}<span className="sr-only"> · {product.name}</span>
+      <small id={`${uid}-shade-hint`} role="status">{shadePrompt
+        ? t("Choisis une teinte pour continuer.", "Choose a shade to continue.")
+        : variant?.shadeApproximate ? t("Couleur indicative", "Approximate colour") : ""}</small>
+    </div>}</div>
+    <div className={styles.cardActions}>
+      <button ref={primary} type="button" className={`button button-primary ${styles.cardSave}`}
+        onClick={() => saved && chosenDestination ? onOpenDestination(chosenDestination, savedProduct)
+          : chosenDestination ? save(chosenDestination) : chooseDestination()}>
+        {saved ? <Check size={16} aria-hidden="true"/> : <Plus size={16} aria-hidden="true"/>}
+        {saved ? t("Voir l’enregistrement", "View saved product") : t("Enregistrer", "Save")}<span className="sr-only"> · {product.name}</span>
+      </button>
+      {chosenDestination && <div className={styles.destinationLine}>
+        <span>{destinationName}</span>
+        <button type="button" className={styles.cardLink} aria-expanded={choosing} onClick={chooseDestination}>
+          {t("Changer", "Change")}<span className="sr-only"> · {product.name}</span>
         </button>
-        {chosenDestination && <div className={styles.destinationLine}>
-          <span>{destinationName}</span>
-          <button type="button" className={styles.cardLink} aria-expanded={choosing} disabled={needsShade} onClick={chooseDestination}>
-            {t("Changer", "Change")}<span className="sr-only"> · {product.name}</span>
-          </button>
-        </div>}
-        {choosing && <div className={styles.catalogField}>
-          <label htmlFor={`${uid}-destination`}>{t("Où enregistrer ?", "Where to save?")}</label>
-          <select id={`${uid}-destination`} value={target} onChange={(event) => setTarget(event.target.value)}>
-            <option value="">{t("Choisir une destination", "Choose a destination")}</option>
-            <option value={vanityDestination}>{t("Ma trousse", "My collection")}</option>
-            {lists.map((list) => <option key={list.id} value={list.id}>{beautyListName(list, t)}</option>)}
-          </select>
-          <div className={styles.destinationActions}>
-            <button type="button" className="button button-primary" disabled={!target || needsShade} onClick={() => save(target)}>{t("Ajouter ici", "Save here")}</button>
-            <button type="button" className="button button-secondary" onClick={() => { setChoosing(false); setFailed(false); }}>{t("Annuler", "Cancel")}</button>
-          </div>
-        </div>}
-        {product.category === "maquillage" && <button type="button" className="button button-secondary" disabled={needsShade} onClick={() => onTry(entry)}>
-          <SwatchBook size={16} aria-hidden="true"/>{t("Essayer dans le Studio", "Try in the Studio")}<span className="sr-only"> · {product.name}</span>
-        </button>}
-        {sourceUrl && <a className={styles.cardLink} href={sourceUrl} target="_blank" rel="noreferrer">
-          <ExternalLink size={14} aria-hidden="true"/>{official ? t("Voir chez la marque", "View on brand site") : t("Données communautaires", "Community data")}<span className="sr-only"> · {product.name}</span>
-        </a>}
-      </div>
+      </div>}
+      {product.category === "maquillage" && <button type="button" className="button button-secondary" onClick={() => { if (requireShade()) onTry(entry); }}>
+        <SwatchBook size={16} aria-hidden="true"/>{t("Essayer dans le Studio", "Try in the Studio")}<span className="sr-only"> · {product.name}</span>
+      </button>}
+      {sourceUrl && <a className={styles.cardLink} href={sourceUrl} target="_blank" rel="noreferrer">
+        <ExternalLink size={14} aria-hidden="true"/>{official ? t("Voir chez la marque", "View on brand site") : t("Données communautaires", "Community data")}<span className="sr-only"> · {product.name}</span>
+      </a>}
+    </div>
+    <div className={styles.catalogExtra}>
+      {choosing && <div className={styles.catalogField}>
+        <label htmlFor={`${uid}-destination`}>{t("Où enregistrer ?", "Where to save?")}</label>
+        <select ref={destinationSelect} id={`${uid}-destination`} value={target} onChange={(event) => setTarget(event.target.value)}>
+          <option value="">{t("Choisir une destination", "Choose a destination")}</option>
+          <option value={vanityDestination}>{t("Ma trousse", "My collection")}</option>
+          {lists.map((list) => <option key={list.id} value={list.id}>{beautyListName(list, t)}</option>)}
+        </select>
+        <div className={styles.destinationActions}>
+          <button type="button" className="button button-primary" disabled={!target || needsShade} onClick={() => save(target)}>{t("Ajouter ici", "Save here")}</button>
+          <button type="button" className="button button-secondary" onClick={() => { closeDestination(); setFailed(false); }}>{t("Annuler", "Cancel")}</button>
+        </div>
+      </div>}
       {failed && <p className={styles.cardError} role="alert">{t("L’enregistrement a échoué.", "This product couldn’t be saved.")}</p>}
     </div>
   </article>;

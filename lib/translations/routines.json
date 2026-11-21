@@ -283,10 +283,11 @@
     "El contorno marca dónde aplicar el producto.",
     "Il contorno indica dove applicare il prodotto."
   ],
-  "Add a makeup type and finish in the vanity to preview a shade.": [
-    "Añade un tipo y un acabado de maquillaje en tu colección para ver un tono.",
-    "Aggiungi il tipo e il finish nella collezione per vedere la tonalità."
+  "The source doesn’t specify this product’s makeup type or finish.": [
+    "La fuente no especifica el tipo ni el acabado de este maquillaje.",
+    "La fonte non specifica il tipo o la finitura di questo trucco."
   ],
+  "Confirm routine deletion": ["Confirmar que se elimina la rutina", "Conferma l’eliminazione della routine"],
   "Transparent finish. The outline marks where to apply it.": [
     "Acabado transparente. El contorno señala dónde aplicarlo.",
     "Finish trasparente. Il contorno indica dove applicarlo."

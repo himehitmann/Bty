@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { catalogBarcode, catalogBrandAlias, localCatalog, matchesCatalogBrand, normalizeCatalogQuery, normalizeCatalogText, type CatalogSearchMode } from "@/lib/catalog";
+import { catalogCommunityImageUrl } from "@/lib/catalog-images";
 import { declaredProductText, productSchema, type Product } from "@/lib/model";
 
 const externalOrigin = "https://world.openbeautyfacts.org";
@@ -15,6 +16,7 @@ const fieldNames = [
   "brands_tags",
   "ingredients_text_fr",
   "ingredients_text",
+  "image_front_small_url",
   "categories_tags",
   "labels_tags",
   "usage_fr",
@@ -37,6 +39,7 @@ const externalProduct = z.object({
   brands_tags: z.array(z.string()).nullish().catch(undefined),
   ingredients_text_fr: z.string().nullish(),
   ingredients_text: z.string().nullish(),
+  image_front_small_url: optionalExternalText,
   categories_tags: z.array(z.string()).nullish(),
   labels_tags: z.array(z.string()).nullish().catch(undefined),
   usage_fr: optionalExternalText,
@@ -134,6 +137,7 @@ function normalizeProduct(product: unknown, barcodeLookup: boolean, brandQuery?:
     category: reference?.category ?? getCategory(name, data.categories_tags ?? []),
     ingredients,
     barcode: data.code,
+    imageUrl: catalogCommunityImageUrl(data.image_front_small_url, data.code),
     source: "open-beauty-facts",
     sourceUrl,
     claims: getClaimEvidence(data.labels_tags ?? [], sourceUrl),

@@ -1,0 +1,14 @@
+{
+  "community": [
+    "https://images.openbeautyfacts.org",
+    "https://images.openbeautyfacts.net",
+    "https://images.openfoodfacts.org",
+    "https://images.openfoodfacts.net"
+  ],
+  "manufacturer": {
+    "https://hudabeauty.com": "https://cdn.shopify.com/s/files/1/0959/8962/9206/files/",
+    "https://www.rarebeauty.com": "https://cdn.shopify.com/s/files/1/0314/1143/7703/files/",
+    "https://fentybeauty.com": "https://cdn.shopify.com/s/files/1/0341/3458/9485/files/",
+    "https://medicube.us": "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/"
+  }
+}

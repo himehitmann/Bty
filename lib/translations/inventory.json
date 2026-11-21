@@ -140,5 +140,9 @@
   "Save here": ["Guardar aquí", "Salva qui"],
   "View on brand site": ["Ver en la web de la marca", "Vedi sul sito del marchio"],
   "Community data": ["Datos comunitarios", "Dati della community"],
-  "Change": ["Cambiar", "Cambia"]
+  "Change": ["Cambiar", "Cambia"],
+  "Brand photo": ["Foto de la marca", "Foto del marchio"],
+  "Community photo": ["Foto de la comunidad", "Foto della community"],
+  "Choose a shade to continue.": ["Elige un tono para continuar.", "Scegli una tonalità per continuare."],
+  "Community photo licence CC BY-SA 3.0": ["Licencia de fotos comunitarias CC BY-SA 3.0", "Licenza per le foto della community CC BY-SA 3.0"]
 }

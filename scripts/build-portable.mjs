@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import tailwind from "@tailwindcss/postcss";
 import { build } from "esbuild";
 import postcss from "postcss";
+import imageSources from "../lib/catalog-image-sources.json" with { type: "json" };
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const destination = path.resolve(process.argv[2] ?? path.join(root, "out", "Navier.html"));
@@ -49,7 +50,8 @@ const script = outputFiles.find((file) => file.path.endsWith(".js")).text.replac
 const css = outputFiles.find((file) => file.path.endsWith(".css")).text;
 const hash = createHash("sha256").update(script).digest("base64");
 const licenses = (await Promise.all([
-  readFile(path.join(root, "public", "fonts", "bricolage-grotesque-OFL.txt"), "utf8"),
+  readFile(path.join(root, "public", "fonts", "tenor-sans-OFL.txt"), "utf8"),
+  readFile(path.join(root, "public", "fonts", "dm-sans-OFL.txt"), "utf8"),
   readFile(path.join(root, "public", "licenses", "uiverse-MIT.txt"), "utf8"),
 ])).join("\n\n").replaceAll("-->", "--&gt;");
 
@@ -59,7 +61,7 @@ await writeFile(destination + ".tmp", `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; img-src data: blob: https://images.openbeautyfacts.org https://images.openbeautyfacts.net https://images.openfoodfacts.org https://images.openfoodfacts.net; font-src data:; connect-src https://world.openbeautyfacts.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; img-src data: blob: ${[...imageSources.community, ...Object.values(imageSources.manufacturer)].join(" ")}; font-src data:; connect-src https://world.openbeautyfacts.org; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Navier</title>
 <style>${css}</style>
 </head>

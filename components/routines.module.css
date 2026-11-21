@@ -140,6 +140,8 @@
   padding-top: 0.35rem;
 }
 
+.cardActions[hidden] { display: none; }
+
 .cardActions > :first-child {
   margin-right: auto;
 }

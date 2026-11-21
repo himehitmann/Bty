@@ -76,14 +76,14 @@
   gap: .42rem .75rem;
 }
 
-.range span {
+.range > span {
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: .2rem;
 }
 
-.range output,
+.value,
 .hint {
   color: var(--muted, #595366);
   font-size: .81rem;

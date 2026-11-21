@@ -1,6 +1,7 @@
 {
   "Brows": ["Cejas", "Sopracciglia"],
   "Current colour": ["Color actual", "Colore attuale"],
+  "Finish placement": ["Terminar la colocación", "Termina il posizionamento"],
   "Build a look with your makeup bag, catalogue shades or colours sampled from your photos.": ["Crea un look con los productos de tu neceser, los tonos del catálogo o los colores que extraigas de tus fotos.", "Crea un look con i prodotti del tuo beauty case, le tonalità del catalogo o i colori prelevati dalle tue foto."],
   "Sample a shade": ["Extraer un tono", "Preleva una tonalità"],
   "Skin tone {0} · {1}": ["Tono de piel {0} · {1}", "Carnagione {0} · {1}"],

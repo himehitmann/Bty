@@ -1,5 +1,8 @@
 import type { Product } from "@/lib/model";
+import { catalogCommunityImageUrl, catalogImageUrl } from "./catalog-images";
 import { manufacturerCatalog } from "./manufacturer-catalog";
+
+export { catalogImageUrl } from "./catalog-images";
 
 export type CatalogSearchMode = "all" | "brand";
 
@@ -143,30 +146,6 @@ export function catalogBrandAlias(query: string): string | undefined {
   return name === "huda" || name === "hudabeauty" || name === "huda beauty" ? "Huda Beauty" : undefined;
 }
 
-const catalogImageOrigins = new Set([
-  "https://images.openbeautyfacts.org",
-  "https://images.openbeautyfacts.net",
-  "https://images.openfoodfacts.org",
-  "https://images.openfoodfacts.net",
-]);
-
-export function catalogImageUrl(value?: string | null, barcode?: string): string | undefined {
-  if (!value || value.length > 700) return undefined;
-  if (/^\/images\/[\w-]+\.webp$/.test(value)) return value;
-
-  try {
-    const url = new URL(value);
-    if (!catalogImageOrigins.has(url.origin) || url.username || url.password || url.search || url.hash) return undefined;
-    const match = /^\/images\/products\/(\d+(?:\/\d+)*)\/front(?:_[\w-]+)?\.\d+\.(?:100|200|400)\.(?:jpe?g|png|webp)$/i.exec(url.pathname);
-    if (!match) return undefined;
-    const imageBarcode = catalogBarcode(match[1].replaceAll("/", ""));
-    if (!imageBarcode || (barcode && imageBarcode.padStart(14, "0") !== barcode.padStart(14, "0"))) return undefined;
-    return url.href;
-  } catch {
-    return undefined;
-  }
-}
-
 function matchWords(words: string[], text: string): boolean {
   const options = text.split(" ");
   return words.every((word) => options.some((option) => option.startsWith(word)));
@@ -222,8 +201,8 @@ export function rankCatalogProducts(
   const photosByGtin = new Map<string, string>();
   for (const product of products) {
     const key = product.barcode?.padStart(14, "0");
-    const photo = catalogImageUrl(product.imageUrl, product.barcode);
-    if (key && photo?.startsWith("https://") && !photosByGtin.has(key)) photosByGtin.set(key, photo);
+    const photo = catalogCommunityImageUrl(product.imageUrl, product.barcode);
+    if (key && photo && product.source === "open-beauty-facts" && !photosByGtin.has(key)) photosByGtin.set(key, photo);
   }
 
   const ranked = products.flatMap((product) => {
@@ -232,7 +211,8 @@ export function rankCatalogProducts(
     if (gtin && productGtin !== gtin) return [];
     const score = query && !barcode ? rankProduct(product, query, words, mode) : 0;
     if (query && !barcode && !score && !keepUnmatched) return [];
-    const imageUrl = catalogImageUrl(product.imageUrl, product.barcode) ?? (productGtin ? photosByGtin.get(productGtin) : undefined);
+    const imageUrl = catalogImageUrl(product.imageUrl, product.barcode, product.manufacturerUrl) ??
+      (productGtin && product.source === "open-beauty-facts" ? photosByGtin.get(productGtin) : undefined);
     const entry = imageUrl === product.imageUrl ? product : { ...product, imageUrl };
     return [{ product: entry, key, score, hasPhoto: Boolean(imageUrl) }];
   }).sort((left, right) => right.score - left.score

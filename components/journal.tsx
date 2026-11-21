@@ -108,6 +108,7 @@ function PrivateJournal({
   const [busy, setBusy] = useState<"save" | "delete" | "export" | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<StoredJournalEntry | null>(null);
   const formSection = useRef<HTMLElement>(null);
+  const historyHeading = useRef<HTMLHeadingElement>(null);
   const deleteDialog = useRef<HTMLDialogElement>(null);
   const exportScope = useRef<AbortController | null>(null);
   const dateInput = useId();
@@ -136,6 +137,7 @@ function PrivateJournal({
         const page = await fetchJournalPage(client, userId, null, controller.signal);
         if (controller.signal.aborted) return;
         setEntries(page);
+        setLoadedDates(new Set());
         setNextBefore(page.length === journalPageSize ? page.at(-1)?.entry_date ?? null : null);
       } catch {
         if (!controller.signal.aborted) setLoadFailed(true);
@@ -290,6 +292,7 @@ function PrivateJournal({
       }
       setEntries((previous) => previous.filter((entry) => entry.entry_date !== deleteEntry.entry_date));
       setNotice("deleted");
+      requestAnimationFrame(() => historyHeading.current?.focus());
     } catch { setError("delete"); }
     finally { setBusy(null); }
   }
@@ -328,7 +331,7 @@ function PrivateJournal({
                 const description = comfort ? t(comfort.fr, comfort.en) : t("sans observation", "no entry");
                 return <button type="button" key={day.date} className={styles.day} aria-current={day.date === today ? "date" : undefined}
                   aria-pressed={day.date === selectedDate} disabled={Boolean(busy)}
-                  aria-label={`${journalDateLabel(day.date, intlLocale)}, ${description}`}
+                  aria-label={`${day.weekday} ${day.label}, ${description}`}
                   onClick={() => selectDate(day.date)}>
                   <small>{day.weekday}</small><span>{day.label}</span>
                   <i data-comfort={entry?.comfort} aria-hidden="true"/>
@@ -367,7 +370,7 @@ function PrivateJournal({
       </div>
       <section className={styles.panel} aria-labelledby="journal-history-title">
         <div className={styles.sectionHeader}>
-          <h2 id="journal-history-title"><BookOpen aria-hidden="true" size={19}/> {t("Historique", "History")}</h2>
+          <h2 id="journal-history-title" ref={historyHeading} tabIndex={-1}><BookOpen aria-hidden="true" size={19}/> {t("Historique", "History")}</h2>
           {entries.length > 0 && <button type="button" className="button button-secondary" disabled={Boolean(busy)} onClick={downloadJournal}>
             <Download aria-hidden="true" size={17}/> {busy === "export" ? t("Téléchargement…", "Downloading…") : t("Exporter le journal", "Export journal")}
           </button>}

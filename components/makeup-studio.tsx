@@ -220,6 +220,9 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
   const lookTab = useRef<HTMLButtonElement>(null);
   const photoTab = useRef<HTMLButtonElement>(null);
   const preview = useRef<HTMLHeadingElement>(null);
+  const previewPanel = useRef<HTMLElement>(null);
+  const portrait = useRef<HTMLDivElement>(null);
+  const placementTrigger = useRef<HTMLButtonElement>(null);
   const loadedTrial = useRef<Product | undefined>(undefined);
   const loadedPreset = useRef<MakeupStylePreset | undefined>(undefined);
   const [tab, setTab] = useState<StudioTab>(initialTab);
@@ -254,6 +257,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
   const pendingHere = pendingProduct?.selection.area === area && pendingProduct.selection.tool === tool;
   const selectedProduct = shadesByProduct.find((choice) => choice.id === (pendingHere ? pendingProduct.id
     : active?.productId ? productShadeId(active.productId, active.variantId) : undefined));
+  const productWithoutShade = selectedProduct?.hex ? undefined : selectedProduct;
   const recentColor = palette[0];
   const photoTool = isSetting ? "powder" : tool;
   const currentPlacement = selectedPlacement(tool, placements);
@@ -283,7 +287,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
       hex: color.hex, group: "palette" as const, apply: () => applyVirtual(color.hex, color.name, photoTool, color.id),
     })),
     ...(active && currentHex ? [{ id: "current", hex: currentHex, label: t("Couleur actuelle", "Current colour"),
-      group: "custom" as const, approximate: active.approximate, apply: () => applyVirtual(currentHex, active.name, photoTool),
+      group: "custom" as const, approximate: active.approximate, apply: () => setPreviewMode("look"),
     }] : []),
   ];
   const toneStyle = {
@@ -293,6 +297,26 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
   } as CSSProperties;
 
   useEffect(() => { setTab(initialTab); }, [initialTab]);
+
+  useEffect(() => {
+    const panel = previewPanel.current;
+    if (!panel) return;
+    const header = panel.closest(".app-shell")?.querySelector<HTMLElement>(".workspace-header");
+    const fitPreview = () => {
+      const headerHeight = header && getComputedStyle(header).position === "sticky" ? header.offsetHeight : 0;
+      const gap = 2 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+      panel.dataset.sticky = String(panel.offsetHeight + headerHeight + gap <= window.innerHeight);
+    };
+    fitPreview();
+    const observer = new ResizeObserver(fitPreview);
+    observer.observe(panel);
+    if (header) observer.observe(header);
+    window.addEventListener("resize", fitPreview);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", fitPreview);
+    };
+  }, []);
 
   const latestTrial = trialProducts.at(-1);
   useEffect(() => {
@@ -322,9 +346,9 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
     (next === "look" ? lookTab : photoTab).current?.focus();
   }
 
-  function applyVirtual(hex: string, name: string, pigmentTool: StudioTool = tool, swatchId?: string, product: ProductShade | null | undefined = selectedProduct) {
+  function applyVirtual(hex: string, name: string, pigmentTool: StudioTool = tool, swatchId?: string, product?: ProductShade) {
     if (pigmentTool === "setting-powder" || !hexPattern.test(hex)) return;
-    if (product === null) setPendingProduct(undefined);
+    setPendingProduct(undefined);
     setPreviewMode("look");
     setLook((previous) => {
       const prior = previous[area]?.[pigmentTool];
@@ -383,13 +407,34 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
     if (positioningTool && active) updateLayer({ details: setStudioAnchor(active.details, positioningTool, side, anchor) });
   }
 
+  function togglePositioning(value: boolean, byPointer: boolean) {
+    setPositioningTool(value && (tool === "blush" || tool === "brow") ? tool : undefined);
+    if (!value) return;
+    setPreviewMode("look");
+    if (!byPointer) return;
+    requestAnimationFrame(() => {
+      if (!portrait.current || !previewPanel.current) return;
+      const { top, bottom } = portrait.current.getBoundingClientRect();
+      const header = previewPanel.current.closest(".app-shell")?.querySelector<HTMLElement>(".workspace-header");
+      const covered = header && getComputedStyle(header).position === "sticky" ? header.getBoundingClientRect().bottom : 0;
+      if (top >= covered && bottom <= window.innerHeight) return;
+      previewPanel.current.scrollIntoView({ block: "start" });
+      preview.current?.focus({ preventScroll: true });
+    });
+  }
+
+  function finishPositioning() {
+    setPositioningTool(undefined);
+    requestAnimationFrame(() => placementTrigger.current?.focus());
+  }
+
   function applySetting(productId?: string) {
     setPreviewMode("look");
     setSetting(productId ? { productId } : {});
   }
 
   function applyFromPhoto(color: PaletteColor) {
-    applyVirtual(color.hex, color.name, photoTool, color.id);
+    applyVirtual(color.hex, color.name, photoTool, color.id, productWithoutShade);
     if (photoTool !== tool) setSelection({ area, tool: photoTool });
     setTab("look");
     requestAnimationFrame(() => preview.current?.focus());
@@ -470,14 +515,19 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
       <StudioLookLibrary looks={savedLooks} activeId={activeLookId} canSave={hasLook} onSave={saveLook}
         onOpen={({ id, snapshot }) => openSnapshot(snapshot, id)} onDelete={deleteLook}/>
       <div className={styles.workspace}>
-        <section className={styles.preview} aria-labelledby={`${id}-preview`}>
+        <section className={styles.preview} aria-labelledby={`${id}-preview`} ref={previewPanel}>
           <div className={styles.previewHeader}>
             <h2 id={`${id}-preview`} tabIndex={-1} ref={preview}>Face Chart</h2>
-            {currentPlacement && <button type="button" className={styles.guideToggle} aria-pressed={showGuide} aria-controls={`${id}-portrait`}
-              onClick={() => {
-                setGuideVisible(!showGuide);
-                setPreviewMode("look");
-              }}><Crosshair size={16} aria-hidden="true"/>{t("Guide de placement", "Placement guide")}</button>}
+            {(currentPlacement || positioning) && <div className={styles.previewActions}>
+              {currentPlacement && <button type="button" className={styles.guideToggle} aria-pressed={showGuide} aria-controls={`${id}-portrait`}
+                onClick={() => {
+                  setGuideVisible(!showGuide);
+                  setPreviewMode("look");
+                }}><Crosshair size={16} aria-hidden="true"/>{t("Guide de placement", "Placement guide")}</button>}
+              {positioning && <button type="button" className={styles.guideToggle} onClick={finishPositioning}>
+                {t("Terminer le placement", "Finish placement")}
+              </button>}
+            </div>}
           </div>
           <div className={styles.comparison} role="group" aria-label={t("Aperçu du visage", "Face preview")}>
             <button type="button" aria-pressed={!showLook} aria-controls={`${id}-portrait`} onClick={() => { setPreviewMode("bare"); setPositioningTool(undefined); }}>
@@ -487,7 +537,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
               {t("Look maquillé", "Makeup look")}
             </button>
           </div>
-          <div id={`${id}-portrait`} className={styles.portrait}>
+          <div id={`${id}-portrait`} className={styles.portrait} ref={portrait}>
             <FaceChart selected={area} availableZones={studioAreas} layers={showLook ? layers : []} className={styles.face} style={toneStyle}
               placementGuide={showGuide ? currentPlacement?.id : undefined} mattePlacement={showLook ? mattePlacement : undefined} showHair={showHair}
               placementMode={placementMode} onPlace={placementMode ? placeAnchor : undefined}
@@ -518,6 +568,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
             {layers.map((layer) => <li key={layer.stepId}>
               <button type="button" aria-pressed={layer.zone === area && layer.kind === tool} onClick={() => {
                 if (!isStudioArea(layer.zone)) return;
+                if (layer.kind !== tool) setPositioningTool(undefined);
                 setSelection({ area: layer.zone, tool: layer.kind });
                 setPreviewMode("look");
               }} title={layer.name}>
@@ -525,6 +576,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
               </button>
             </li>)}
             {settingApplied && <li><button type="button" aria-pressed={isSetting} onClick={() => {
+              setPositioningTool(undefined);
               setSelection({ area: "visage", tool: "setting-powder" });
               setPreviewMode("look");
             }}>
@@ -578,20 +630,20 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
           </div> : <>
           <div className={styles.shadeSources}>
             {palette.length > 0 && <SavedShades palette={palette} selected={active?.swatchId}
-              onSelect={(color) => applyVirtual(color.hex, color.name, tool, color.id)}/>}
+              onSelect={(color) => applyVirtual(color.hex, color.name, tool, color.id, productWithoutShade)}/>}
             {palette.length === 0 && <button type="button" className={styles.photoShortcut} onClick={() => {
               setTab("photo");
               photoTab.current?.focus();
             }}><SwatchBook size={16} aria-hidden="true"/>{t("Prélever une teinte sur une photo", "Sample a shade from a photo")}</button>}
           </div>
           <ColourField label={t("Couleur personnalisée", "Custom colour")} hex={active?.hex ?? shades[0].hex}
-            onChange={(hex) => applyVirtual(hex, hex)}/>
+            onChange={(hex) => applyVirtual(hex, hex, tool, undefined, productWithoutShade)}/>
           <details className={styles.exampleShades}>
             <summary>{t("Couleurs d’exemple", "Example colours")}</summary>
             <div className={styles.swatches}>
               {shades.map((shade) => <button type="button" key={shade.hex} className={styles.shade}
                 aria-pressed={active?.hex.toUpperCase() === shade.hex && !active?.productId && !active?.swatchId}
-                onClick={() => applyVirtual(shade.hex, t(...shade.label), tool, undefined, null)}>
+                onClick={() => applyVirtual(shade.hex, t(...shade.label))}>
                 <span style={{ "--swatch": shade.hex } as CSSProperties} aria-hidden="true"/>
                 <small>{t(...shade.label)}</small>
               </button>)}
@@ -606,10 +658,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
             </p>
             <StudioPlacementEditor tool={tool} details={active.details} placement={currentPlacement?.id}
               onChange={(details) => updateLayer({ details })} side={side} onSideChange={setSide} positioning={positioning}
-              onPositioningChange={(value) => {
-                if (value) setPreviewMode("look");
-                setPositioningTool(value && (tool === "blush" || tool === "brow") ? tool : undefined);
-              }}/>
+              placementTrigger={placementTrigger} portraitId={`${id}-portrait`} onPositioningChange={togglePositioning}/>
             <label className={styles.range}>
               <span>{t("Intensité", "Intensity")} <output>{formatNumber(active.intensity)} %</output></span>
               <input type="range" min={0} max={100} value={active.intensity} aria-label={t("Intensité", "Intensity")}

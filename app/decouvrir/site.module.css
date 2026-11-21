@@ -50,10 +50,11 @@
 
 .wordmark,
 .footerMark {
-  color: var(--plum);
-  font: 800 2.05rem/.96 var(--display);
-  letter-spacing: -.055em;
+  color: var(--wordmark-ink);
+  font: 400 clamp(1.4rem, 3vw, 1.95rem)/1 var(--wordmark-family);
+  letter-spacing: var(--wordmark-tracking);
   text-decoration: none;
+  text-transform: uppercase;
 }
 
 .nav,

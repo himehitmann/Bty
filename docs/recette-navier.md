@@ -19,10 +19,10 @@ Ouvre `http://localhost:3000` tant que le serveur tourne. Le site et le guide d�
 
 ## Recette rapide
 
-1. Dans la barre de recherche, cherche `Huda`, sélectionne **Strawberry Latte** pour **Blush Filter**, puis enregistre la teinte dans **À essayer**. Ajoute une deuxième teinte en vérifiant que la même destination est utilisée. Utilise **Changer** pour enregistrer une teinte dans **Ma trousse**. Essaie aussi le code `6294018408802`.
+1. Dans la barre de recherche, cherche `Huda` puis `Medicube`. Vérifie que les cartes affichent les photos de marque et alignent leurs commandes. Sélectionne **Strawberry Latte** pour **Blush Filter**, puis enregistre la teinte dans **À essayer**. Ajoute une deuxième teinte et vérifie que la même destination est utilisée. Essaie aussi le code `6294018408802`.
 2. Ouvre la fiche d’un produit enregistré. Consulte sa provenance et l’INCI s’il est disponible. Repère l’état des mentions végane et cruelty-free selon les données de la source.
 3. Dans le Studio, essaie une poudre translucide puis un fard teinté. La poudre n’ajoute aucun pigment. Le fard dépose la couleur sélectionnée sur la zone choisie.
-4. Dans le menu des langues de l’en-tête, sélectionne **English**, recharge la page, puis repasse en **Français**. Dans **Paramètres**, renseigne une observation et un sous-ton, puis prépare une trame du matin à partir de tes produits.
+4. Dans le menu des langues, sélectionne **English**, recharge, puis repasse en **Français**. Dans **Profil beauté**, renseigne une observation et un sous-ton, puis prépare une routine du matin. Depuis l’accueil, clique sur l’illustration d’une carte et vérifie la même action au clavier.
 5. Pour tester le service worker, arrête le serveur de développement, lance `npm run build` puis `npm start`, ouvre l’espace une première fois en ligne, puis réessaie hors connexion. L’installation de la PWA et le service worker exigent HTTPS ou localhost.
 6. Pour tester les comptes et le journal Plus, suis la configuration Supabase et Stripe test du README. Sans configuration, aucun paiement n’est possible dans l’aperçu.
 7. Dans **Simulation maquillage**, compare deux teintes. Déplace le blush, applique le miroir, choisis une zone de fard, une forme de liner et une forme de sourcils. Passe de **Visage nu** à **Look maquillé** pour retrouver tes calques. Essaie aussi un exemple depuis **Styles de maquillage** et prélève une couleur avec l’onglet **Prélever une teinte**.

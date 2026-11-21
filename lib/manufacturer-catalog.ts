@@ -7,6 +7,7 @@ function officialProduct(
   name: string,
   brand: string,
   manufacturerUrl: string,
+  imageUrl: string,
   makeupKind: NonNullable<Product["makeupKind"]>,
   makeupEffect: NonNullable<Product["makeupEffect"]>,
   entries: readonly VariantEntry[],
@@ -19,6 +20,7 @@ function officialProduct(
     ingredients: "",
     source: "manufacturer",
     manufacturerUrl,
+    imageUrl,
     makeupKind,
     makeupEffect,
     variants: entries.map(([id, name, barcode, shadeHex]) => ({
@@ -32,11 +34,26 @@ function officialProduct(
   };
 }
 
+function medicubeProduct(handle: string, name: string, imageUrl: string): Product {
+  return {
+    id: `manufacturer-medicube-${handle}`,
+    name,
+    brand: "Medicube",
+    category: "soin",
+    ingredients: "",
+    source: "manufacturer",
+    manufacturerUrl: `https://medicube.us/products/${handle}`,
+    imageUrl,
+  };
+}
+
 // Public manufacturer product and shade facts, verified from the linked storefronts.
 // Huda: published digital swatch colors. Rare and Fenty: representative RGB sampled
 // from their own shade-picker swatches. These values approximate on-screen color.
+// Product photos are representative pack shots hosted by each manufacturer’s store.
 export const manufacturerCatalog: readonly Product[] = [
   officialProduct("huda-blush", "Blush Filter Liquid Blush", "Huda Beauty", "https://hudabeauty.com/en-us/products/blush-filter-liquid-blush-hb01345m",
+    "https://cdn.shopify.com/s/files/1/0959/8962/9206/files/PDP-SECTION1-BLUSHFILTER-COTTONCANDY-TILE1_ded21597-e66d-4e97-afa5-e814766cdd67.webp?v=1759616942&width=480",
     "blush", "tinted", [
       ["51161393529110", "Strawberry Latte", "6294018408802", "#ae4c4a"],
       ["51161394774294", "Ube Berry", "6294018408963", "#ba548a"],
@@ -54,6 +71,7 @@ export const manufacturerCatalog: readonly Product[] = [
       ["50573490913558", "Watermelon Pop", "6294018405740", "#e26060"],
     ]),
   officialProduct("huda-powder", "Easy Bake Loose Baking & Setting Powder", "Huda Beauty", "https://hudabeauty.com/en-us/products/easy-bake-loose-baking-setting-powder-hb00140m",
+    "https://cdn.shopify.com/s/files/1/0959/8962/9206/files/PDP-SECTION1-EASYBAKELOOSEPOWDER-BANANABREAD-TILE1_a6995b11-65aa-41c9-8b8a-18540ef41440.webp?v=1759616885&width=480",
     "powder", "mattifying", [
       ["50573329400086", "Peach Pie", "6294018402725", "#f5c099"],
       ["51086110392598", "Matcha Milk Cake", "6294018409281", "#acddb3"],
@@ -69,6 +87,7 @@ export const manufacturerCatalog: readonly Product[] = [
       ["50573329694998", "Coffee Cake", undefined, "#804920"],
     ]),
   officialProduct("huda-foundation", "Easy Blur Natural Airbrush Foundation with Niacinamide", "Huda Beauty", "https://hudabeauty.com/en-us/products/easy-blur-natural-airbrush-foundation-with-niacinamide-hb01166m",
+    "https://cdn.shopify.com/s/files/1/0959/8962/9206/files/PDP-SECTION1-EASYBLUR-150G_CREME_BRULEE-TILE1.webp?v=1759872027&width=480",
     "foundation", "tinted", [
       ["50573349552406", "Milkshake 100B", "6294018403302", "#fbe4d6"],
       ["50573349585174", "Angel Food 110N", "6294018403319", "#fed7b4"],
@@ -110,6 +129,7 @@ export const manufacturerCatalog: readonly Product[] = [
       ["50573350764822", "Espresso 600N", "6294018403586", "#45332e"],
     ]),
   officialProduct("huda-concealer", "#FauxFilter Luminous Matte Concealer", "Huda Beauty", "https://hudabeauty.com/en-us/products/fauxfilter-luminous-matte-concealer-hb00855m",
+    "https://cdn.shopify.com/s/files/1/0959/8962/9206/files/PDP-SECTION1-FFCONCEALER-GRAHAMCRACKER-TILE1_dbf38229-faea-48e6-bf08-76fb7fd7c070.webp?v=1759671989&width=480",
     "concealer", "tinted", [
       ["50573414007062", "Whipped Cream 0.1", "6291107572543", "#feebd5"],
       ["50573414039830", "Royal Icing 1.1", "6291107572550", "#fce0c6"],
@@ -142,6 +162,7 @@ export const manufacturerCatalog: readonly Product[] = [
       ["50573414924566", "Chocolate Chip 8.7", "6291107572826", "#5b3429"],
     ]),
   officialProduct("huda-gloss", "FAUX FILLER Extra Shine Lip Gloss", "Huda Beauty", "https://hudabeauty.com/en-us/products/faux-filler-extra-shine-lip-gloss-hb01251m",
+    "https://cdn.shopify.com/s/files/1/0959/8962/9206/files/PDP-SECTION1-FAUXFILLERLIPGLOSS-GLASSY-TILE1_b384ae3b-ee06-4758-a70c-72126a0fc985.webp?v=1759616950&width=480",
     "lip", "tinted", [
       ["51158974431510", "LightCealer", "6294018408932", "#f8bfa3"],
       ["51161335693590", "MidCealer", "6294018408949", "#e99573"],
@@ -159,16 +180,19 @@ export const manufacturerCatalog: readonly Product[] = [
       ["50847430246678", "Coco", "6294018405351", "#5e3527"],
     ]),
   officialProduct("huda-eyes", "Creamy Obsessions Eyeshadow Palette", "Huda Beauty", "https://hudabeauty.com/en-us/products/creamy-obsessions-eyeshadow-palette-hb01249m",
+    "https://cdn.shopify.com/s/files/1/0959/8962/9206/files/PDP-SECTION1-CREAMYOBSESSIONS-GREIGE-TILE1_c243041d-9603-484a-aa28-7a9b899517d5.webp?v=1759616950&width=480",
     "eyeshadow", "tinted", [
       ["50573423018262", "Neutral Brown", "6294018404040"],
       ["50573423051030", "Greige", "6294018404583"],
     ]),
   officialProduct("huda-duo", "Baby Blush Duo Pink And Peach", "Huda Beauty", "https://hudabeauty.com/en-us/products/baby-blush-duo-pink-and-peach-hb01378",
+    "https://cdn.shopify.com/s/files/1/0959/8962/9206/files/PDP-SECTION1-BABYBLUSH-PINK_PEACH-TILE1_1.webp?v=1759616937&width=480",
     "blush", "tinted", [
       ["cotton-candy", "Cotton Candy"],
       ["peach-sorbet", "Peach Sorbet"],
     ]),
   officialProduct("rare-blush", "Soft Pinch Liquid Blush", "Rare Beauty", "https://www.rarebeauty.com/products/soft-pinch-liquid-blush",
+    "https://cdn.shopify.com/s/files/1/0314/1143/7703/files/ECOMM-SP-LIQUID-BLUSH-DEWY-HOPE.jpg?v=1762200490&width=480",
     "blush", "tinted", [
       ["43734829695111", "Hope", "840122904929", "#ea8e97"],
       ["43734829564039", "Bliss", "840122900051", "#ee948e"],
@@ -188,6 +212,7 @@ export const manufacturerCatalog: readonly Product[] = [
       ["43734829596807", "Faith", "840122900068", "#8c3455"],
     ]),
   officialProduct("rare-contour", "Soft Pinch Liquid Contour", "Rare Beauty", "https://www.rarebeauty.com/products/soft-pinch-liquid-contour",
+    "https://cdn.shopify.com/s/files/1/0314/1143/7703/files/ECOMM-SOFT-PINCH-LIQUID-CONTOUR-GENTLE.jpg?v=1762300534&width=480",
     "contour", "tinted", [
       ["42181696946311", "Gentle", "840122907234", "#b79687"],
       ["43734837264519", "Mellow", "840122907241", "#c2987f"],
@@ -198,6 +223,7 @@ export const manufacturerCatalog: readonly Product[] = [
       ["43734837428359", "Sublime", "840122908811", "#3f231d"],
     ]),
   officialProduct("rare-luminizer", "Positive Light Liquid Luminizer", "Rare Beauty", "https://www.rarebeauty.com/products/positive-light-liquid-luminizer-1",
+    "https://cdn.shopify.com/s/files/1/0314/1143/7703/files/ECOMM-PL-LIQUID-LUMINIZER-ENLIGHTEN-1440x1952.jpg?v=1762283296&width=480",
     "highlighter", "tinted", [
       ["43734829203591", "Enlighten", "840122900082", "#edd4c1"],
       ["43734829170823", "Enchant", "840122900099", "#e7bfb8"],
@@ -211,13 +237,33 @@ export const manufacturerCatalog: readonly Product[] = [
       ["43734829334663", "Reflect", "840122900150", "#af6440"],
     ]),
   officialProduct("fenty-gloss", "Gloss Bomb Universal Lip Luminizer — Fenty Glow", "Fenty Beauty", "https://fentybeauty.com/products/gloss-bomb-universal-lip-luminizer-fenty-glow",
+    "https://cdn.shopify.com/s/files/1/0341/3458/9485/files/FB3006_PROD_GLOSS_BOMB_FENTY_GLOW_CLOSED_72_1.jpg?v=1762198594&width=480",
     "lip", "tinted", [
       ["35110478774317", "Fenty Glow / Standard", "816657022513", "#e59279"],
       ["44010724917293", "Fenty Glow / Mini", "840026671569", "#e59279"],
     ]),
   officialProduct("fenty-slip", "Gloss Bomb Universal Lip Luminizer — Glass Slipper", "Fenty Beauty", "https://fentybeauty.com/products/gloss-bomb-universal-lip-luminizer-glass-slipper",
+    "https://cdn.shopify.com/s/files/1/0341/3458/9485/files/FB_SPR20_II_T2PRODUCT_CONCRETE_CLEAR_GLOSS_BOMB_CLOSED_1200x1500_14fd1a9f-9d29-4c29-bbf1-ba4a22343ab8.jpg?v=1762198209&width=480",
     "lip", "transparent", [
       ["35110457737261", "Glass Slipper / Standard", "840026645584"],
       ["44010714300461", "Glass Slipper / Mini", "840026677318"],
     ]),
+  medicubeProduct("zero-pore-pad-1", "Zero Pore Pads",
+    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/ZeroPorePads_3_604112a1-5eea-46cd-a60a-c9a0d99c36d8.jpg?v=1734678669&width=480"),
+  medicubeProduct("collagen-niacinamide-jelly-cream", "Collagen Niacinamide Jelly Cream",
+    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/jelly50ml_th2_1.jpg?v=1766563329&width=480"),
+  medicubeProduct("deep-vita-c-capsule-cream", "Deep Vita C Capsule Cream",
+    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/c096afcff419378df8afcb96182a4365.jpg?v=1768373336&width=480"),
+  medicubeProduct("rose-pdrn-pink-peptide-serum", "PDRN Pink Peptide Serum",
+    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/PDRN_01_afffce45-a253-43cc-a113-3bbb60bd4c32.jpg?v=1724649392&width=480"),
+  medicubeProduct("pdrn-pink-collagen-capsule-cream", "PDRN Pink Collagen Capsule Cream",
+    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/pdrn_4bb18716-9e52-43c7-b477-1699ac1e4c8f.jpg?v=1768373058&width=480"),
+  medicubeProduct("collagen-night-wrapping-mask", "Collagen Night Wrapping Mask",
+    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/00_6d878aff-381d-4cd6-b9e1-d8b924225025.jpg?v=1766713832&width=480"),
+  medicubeProduct("pdrn-pink-collagen-gel-mask", "Salmon PDRN Pink Collagen Jelly Gel Mask",
+    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/mask.jpg?v=1767340292&width=480"),
+  medicubeProduct("triple-collagen-serum", "Triple Collagen Serum",
+    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/00_e28ee073-2062-47ca-8fca-5a117657a736.jpg?v=1766044887&width=480"),
+  medicubeProduct("txa-niacinamide-serum", "TXA Niacinamide Serum",
+    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/TXA_00.jpg?v=1743589033&width=480"),
 ];

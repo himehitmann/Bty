@@ -1,6 +1,7 @@
 "use client";
 
 import { FlipHorizontal2, MousePointer2, RotateCcw } from "lucide-react";
+import type { Ref } from "react";
 import { useLocale, type Locale } from "@/lib/i18n";
 import type { MakeupPlacement } from "@/lib/makeup-placements";
 import {
@@ -43,10 +44,12 @@ interface StudioPlacementEditorProps {
   side: StudioSide;
   onSideChange: (side: StudioSide) => void;
   positioning: boolean;
-  onPositioningChange: (positioning: boolean) => void;
+  placementTrigger: Ref<HTMLButtonElement>;
+  portraitId: string;
+  onPositioningChange: (positioning: boolean, byPointer: boolean) => void;
 }
 
-export function StudioPlacementEditor({ tool, details, placement, onChange, side, onSideChange, positioning, onPositioningChange }: StudioPlacementEditorProps) {
+export function StudioPlacementEditor({ tool, details, placement, onChange, side, onSideChange, positioning, placementTrigger, portraitId, onPositioningChange }: StudioPlacementEditorProps) {
   const { locale, formatNumber } = useLocale();
   const text = (copy: Copy) => copy[languageIndex[locale]];
 
@@ -77,7 +80,7 @@ export function StudioPlacementEditor({ tool, details, placement, onChange, side
   const brow = details?.brow;
   const selected = details?.[editable];
   const hasPosition = Boolean(selected?.left || selected?.right);
-  const percent = (value: number) => formatNumber(value, { style: "percent", maximumFractionDigits: 0 });
+  const percent = (value: number) => formatNumber(value, { style: "percent", maximumFractionDigits: 1 });
 
   function setAnchor(change: Partial<StudioAnchor>) {
     onChange(setStudioAnchor(details, editable, side, { ...anchor, ...change }));
@@ -107,14 +110,14 @@ export function StudioPlacementEditor({ tool, details, placement, onChange, side
       </label>
       <div className={styles.adjustments}>
         <label className={styles.range}>
-          <span>{text(["Épaisseur", "Thickness", "Grosor", "Spessore"])} <output>{percent(brow?.thickness ?? 0.5)}</output></span>
-          <input type="range" min={0} max={1} step={0.01} value={brow?.thickness ?? 0.5} onChange={(event) => {
+          <span>{text(["Épaisseur", "Thickness", "Grosor", "Spessore"])} <span className={styles.value} aria-hidden="true">{percent(brow?.thickness ?? 0.5)}</span></span>
+          <input type="range" min={0} max={1} step={0.01} value={brow?.thickness ?? 0.5} aria-valuetext={percent(brow?.thickness ?? 0.5)} onChange={(event) => {
             onChange({ ...details, brow: { shape: "natural", ...brow, thickness: Number(event.target.value) } });
           }}/>
         </label>
         <label className={styles.range}>
-          <span>{text(["Courbure", "Arch", "Arco", "Curvatura"])} <output>{percent(brow?.arch ?? 0.5)}</output></span>
-          <input type="range" min={0} max={1} step={0.01} value={brow?.arch ?? 0.5} onChange={(event) => {
+          <span>{text(["Courbure", "Arch", "Arco", "Curvatura"])} <span className={styles.value} aria-hidden="true">{percent(brow?.arch ?? 0.5)}</span></span>
+          <input type="range" min={0} max={1} step={0.01} value={brow?.arch ?? 0.5} aria-valuetext={percent(brow?.arch ?? 0.5)} onChange={(event) => {
             onChange({ ...details, brow: { shape: "natural", ...brow, arch: Number(event.target.value) } });
           }}/>
         </label>
@@ -131,7 +134,8 @@ export function StudioPlacementEditor({ tool, details, placement, onChange, side
     </div>
 
     <div className={styles.buttons}>
-      <button type="button" aria-pressed={positioning} onClick={() => onPositioningChange(!positioning)}>
+      <button type="button" ref={placementTrigger} aria-pressed={positioning} aria-controls={portraitId}
+        onClick={(event) => onPositioningChange(!positioning, event.detail > 0)}>
         <MousePointer2 size={15} aria-hidden="true"/>{text(["Placer sur le visage", "Place on face", "Colocar en el rostro", "Posiziona sul viso"])}
       </button>
       <button type="button" onClick={() => onChange(mirrorStudioAnchor(details, editable, side, placement))}>
@@ -147,13 +151,13 @@ export function StudioPlacementEditor({ tool, details, placement, onChange, side
 
     <div className={styles.adjustments}>
       <label className={styles.range}>
-        <span>{text(["Horizontal", "Horizontal", "Horizontal", "Orizzontale"])} <output>{percent(anchor.x)}</output></span>
-        <input type="range" min={bounds.minX} max={bounds.maxX} step={0.001} value={anchor.x}
+        <span>{text(["Horizontal", "Horizontal", "Horizontal", "Orizzontale"])} <span className={styles.value} aria-hidden="true">{percent(anchor.x)}</span></span>
+        <input type="range" min={bounds.minX} max={bounds.maxX} step={0.001} value={anchor.x} aria-valuetext={percent(anchor.x)}
           onChange={(event) => setAnchor({ x: Number(event.target.value) })}/>
       </label>
       <label className={styles.range}>
-        <span>{text(["Vertical", "Vertical", "Vertical", "Verticale"])} <output>{percent(anchor.y)}</output></span>
-        <input type="range" min={bounds.minY} max={bounds.maxY} step={0.001} value={anchor.y}
+        <span>{text(["Vertical", "Vertical", "Vertical", "Verticale"])} <span className={styles.value} aria-hidden="true">{percent(anchor.y)}</span></span>
+        <input type="range" min={bounds.minY} max={bounds.maxY} step={0.001} value={anchor.y} aria-valuetext={percent(anchor.y)}
           onChange={(event) => setAnchor({ y: Number(event.target.value) })}/>
       </label>
     </div>

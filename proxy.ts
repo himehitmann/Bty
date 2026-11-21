@@ -1,13 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
+import { catalogImageCspSources } from "@/lib/catalog-images";
 import { getSupabaseConfig } from "@/lib/supabase/config";
-
-const beautyImageOrigins = [
-  "https://images.openbeautyfacts.org",
-  "https://images.openbeautyfacts.net",
-  "https://images.openfoodfacts.org",
-  "https://images.openfoodfacts.net",
-];
 
 export async function proxy(request: NextRequest) {
   const config = getSupabaseConfig();
@@ -26,7 +20,7 @@ export async function proxy(request: NextRequest) {
     `script-src ${scriptSources.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
     ...(!development ? [`style-src-elem 'self' 'nonce-${nonce}'`] : []),
-    `img-src 'self' data: blob: ${beautyImageOrigins.join(" ")}`,
+    `img-src 'self' data: blob: ${catalogImageCspSources.join(" ")}`,
     "font-src 'self'",
     `connect-src ${connectSources.join(" ")}`,
     "worker-src 'self'",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { catalogCommunityImageUrl, catalogImageUrl } from "./catalog-images";
 import { isDefaultBeautyList } from "./beauty-list-destinations";
 import { makeupPlacementIds } from "./makeup-placements";
 import { savedStudioLookSchema, studioLookLimits } from "./studio-looks";
@@ -21,7 +22,7 @@ export const makeupEffectLabels = {
 const identifier = z.string().min(1).max(160);
 const name = z.string().trim().min(1).max(140);
 const hex = z.string().regex(/^#[0-9a-f]{6}$/i);
-const productImage = z.string().max(700).refine((url) => /^\/images\/[\w-]+\.webp$/.test(url) || /^https:\/\/(?:images\.openbeautyfacts\.(?:org|net)|images\.openfoodfacts\.(?:org|net))\//i.test(url));
+const productImage = z.string().max(700).catch("");
 
 const evidenceUrl = z.string().trim().max(700).refine((value) => {
   if (!/^https:\/\//i.test(value) || /\p{Cc}/u.test(value)) return false;
@@ -33,8 +34,8 @@ const evidenceUrl = z.string().trim().max(700).refine((value) => {
   }
 });
 const catalogSourceUrl = evidenceUrl.regex(/^https:\/\/world\.openbeautyfacts\.org\/product\/\d{8,14}\/?$/i);
-const manufacturerProductUrl = evidenceUrl.regex(/^https:\/\/(?:hudabeauty\.com\/en-us|www\.rarebeauty\.com|fentybeauty\.com)\/products\/[a-z0-9-]+$/);
-const manufacturerVariantUrl = evidenceUrl.regex(/^https:\/\/(?:hudabeauty\.com\/en-us|www\.rarebeauty\.com|fentybeauty\.com)\/products\/[a-z0-9-]+(?:\?variant=\d{1,20})?$/);
+const manufacturerProductUrl = evidenceUrl.regex(/^https:\/\/(?:hudabeauty\.com\/en-us|www\.rarebeauty\.com|fentybeauty\.com|medicube\.us)\/products\/[a-z0-9-]+$/);
+const manufacturerVariantUrl = evidenceUrl.regex(/^https:\/\/(?:hudabeauty\.com\/en-us|www\.rarebeauty\.com|fentybeauty\.com|medicube\.us)\/products\/[a-z0-9-]+(?:\?variant=\d{1,20})?$/);
 const catalogEvidence = z.object({ source: z.literal("open-beauty-facts"), url: catalogSourceUrl });
 const manufacturerEvidence = z.object({ source: z.literal("manufacturer"), url: evidenceUrl });
 const claimEvidence = z.discriminatedUnion("source", [
@@ -88,7 +89,7 @@ export const productInput = z.object({
 
 export const productSchema = productInput.extend({
   id: identifier,
-  imageUrl: productImage.catch("").transform((image) => image || undefined).optional(),
+  imageUrl: productImage.optional(),
   source: z.enum(["manuel", "local", "open-beauty-facts", "manufacturer"]),
   sourceUrl: catalogSourceUrl.optional(),
   manufacturerUrl: manufacturerProductUrl.optional(),
@@ -127,6 +128,12 @@ export const productSchema = productInput.extend({
       context.addIssue({ code: "custom", path, message: "La fiche Open Beauty Facts doit correspondre au code-barres du produit." });
     }
   }
+}).transform((product) => {
+  if (!product.imageUrl) return product.imageUrl === undefined ? product : { ...product, imageUrl: undefined };
+  const image = product.manufacturerUrl ? catalogImageUrl(product.imageUrl, product.barcode, product.manufacturerUrl)
+    : product.imageUrl.startsWith("/") ? catalogImageUrl(product.imageUrl)
+      : catalogCommunityImageUrl(product.imageUrl, product.barcode);
+  return image === product.imageUrl ? product : { ...product, imageUrl: image };
 });
 
 const zoneSchema = z.enum(["visage", "front", "joues", "yeux", "levres", "menton", "cheveux"]);

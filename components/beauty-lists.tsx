@@ -89,7 +89,8 @@ export function BeautyLists({ lists, products, onChange, firstListId, onTryProdu
             }}>{t("Annuler", "Cancel")}</button>}
           </div>
           <div className={styles.suggestions} aria-label={t("Suggestions de noms", "Suggested list names")}>
-            {suggestedNames.map(([french, english]) => <button type="button" key={french} onClick={() => {
+            {suggestedNames.filter(([fr, en]) => !lists.some((list) => normalizeSearch(beautyListName(list, t)) === normalizeSearch(t(fr, en))))
+              .map(([french, english]) => <button type="button" key={french} onClick={() => {
               setName(t(french, english));
               listName.current?.focus();
             }}>{t(french, english)}</button>)}
@@ -142,6 +143,8 @@ function ListDetail({ list, products, onEdit, onDelete, onTryProduct }: {
   const [entryAction, setEntryAction] = useState<EntryAction | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pickerSearch = useRef<HTMLInputElement>(null);
+  const listTrigger = useRef<HTMLButtonElement | null>(null);
+  const entryTrigger = useRef<HTMLButtonElement | null>(null);
   const titleId = useId();
   const textId = useId();
   const reasonId = useId();
@@ -171,6 +174,7 @@ function ListDetail({ list, products, onEdit, onDelete, onTryProduct }: {
     if (entry && addItem({ text: entry, reason: reason.trim() || undefined })) {
       setText("");
       setReason("");
+      inputRef.current?.focus();
     }
   }
 
@@ -181,7 +185,7 @@ function ListDetail({ list, products, onEdit, onDelete, onTryProduct }: {
   function saveListName(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const label = name.trim();
-    if (label && onEdit((current) => ({ ...current, name: label }))) setListAction(null);
+    if (label && (label === beautyListName(list, t) || onEdit((current) => ({ ...current, name: label })))) closeListAction();
   }
 
   function editEntry(event: FormEvent<HTMLFormElement>, id: string) {
@@ -189,7 +193,17 @@ function ListDetail({ list, products, onEdit, onDelete, onTryProduct }: {
     if (entryAction?.kind !== "edit" || entryAction.id !== id) return;
     const label = entryAction.text.trim();
     const rationale = entryAction.reason.trim() || undefined;
-    if (label && changeItem(id, (item) => ({ ...item, text: label, reason: rationale }))) setEntryAction(null);
+    if (label && changeItem(id, (item) => ({ ...item, text: label, reason: rationale }))) closeEntryAction();
+  }
+
+  function closeListAction() {
+    setListAction(null);
+    requestAnimationFrame(() => listTrigger.current?.focus());
+  }
+
+  function closeEntryAction() {
+    setEntryAction(null);
+    requestAnimationFrame(() => entryTrigger.current?.focus());
   }
 
   return (
@@ -199,14 +213,21 @@ function ListDetail({ list, products, onEdit, onDelete, onTryProduct }: {
           <h2 id={titleId}>{beautyListName(list, t)}</h2>
           <p className={styles.muted}>{t(`${checked} / ${list.items.length} cochés`, `${checked} / ${list.items.length} checked`)}</p>
         </div>
-        {!listAction && <div className={styles.actions}>
-          <button type="button" className="button button-secondary" onClick={() => { setName(beautyListName(list, t)); setListAction("rename"); }}>
+        <div className={styles.actions} hidden={Boolean(listAction)}>
+          <button type="button" className="button button-secondary" onClick={(event) => {
+            listTrigger.current = event.currentTarget;
+            setName(beautyListName(list, t));
+            setListAction("rename");
+          }}>
             <Pencil size={15} aria-hidden="true"/>{t("Renommer", "Rename")}
           </button>
-          {!isDefaultBeautyList(list.id) && <button type="button" className={styles.iconButton} aria-label={t("Supprimer la liste", "Delete list")} onClick={() => setListAction("delete")}>
+          {!isDefaultBeautyList(list.id) && <button type="button" className={styles.iconButton} aria-label={t("Supprimer la liste", "Delete list")} onClick={(event) => {
+            listTrigger.current = event.currentTarget;
+            setListAction("delete");
+          }}>
             <Trash2 size={17} aria-hidden="true"/>
           </button>}
-        </div>}
+        </div>
       </div>
 
       {listAction === "rename" && <form className={styles.form} onSubmit={saveListName}>
@@ -214,13 +235,13 @@ function ListDetail({ list, products, onEdit, onDelete, onTryProduct }: {
         <div className={styles.inputRow}>
           <input id={nameId} value={name} onChange={(event) => setName(event.target.value)} required maxLength={beautyListLimits.name} autoFocus/>
           <button type="submit" className="button button-primary" disabled={!name.trim()}>{t("Enregistrer", "Save")}</button>
-          <button type="button" className="button button-secondary" onClick={() => setListAction(null)}>{t("Annuler", "Cancel")}</button>
+          <button type="button" className="button button-secondary" onClick={closeListAction}>{t("Annuler", "Cancel")}</button>
         </div>
       </form>}
       {listAction === "delete" && <div className={styles.confirm} role="group" aria-label={t("Confirmer la suppression de la liste", "Confirm list deletion")}>
         <p>{t("La liste et tous ses éléments seront supprimés.", "The list and all its entries will be deleted.")}</p>
         <div className={styles.actions}>
-          <button type="button" className="button button-secondary" onClick={() => setListAction(null)} autoFocus>{t("Annuler", "Cancel")}</button>
+          <button type="button" className="button button-secondary" onClick={closeListAction} autoFocus>{t("Annuler", "Cancel")}</button>
           <button type="button" className="button button-danger" onClick={onDelete}>{t("Supprimer cette liste", "Delete this list")}</button>
         </div>
       </div>}
@@ -256,11 +277,10 @@ function ListDetail({ list, products, onEdit, onDelete, onTryProduct }: {
           {!!matches.length ? <>
             <ul className={styles.productResults}>
               {matches.slice(0, 8).map((product) => <li key={product.id}>
-                <button type="button" onClick={() => addItem({
-                  productId: product.id,
-                  product: productListSnapshot(product),
-                  text: product.brand ? `${product.name} · ${product.brand}` : product.name,
-                })}>
+                <button type="button" onClick={() => {
+                  if (addItem({ productId: product.id, product: productListSnapshot(product),
+                    text: product.brand ? `${product.name} · ${product.brand}` : product.name })) pickerSearch.current?.focus();
+                }}>
                   <span>{product.name}{product.brand && <small>{product.brand}</small>}</span>
                   <Plus size={16} aria-hidden="true"/>
                 </button>
@@ -295,15 +315,21 @@ function ListDetail({ list, products, onEdit, onDelete, onTryProduct }: {
                 </label>
                 {item.reason && <p className={styles.reason}>{item.reason}</p>}
               </div>
-              {!action && <div className={styles.actions}>
+              <div className={styles.actions} hidden={Boolean(action)}>
                 {onTryProduct && product?.category === "maquillage" && <button type="button" className="button button-secondary" onClick={() => onTryProduct(product)}>
                   <Brush size={15} aria-hidden="true"/>{t("Essayer", "Try")}<span className="sr-only"> · {item.text}</span>
                 </button>}
                 <button type="button" className={styles.iconButton} aria-label={t(`Modifier ${item.text}`, `Edit ${item.text}`)}
-                  onClick={() => setEntryAction({ kind: "edit", id: item.id, text: item.text, reason: item.reason ?? "" })}><Pencil size={16} aria-hidden="true"/></button>
+                  onClick={(event) => {
+                    entryTrigger.current = event.currentTarget;
+                    setEntryAction({ kind: "edit", id: item.id, text: item.text, reason: item.reason ?? "" });
+                  }}><Pencil size={16} aria-hidden="true"/></button>
                 <button type="button" className={styles.iconButton} aria-label={t(`Supprimer ${item.text}`, `Delete ${item.text}`)}
-                  onClick={() => setEntryAction({ kind: "delete", id: item.id })}><Trash2 size={16} aria-hidden="true"/></button>
-              </div>}
+                  onClick={(event) => {
+                    entryTrigger.current = event.currentTarget;
+                    setEntryAction({ kind: "delete", id: item.id });
+                  }}><Trash2 size={16} aria-hidden="true"/></button>
+              </div>
             </div>
             {action?.kind === "edit" && <form className={styles.form} onSubmit={(event) => editEntry(event, item.id)}>
               <label htmlFor={entryEditId}>{t("Modifier l’élément", "Edit entry")}</label>
@@ -316,13 +342,13 @@ function ListDetail({ list, products, onEdit, onDelete, onTryProduct }: {
                 <button type="submit" className="button button-primary" disabled={!action.text.trim()}>
                   <Check size={16} aria-hidden="true"/>{t("Enregistrer", "Save")}
                 </button>
-                <button type="button" className="button button-secondary" onClick={() => setEntryAction(null)}>{t("Annuler", "Cancel")}</button>
+                <button type="button" className="button button-secondary" onClick={closeEntryAction}>{t("Annuler", "Cancel")}</button>
               </div>
             </form>}
             {action?.kind === "delete" && <div className={styles.confirm} role="group" aria-label={t("Confirmer la suppression de l’élément", "Confirm entry deletion")}>
               <p>{t("Supprimer cet élément de la liste ?", "Delete this entry from the list?")}</p>
               <div className={styles.actions}>
-                <button type="button" className="button button-secondary" onClick={() => setEntryAction(null)} autoFocus>{t("Annuler", "Cancel")}</button>
+                <button type="button" className="button button-secondary" onClick={closeEntryAction} autoFocus>{t("Annuler", "Cancel")}</button>
                 <button type="button" className="button button-danger" onClick={() => {
                   if (onEdit((current) => ({ ...current, items: current.items.filter((entry) => entry.id !== item.id) }))) {
                     setEntryAction(null);

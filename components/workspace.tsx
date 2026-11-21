@@ -65,6 +65,8 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   const [auth, setAuth] = useState(false);
   const accountDialog = useRef<HTMLDialogElement>(null);
   const conflictDialog = useRef<HTMLDialogElement>(null);
+  const appShell = useRef<HTMLDivElement>(null);
+  const workspaceHeader = useRef<HTMLElement>(null);
   const content = useRef<HTMLElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
 
@@ -107,7 +109,19 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     if (auth && !accountDialog.current?.open) accountDialog.current?.showModal();
   }, [auth]);
 
+  useEffect(() => {
+    const shell = appShell.current;
+    const header = workspaceHeader.current;
+    if (!shell || !header) return;
+    const measure = () => shell.style.setProperty("--workspace-header-height", `${header.getBoundingClientRect().height}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+
   const activeAccount = user?.id;
+  const saveOptions = { requireLocalCopy: !activeAccount };
   useEffect(() => {
     setSelected(null);
     setSelectedList(undefined);
@@ -169,7 +183,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
       const entry = { id: crypto.randomUUID(), text: product.name, checked: false, productId: product.id, product: productListSnapshot(product) };
       return { ...previous, preferences, lists: storedBeautyLists(lists.map((list) => list.id === destination
         ? { ...list, items: [...list.items, entry] } : list)) };
-    }, user?.id ?? null, { requireLocalCopy: !user });
+    }, activeAccount ?? null, saveOptions);
     return applied && saved;
   }
 
@@ -193,7 +207,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
       ...previous,
       products: previous.products.filter((item) => item.id !== id),
       routines: previous.routines.map((routine) => ({ ...routine, steps: routine.steps.filter((step) => step.productId !== id) })),
-    }))) return;
+    }), activeAccount ?? null, saveOptions)) return;
     setSelected(null);
     setNotice(t("Produit supprimé.", "Product removed."));
   }
@@ -202,7 +216,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     const saved = update((previous) => ({
       ...previous,
       completed: [{ routineId: routine.id, at: new Date().toISOString() }, ...previous.completed].slice(0, 1000),
-    }));
+    }), activeAccount ?? null, saveOptions);
     if (saved) setNotice(t(`« ${routine.name} » terminée.`, `“${routine.name}” completed.`));
     return saved;
   }
@@ -212,7 +226,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
       setNotice(t("La limite de 100 routines est atteinte.", "The limit of 100 routines has been reached."));
       return false;
     }
-    if (!update((previous) => ({ ...previous, routines: [...previous.routines, routine] }))) return false;
+    if (!update((previous) => ({ ...previous, routines: [...previous.routines, routine] }), activeAccount ?? null, saveOptions)) return false;
     navigate("routines");
     setNotice(t(`« ${routine.name} » ajoutée.`, `“${routine.name}” added.`));
     return true;
@@ -237,9 +251,9 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     conflict: t("Conflit de synchronisation", "Sync conflict"),
   }[sync];
 
-  return <div className="app-shell">
+  return <div className="app-shell" ref={appShell}>
     <a href="#main-content" className="skip-link" onClick={(event) => { event.preventDefault(); content.current?.focus(); }}>{t("Aller au contenu", "Skip to content")}</a>
-    <header className="workspace-header">
+    <header className="workspace-header" ref={workspaceHeader}>
       <div className="workspace-masthead">
         <a className="brand" href="#accueil" aria-label={t("Navier, accueil", "Navier, home")}
           aria-current={view === "accueil" ? "page" : undefined} onClick={(event) => navClick(event, "accueil")}>Navier</a>
@@ -313,29 +327,29 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
             </div>
             <Inventory products={state.products} preferences={state.preferences} selected={selected} onSelect={setSelected} onRemove={removeProduct} onTry={tryProduct}/>
           </>}
-          {view === "routines" && <Routines products={state.products} routines={state.routines} preferences={state.preferences} palette={state.palette}
-            onChange={(routines) => update((previous) => ({ ...previous, routines }))}
+          {view === "routines" && <Routines key={user?.id ?? "guest"} products={state.products} routines={state.routines} preferences={state.preferences} palette={state.palette}
+            onChange={(routines) => update((previous) => ({ ...previous, routines }), activeAccount ?? null, saveOptions)}
             startRoutineId={guide} onStartGuide={setGuide} onExitGuide={() => setGuide(undefined)} onComplete={complete}/>}
           {view === "studio" && <MakeupStudio key={`${user?.id ?? "guest"}:${studioTab}`} products={state.products} trialProducts={trialProducts} preset={preset}
             savedLooks={state.looks ?? []}
-            onChangeLooks={(apply) => update((previous) => ({ ...previous, looks: apply(previous.looks ?? []) }), user?.id ?? null, { requireLocalCopy: !user })}
+            onChangeLooks={(apply) => update((previous) => ({ ...previous, looks: apply(previous.looks ?? []) }), activeAccount ?? null, saveOptions)}
             palette={state.palette} initialTab={studioTab} paletteEditor={
               <Palette colors={state.palette}
-                onChange={(apply) => update((previous) => ({ ...previous, palette: apply(previous.palette) }), user?.id ?? null)}
+                onChange={(apply) => update((previous) => ({ ...previous, palette: apply(previous.palette) }), activeAccount ?? null, saveOptions)}
                 onUpload={client && user ? (file) => uploadPalettePhoto(client, user.id, file) : undefined}
                 onDiscardUpload={client && user ? (path) => removePalettePhoto(client, path) : undefined}
                 onResolvePhoto={client && user ? (path) => getPalettePhotoUrl(client, path) : undefined}/>
             }/>}
           {view === "listes" && <BeautyLists key={`${user?.id ?? "guest"}:${selectedList ?? "overview"}`} lists={lists} products={state.products}
             firstListId={selectedList} onTryProduct={tryProduct}
-            onChange={(apply) => update((previous) => ({ ...previous, lists: storedBeautyLists(apply(beautyListsWithDefaults(previous.lists))) }), user?.id ?? null)}/>}
+            onChange={(apply) => update((previous) => ({ ...previous, lists: storedBeautyLists(apply(beautyListsWithDefaults(previous.lists))) }), activeAccount ?? null, saveOptions)}/>}
           {view === "styles" && <MakeupStyles onTry={(look) => { navigate("studio"); setPreset(look); }}/>}
           {view === "profile" && <BeautyProfile key={user?.id ?? "guest"} preferences={state.preferences} products={state.products} onCreate={createRoutine}
-            onSave={(preferences) => update((previous) => ({ ...previous, preferences }), user?.id ?? null)}/>}
-          {view === "tutoriels" && <Tutorials products={state.products} onCreateRoutine={createRoutine}/>}
+            onSave={(preferences) => update((previous) => ({ ...previous, preferences }), activeAccount ?? null, saveOptions)}/>}
+          {view === "tutoriels" && <Tutorials key={user?.id ?? "guest"} products={state.products} onCreateRoutine={createRoutine}/>}
           {view === "journal" && !portable && <Journal key={user?.id ?? "guest"} userId={user?.id} client={client} plus={billing.plus} entitlementLoading={billing.loading}
             products={state.products} routines={state.routines} completed={state.completed} onOpenPlans={() => navigate("offres")}/>}
-          {view === "offres" && !portable && <Plans signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth(true)}/>}
+          {view === "offres" && !portable && <Plans key={user?.id ?? "guest"} signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth(true)}/>}
           {view === "preferences" && <>
             <div className="page-heading"><div><h1>{t("Paramètres", "Settings")}</h1><p>{t("Langue de l’interface, compte et données.", "Interface language, account and data.")}</p></div></div>
             <section className="settings-language" aria-labelledby="language-title">

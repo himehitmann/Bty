@@ -1,6 +1,6 @@
 # Navier
 
-Navier est une application web installable pour composer des routines, organiser tes produits et préparer des looks. L’accueil affiche les trois outils dans cet ordre, sur des cartes fixes. Le menu de l’en-tête propose le français, l’anglais, l’espagnol et l’italien.
+Navier est une application web installable pour composer des routines, organiser tes produits et préparer des looks. L’accueil affiche les trois outils dans cet ordre, sur des cartes cliquables sur toute leur surface. Le menu de l’en-tête propose le français, l’anglais, l’espagnol et l’italien.
 
 ## Ouvrir Navier par double-clic
 
@@ -41,7 +41,7 @@ Chaque compte démarre avec un espace vide. L’espace invité reste sur le navi
 ## Fonctionnement
 
 - **Catalogue et Ma trousse** · cherche par nom, marque, teinte ou code-barres. Choisis une variante et essaie-la dans le Studio ou enregistre-la dans la trousse ou dans une liste. Navier retient la dernière destination utilisée.
-- **Sources et teintes** · la sélection de marques embarquée propose des liens vers les pages officielles et des couleurs indicatives. Open Beauty Facts complète les recherches sans correspondance fabricante avec ses données sous licence ODbL. Les images produit sont consultables sur le site source. `OPEN_BEAUTY_FACTS_CONTACT` renseigne le contact envoyé par le serveur web. [Open Beauty Facts](https://world.openbeautyfacts.org/data) · [Licence ODbL](https://opendatacommons.org/licenses/odbl/1.0/)
+- **Sources et photos** · les fiches vérifiées affichent une photo du produit chargée depuis le serveur de la marque, un lien officiel et, selon la référence, des teintes indicatives. Open Beauty Facts complète la recherche. Ses photos sont signalées comme communautaires, avec un lien vers leur fiche source. `OPEN_BEAUTY_FACTS_CONTACT` renseigne le contact envoyé par le serveur web. [Open Beauty Facts et licences](https://world.openbeautyfacts.org/data)
 - **Simulation maquillage** · compare deux teintes sur le Face Chart SVG avec les produits de ta trousse, les essais du catalogue et les couleurs prélevées à la pipette. Ajuste le blush ou les sourcils sur le visage et reproduis le placement en miroir. Choisis la forme du liner et la zone du fard.
 - **Styles de maquillage** · huit exemples illustrés, de Douyin au liner graphique, avec étapes, sources éditoriales et ouverture du look dans le Studio. **Profil beauté** regroupe les critères de peau et la préparation d’une routine adaptée à tes produits.
 - **Mes looks** · dans le Studio, enregistre et rouvre jusqu’à 30 compositions nommées. Le look garde les réglages du portrait, les teintes et leur placement, même après la suppression des produits ou des teintes d’origine. Dans l’espace invité, l’enregistrement dépend du stockage du navigateur. Sur le web, les looks se synchronisent avec le compte lorsque Supabase est configuré. **Paramètres → Exporter mon espace** les inclut dans le JSON.
@@ -53,7 +53,7 @@ Les repères INCI concernent les ingrédients déclarés et quelques superpositi
 
 ## Architecture
 
-Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. La police [Bricolage Grotesque](public/fonts/bricolage-grotesque-OFL.txt) est hébergée avec l’application et intégrée au fichier portable.
+Next.js App Router fournit la structure serveur, le manifeste et la route catalogue. Les composants interactifs partagent le modèle Zod de `lib/model.ts`. PostgreSQL enregistre le petit espace personnel comme un document JSONB par utilisateur, avec contrôle de taille, isolation RLS et version horodatée. Le front conserve un brouillon local propre à chaque espace. Les polices sont hébergées avec l’application et intégrées au fichier portable. [Licence Tenor Sans](public/fonts/tenor-sans-OFL.txt) · [Licence DM Sans](public/fonts/dm-sans-OFL.txt)
 
 Références techniques · [Next.js App Router](https://nextjs.org/docs/app), [Proxy](https://nextjs.org/docs/app/api-reference/file-conventions/proxy), [PWA](https://nextjs.org/docs/app/guides/progressive-web-apps), [Tailwind CSS](https://tailwindcss.com/docs/installation/framework-guides/nextjs), [Supabase Auth SSR](https://supabase.com/docs/guides/auth/server-side/nextjs), [Supabase Storage](https://supabase.com/docs/reference/javascript/storage-from-createsignedurl), [Zod](https://zod.dev/api) et [API Open Facts](https://openfoodfacts.github.io/openfoodfacts-server/api/).
 
