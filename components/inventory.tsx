@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, Brush, CalendarClock, Check, ChevronRight, CircleAlert, Columns2, Droplets, ExternalLink, Heart, Plus, Scissors, Search, SprayCan, SwatchBook, Trash2 } from "lucide-react";
 import { beautyListName, sameProductVariant, vanityDestination } from "@/lib/beauty-list-destinations";
 import { analyzeProduct, ingredientList } from "@/lib/analysis";
-import { catalogImageUrl, normalizeCatalogQuery, normalizeCatalogText, rankCatalogProducts, searchLocalCatalog } from "@/lib/catalog";
+import { canSupplementCatalog, catalogImageUrl, normalizeCatalogQuery, normalizeCatalogText, rankCatalogProducts, searchLocalCatalog, supplementCatalog } from "@/lib/catalog";
 import { useLocale } from "@/lib/i18n";
 import { categories, categoryLabels, makeupEffectLabels, makeupKindLabels, productSchema, sourceLabels, type BeautyList, type Preferences, type Product } from "@/lib/model";
 import { searchOpenBeautyFacts } from "@/lib/open-beauty-facts";
@@ -400,6 +400,7 @@ type CatalogueResult = {
   items: Product[];
   origin: "online" | "local" | "unavailable";
   query: string;
+  supplemented?: boolean;
 };
 
 function localMatches(query: string) {
@@ -425,31 +426,39 @@ export function Catalog({ initialQuery = "", portable = false, ...actions }: Cat
     items: localMatches(initialQuery.trim()), origin: "local", query: initialQuery.trim(),
   }));
   const [pending, setPending] = useState(false);
+  const [supplementRequest, setSupplementRequest] = useState<{ query: string; attempt: number }>();
+  const additionalResults = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const input = initialQuery.trim().slice(0, 120);
     const normalized = normalizeCatalogQuery(input);
     const query = normalized ? input : "";
-    const items = localMatches(query);
-    const hasOfficialMatch = items.some(({ source }) => source === "manufacturer");
-    if (hasOfficialMatch || normalized.length < 2 || !navigator.onLine) {
-      setResult({ items, origin: hasOfficialMatch || normalized.length < 2 ? "local" : "unavailable", query });
+    const localItems = localMatches(query);
+    const hasOfficialMatch = localItems.some(({ source }) => source === "manufacturer");
+    const supplemented = supplementRequest?.query === query && canSupplementCatalog(query, localItems);
+    const items = supplemented ? supplementCatalog(localItems, [], query) : localItems;
+    const tryOnline = normalized.length >= 2 && (supplemented || !hasOfficialMatch);
+    if (!tryOnline || !navigator.onLine) {
+      setResult({ items, origin: tryOnline ? "unavailable" : "local", query, supplemented });
       setPending(false);
       return;
     }
 
     const request = new AbortController();
-    setResult({ items, origin: "local", query });
+    setResult({ items, origin: "local", query, supplemented });
     setPending(true);
     async function search() {
       try {
         if (portable) {
           const remote = await searchOpenBeautyFacts(query, "all", { signal: request.signal });
-          if (!request.signal.aborted) setResult({ items: rankCatalogProducts([...remote, ...items], query), origin: "online", query });
+          const products = supplemented ? supplementCatalog(localItems, remote, query) : rankCatalogProducts([...remote, ...items], query);
+          if (!request.signal.aborted) setResult({ items: products, origin: "online", query, supplemented });
           return;
         }
 
-        const response = await fetch(`/api/catalog?${new URLSearchParams({ q: query })}`, { signal: request.signal, credentials: "omit" });
+        const params = new URLSearchParams({ q: query });
+        if (supplemented) params.set("supplement", "1");
+        const response = await fetch(`/api/catalog?${params}`, { signal: request.signal, credentials: "omit" });
         if (!response.ok) throw new Error();
         const payload = await response.json() as { products?: unknown; externalStatus?: string };
         if (request.signal.aborted) return;
@@ -457,22 +466,29 @@ export function Catalog({ initialQuery = "", portable = false, ...actions }: Cat
           const parsed = productSchema.safeParse(item);
           return parsed.success ? [parsed.data] : [];
         }) : items;
-        setResult({ items: products, query,
+        setResult({ items: supplemented ? supplementCatalog(localItems, products, query) : products, query, supplemented,
           origin: payload.externalStatus === "ok" ? "online" : payload.externalStatus === "unavailable" ? "unavailable" : "local" });
       } catch {
-        if (!request.signal.aborted) setResult({ items, origin: "unavailable", query });
+        if (!request.signal.aborted) setResult({ items, origin: "unavailable", query, supplemented });
       } finally {
         if (!request.signal.aborted) setPending(false);
       }
     }
     void search();
     return () => request.abort();
-  }, [initialQuery, portable]);
+  }, [initialQuery, portable, supplementRequest]);
+
+  useEffect(() => {
+    if (result.supplemented && result.origin === "online") additionalResults.current?.focus();
+  }, [result.supplemented, result.origin]);
 
   const count = formatNumber(result.items.length);
   const resultCount = result.items.length === 1
     ? t(`${count} résultat pour « ${result.query} ».`, `${count} result for “${result.query}”.`)
     : t(`${count} résultats pour « ${result.query} ».`, `${count} results for “${result.query}”.`);
+  const canSupplement = canSupplementCatalog(result.query, result.items) && (!result.supplemented || result.origin !== "online");
+  const primaryItems = result.supplemented ? result.items.filter(({ source }) => source === "manufacturer") : result.items;
+  const extraItems = result.supplemented ? result.items.filter(({ source }) => source === "open-beauty-facts") : [];
 
   return <section className={styles.catalog} aria-labelledby="catalogue-title">
     <header className={styles.catalogHeader}>
@@ -489,11 +505,25 @@ export function Catalog({ initialQuery = "", portable = false, ...actions }: Cat
           "Open Beauty Facts is unavailable. Local results are displayed here.",
         )}</p>}
       </div>
-      {result.items.length > 0 ? <ul className={styles.catalogResults} aria-label={t("Produits du catalogue", "Catalogue products")} aria-busy={pending}>
-        {result.items.map((product) => <li key={product.id}><CatalogueCard product={product} {...actions}/></li>)}
+      {canSupplement && <button className={`button button-secondary ${styles.supplementButton}`} type="button"
+        aria-controls="catalogue-supplement-results" disabled={pending}
+        onClick={() => setSupplementRequest((current) => ({ query: result.query, attempt: (current?.attempt ?? 0) + 1 }))}>
+        {result.supplemented && !pending ? t("Réessayer la recherche", "Retry search") : t("Voir d’autres résultats", "Show more results")}
+      </button>}
+      {primaryItems.length > 0 ? <ul className={styles.catalogResults} aria-label={t("Produits du catalogue", "Catalogue products")} aria-busy={pending}>
+        {primaryItems.map((product) => <li key={product.id}><CatalogueCard product={product} {...actions}/></li>)}
       </ul> : !pending && <p className={styles.emptyState}>
         {t("Aucun produit trouvé. Essaie un autre nom, une marque ou un code-barres dans la barre de recherche.", "No products found. Try another name, brand or barcode in the search bar.")}
       </p>}
+      <section id="catalogue-supplement-results" className={styles.supplementResults} aria-labelledby="catalogue-supplement-title"
+        hidden={!result.supplemented}>
+        <h2 id="catalogue-supplement-title" ref={additionalResults} tabIndex={-1}>{t("Résultats complémentaires", "Additional results")}</h2>
+        {extraItems.length > 0 ? <ul className={styles.catalogResults} aria-labelledby="catalogue-supplement-title" aria-busy={pending}>
+          {extraItems.map((product) => <li key={product.id}><CatalogueCard product={product} {...actions}/></li>)}
+        </ul> : !pending && result.origin === "online" && <p className={styles.emptyState}>
+          {t("Aucun résultat complémentaire.", "No additional results.")}
+        </p>}
+      </section>
     </section>
     <p className={`muted ${styles.catalogAttribution}`}>{t("Fiches de marques et données complémentaires.", "Brand listings and supplementary data.")}{" "}
       <a href="https://world.openbeautyfacts.org/data" target="_blank" rel="noreferrer">Open Beauty Facts · ODbL</a>{" · "}

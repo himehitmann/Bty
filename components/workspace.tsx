@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
-import { BookOpen, Brush, CalendarCheck, ChevronDown, ClipboardList, Download, Globe, House, Layers, ListChecks, LogIn, LogOut, Search, Settings, ShoppingBag, SwatchBook, UserRound, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { BookOpen, Brush, CalendarCheck, ChevronDown, ClipboardList, Globe, House, Layers, ListChecks, LogIn, LogOut, Search, Settings, ShoppingBag, SwatchBook, UserRound, X } from "lucide-react";
 import { Catalog, Inventory } from "./inventory";
 import { Palette } from "./palette";
 import { HomeDiscovery } from "./home-discovery";
-import { MakeupStudio } from "./makeup-studio";
+import { MakeupStudio, type StudioDraft } from "./makeup-studio";
 import { BeautyLists } from "./beauty-lists";
 import { Routines } from "./routines";
 import { Tutorials } from "./tutorials";
@@ -13,11 +13,13 @@ import { Journal } from "./journal";
 import { Plans } from "./plans";
 import { BeautyProfile } from "./beauty-profile";
 import { MakeupStyles, type MakeupStylePreset } from "./makeup-styles";
+import { WorkspaceSettings } from "./workspace-settings";
 import { beautyListsWithDefaults, productListSnapshot, sameProductVariant, storedBeautyLists, vanityDestination } from "@/lib/beauty-list-destinations";
 import { useBillingStatus } from "@/lib/billing-client";
 import { LocaleProvider, useLocale, type Locale } from "@/lib/i18n";
 import { isLocale, localeOptions } from "@/lib/locale";
-import { beautyListLimits, type Product, type Routine, type State } from "@/lib/model";
+import { beautyListLimits, type Product, type Routine } from "@/lib/model";
+import { useMotionPreference } from "@/lib/motion-preference";
 import { getPalettePhotoUrl, removePalettePhoto, uploadPalettePhoto } from "@/lib/supabase/browser";
 import { useWorkspaceState } from "@/lib/use-workspace";
 
@@ -37,6 +39,8 @@ const navigation = [
 ] as const;
 type View = (typeof navigation)[number]["id"];
 type WorkspaceData = ReturnType<typeof useWorkspaceState>;
+type StudioTrials = { products: Product[]; request: { product: Product } };
+const noTrials: Product[] = [];
 
 function readView(portable: boolean): View {
   const hash = location.hash.slice(1);
@@ -53,14 +57,20 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   const { t, locale } = useLocale();
   const { state, user, client, ready, update, sync, notice, setNotice } = data;
   const billing = useBillingStatus(user?.id, !portable);
+  const [motion, setMotion] = useMotionPreference();
+  const activeAccount = user?.id;
+  const studioScope = activeAccount ?? "guest";
   const [view, setView] = useState<View>("accueil");
   const [studioTab, setStudioTab] = useState<"look" | "photo">("look");
   const [catalogue, setCatalogue] = useState({ query: "", revision: 0 });
   const [searchTerm, setSearchTerm] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedList, setSelectedList] = useState<string>();
-  const [trialProducts, setTrialProducts] = useState<Product[]>([]);
-  const [preset, setPreset] = useState<MakeupStylePreset>();
+  const [trialsByScope, setTrialsByScope] = useState(() => new Map<string, StudioTrials>());
+  const trials = trialsByScope.get(studioScope);
+  const studioDrafts = useRef(new Map<string, StudioDraft>());
+  const saveStudioDraft = useCallback((draft: StudioDraft) => { studioDrafts.current.set(studioScope, draft); }, [studioScope]);
+  const [preset, setPreset] = useState<{ account: string; value: MakeupStylePreset }>();
   const [guide, setGuide] = useState<string>();
   const [auth, setAuth] = useState(false);
   const accountDialog = useRef<HTMLDialogElement>(null);
@@ -120,15 +130,13 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     return () => observer.disconnect();
   }, []);
 
-  const activeAccount = user?.id;
   const saveOptions = { requireLocalCopy: !activeAccount };
   useEffect(() => {
     setSelected(null);
     setSelectedList(undefined);
-    setTrialProducts([]);
     setPreset(undefined);
     setGuide(undefined);
-  }, [activeAccount]);
+  }, [studioScope]);
 
   function navigate(next: View, focus = true) {
     setView(next);
@@ -189,7 +197,13 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
 
   function tryProduct(product: Product) {
     navigate("studio");
-    setTrialProducts((current) => [...current.filter(({ id }) => id !== product.id), product].slice(-12));
+    setTrialsByScope((current) => {
+      const products = current.get(studioScope)?.products ?? noTrials;
+      return new Map(current).set(studioScope, {
+        products: [...products.filter(({ id }) => id !== product.id), product].slice(-12),
+        request: { product },
+      });
+    });
   }
 
   function openDestination(destination: string, product?: Product) {
@@ -233,7 +247,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   }
 
   function switchLanguage(next: Locale) {
-    if (next !== locale) update((previous) => ({ ...previous, preferences: { ...previous.preferences, locale: next } }));
+    if (next !== locale) update((previous) => ({ ...previous, preferences: { ...previous.preferences, locale: next } }), activeAccount ?? null, saveOptions);
   }
 
   const label = (id: View) => {
@@ -251,7 +265,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     conflict: t("Conflit de synchronisation", "Sync conflict"),
   }[sync];
 
-  return <div className="app-shell" ref={appShell}>
+  return <div className="app-shell" ref={appShell} data-motion={motion}>
     <a href="#main-content" className="skip-link" onClick={(event) => { event.preventDefault(); content.current?.focus(); }}>{t("Aller au contenu", "Skip to content")}</a>
     <header className="workspace-header" ref={workspaceHeader}>
       <div className="workspace-masthead">
@@ -330,7 +344,10 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
           {view === "routines" && <Routines key={user?.id ?? "guest"} products={state.products} routines={state.routines} preferences={state.preferences} palette={state.palette}
             onChange={(routines) => update((previous) => ({ ...previous, routines }), activeAccount ?? null, saveOptions)}
             startRoutineId={guide} onStartGuide={setGuide} onExitGuide={() => setGuide(undefined)} onComplete={complete}/>}
-          {view === "studio" && <MakeupStudio key={`${user?.id ?? "guest"}:${studioTab}`} products={state.products} trialProducts={trialProducts} preset={preset}
+          {view === "studio" && <MakeupStudio key={`${studioScope}:${studioTab}`} products={state.products}
+            preset={preset?.account === studioScope ? preset.value : undefined}
+            trialProducts={trials?.products ?? noTrials} trialRequest={trials?.request}
+            draft={studioDrafts.current.get(studioScope)} onDraftChange={saveStudioDraft} defaultPortrait={state.preferences.studioPortrait}
             savedLooks={state.looks ?? []}
             onChangeLooks={(apply) => update((previous) => ({ ...previous, looks: apply(previous.looks ?? []) }), activeAccount ?? null, saveOptions)}
             palette={state.palette} initialTab={studioTab} paletteEditor={
@@ -343,25 +360,17 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
           {view === "listes" && <BeautyLists key={`${user?.id ?? "guest"}:${selectedList ?? "overview"}`} lists={lists} products={state.products}
             firstListId={selectedList} onTryProduct={tryProduct}
             onChange={(apply) => update((previous) => ({ ...previous, lists: storedBeautyLists(apply(beautyListsWithDefaults(previous.lists))) }), activeAccount ?? null, saveOptions)}/>}
-          {view === "styles" && <MakeupStyles onTry={(look) => { navigate("studio"); setPreset(look); }}/>}
+          {view === "styles" && <MakeupStyles onTry={(look) => { navigate("studio"); setPreset({ account: studioScope, value: look }); }}/>}
           {view === "profile" && <BeautyProfile key={user?.id ?? "guest"} preferences={state.preferences} products={state.products} onCreate={createRoutine}
-            onSave={(preferences) => update((previous) => ({ ...previous, preferences }), activeAccount ?? null, saveOptions)}/>}
+            onSave={(profile) => update((previous) => ({ ...previous, preferences: { ...previous.preferences, ...profile } }), activeAccount ?? null, saveOptions)}/>}
           {view === "tutoriels" && <Tutorials key={user?.id ?? "guest"} products={state.products} onCreateRoutine={createRoutine}/>}
           {view === "journal" && !portable && <Journal key={user?.id ?? "guest"} userId={user?.id} client={client} plus={billing.plus} entitlementLoading={billing.loading}
             products={state.products} routines={state.routines} completed={state.completed} onOpenPlans={() => navigate("offres")}/>}
           {view === "offres" && !portable && <Plans key={user?.id ?? "guest"} signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth(true)}/>}
-          {view === "preferences" && <>
-            <div className="page-heading"><div><h1>{t("Paramètres", "Settings")}</h1><p>{t("Langue de l’interface, compte et données.", "Interface language, account and data.")}</p></div></div>
-            <section className="settings-language" aria-labelledby="language-title">
-              <div><h2 id="language-title">{t("Langue de l’interface", "Interface language")}</h2></div>
-              <select aria-labelledby="language-title" value={locale} onChange={(event) => {
-                if (isLocale(event.target.value)) switchLanguage(event.target.value);
-              }}>
-                {localeOptions.map(({ value, name }) => <option key={value} value={value} lang={value}>{name}</option>)}
-              </select>
-            </section>
-            <WorkspaceSettings state={state} portable={portable}/>
-          </>}
+          {view === "preferences" && <WorkspaceSettings state={state} portable={portable}
+            account={portable || !client ? "local" : user ? "signed-in" : "guest"}
+            onLanguageChange={switchLanguage} onOpenAccount={() => setAuth(true)} onOpenProfile={(event) => navClick(event, "profile")}
+            motion={motion} onMotionChange={setMotion}/>}
         </div>}
       </main>
     </div>
@@ -379,35 +388,6 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   </div>;
 }
 
-function exportWorkspace(state: State) {
-  const palette = state.palette.map(({ id, hex, name, collection }) => ({ id, hex, name, collection }));
-  const exported = { version: 1, exportedAt: new Date().toISOString(), ...state, palette };
-  const url = URL.createObjectURL(new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "navier-data.json";
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function WorkspaceSettings({ state, portable }: { state: State; portable: boolean }) {
-  const { t } = useLocale();
-  return (
-    <aside className="dashboard-card preference-help">
-      <h2>{t("Mes données", "My data")}</h2>
-      <button className="button button-secondary" type="button" onClick={() => exportWorkspace(state)}><Download size={16}/>{t("Exporter mon espace", "Export my workspace")}</button>
-      <p className="muted">{portable
-        ? t("Garde le fichier Navier au même endroit et utilise le même navigateur pour retrouver tes données.", "Keep the Navier file in the same place and use the same browser to find your data.")
-        : t("Le fichier inclut les produits, routines, listes, looks, teintes et préférences.", "The file includes products, routines, lists, looks, shades and preferences.")}</p>
-      {!portable && <>
-        <a href="/installer">{t("Installer Navier", "Install Navier")}</a>
-        <a href="/confidentialite">{t("Confidentialité", "Privacy")}</a>
-      </>}
-    </aside>
-  );
-}
 function Account({ user, client, onClose, onNotice }: {
   user: ReturnType<typeof useWorkspaceState>["user"]; client: ReturnType<typeof useWorkspaceState>["client"];
   onClose: () => void; onNotice: (message: string) => void;

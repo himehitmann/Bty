@@ -204,6 +204,17 @@
   font-weight: 650;
 }
 
+.supplementButton {
+  justify-self: start;
+}
+
+.supplementResults:not([hidden]) {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
 .catalogResults {
   --catalog-gap: clamp(0.6rem, 2vw, 1rem);
   display: grid;

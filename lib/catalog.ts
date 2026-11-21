@@ -249,3 +249,37 @@ export function searchLocalCatalog(query: string, mode: CatalogSearchMode = "all
   if (official.length) return official;
   return rankCatalogProducts(localCatalog, query, mode, false);
 }
+
+export function canSupplementCatalog(query: string, products: readonly Product[], mode: CatalogSearchMode = "all"): boolean {
+  return normalizeCatalogQuery(query).length >= 2
+    && !(mode === "all" && catalogBarcode(query))
+    && products.some(({ source }) => source === "manufacturer");
+}
+
+function catalogTitleKeys(product: Product): string[] {
+  const title = normalizeCatalogQuery(product.name);
+  return product.brand.split(/[,;|]/).map(normalizeCatalogQuery).filter(Boolean).map((brand) => {
+    const productName = title.startsWith(`${brand} `) ? title.slice(brand.length + 1) : title;
+    return `${brand}:${productName.replace(/\bpads$/, "pad")}`;
+  });
+}
+
+export function supplementCatalog(
+  official: readonly Product[],
+  remote: readonly Product[],
+  query: string,
+  mode: CatalogSearchMode = "all",
+): Product[] {
+  const knownCodes = new Set<string>();
+  const titlesWithoutCodes = new Set<string>();
+  for (const product of official) {
+    const codes = [product.barcode, ...(product.variants ?? []).map(({ barcode }) => barcode)].filter((code) => code !== undefined);
+    for (const code of codes) knownCodes.add(code.padStart(14, "0"));
+    if (!codes.length) for (const key of catalogTitleKeys(product)) titlesWithoutCodes.add(key);
+  }
+
+  const community = [...remote, ...localCatalog].filter((product) => product.source === "open-beauty-facts"
+    && (!product.barcode || !knownCodes.has(product.barcode.padStart(14, "0")))
+    && !catalogTitleKeys(product).some((key) => titlesWithoutCodes.has(key)));
+  return [...official, ...rankCatalogProducts(community, query, mode, false)];
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, CircleX, Crosshair, Palette as PaletteIcon, RotateCcw, SlidersHorizontal, SwatchBook } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { makeupAppearance, type PigmentLayer } from "@/lib/face-makeup";
 import { useLocale } from "@/lib/i18n";
 import { findMakeupPlacement, getMakeupPlacements } from "@/lib/makeup-placements";
@@ -9,8 +9,8 @@ import type { MakeupStylePreset } from "@/lib/makeup-styles";
 import type { FaceZone, PaletteColor, Product } from "@/lib/model";
 import { getStudioAnchor, setStudioAnchor, type StudioAnchor, type StudioSide } from "@/lib/studio-advanced";
 import {
-  studioAreas, studioLookLimits, studioToolsByArea,
-  type SavedStudioLook, type StudioArea, type StudioLayer, type StudioLookLayers, type StudioLookSnapshot, type StudioPlacements, type StudioSetting, type StudioTool,
+  defaultStudioPortrait, studioAreas, studioLookLimits, studioSkinTones, studioToolsByArea,
+  type SavedStudioLook, type StudioArea, type StudioLayer, type StudioLookLayers, type StudioLookSnapshot, type StudioPlacements, type StudioPortrait, type StudioSetting, type StudioTool,
 } from "@/lib/studio-looks";
 import { FaceChart } from "./face-chart";
 import { StudioLookLibrary } from "./studio-look-library";
@@ -22,6 +22,19 @@ type StudioTab = "look" | "photo";
 type PreviewMode = "look" | "bare";
 type PigmentKind = PigmentLayer["kind"];
 type StudioSelection = { area: StudioArea; tool: StudioTool };
+type StudioTrialRequest = { product: Product };
+type PendingProduct = { id: string; selection: StudioSelection };
+export type StudioDraft = {
+  snapshot: StudioLookSnapshot;
+  selection: StudioSelection;
+  previewMode: PreviewMode;
+  activeLookId?: string;
+  guideVisible: boolean;
+  pendingProduct?: PendingProduct;
+  side: StudioSide;
+  handledTrial?: StudioTrialRequest;
+  unassignedTrial?: string;
+};
 type Labels = [french: string, english: string];
 type Shade = { hex: string; label: Labels };
 
@@ -78,11 +91,6 @@ const toolShades: Partial<Record<PigmentKind, Shade[]>> = {
 };
 const toolIntensity: Partial<Record<PigmentKind, number>> = { contour: 39, bronzer: 44, highlighter: 59, eyeliner: 96, mascara: 96, powder: 27 };
 
-const skinTones = [
-  "#F8E2D3", "#EBC5B0", "#DDBEA6", "#D7A385", "#C89577", "#B78263", "#A87863",
-  "#945C46", "#875849", "#714733", "#68463F", "#513329", "#3F2B2A", "#342420",
-];
-
 const hexPattern = /^#[\da-f]{6}$/i;
 
 function isStudioArea(zone: FaceZone): zone is StudioArea {
@@ -125,7 +133,8 @@ function productShades(products: Product[], group: ProductShade["group"]): Produ
     const selected = variants.find((variant) => variant.id === product.selectedVariantId);
     const options = selected && group === "owned" ? [selected] : variants;
     if (options.length) return options.map((variant) => ({ ...base,
-      id: productShadeId(product.id, variant.id), label: `${product.name} · ${variant.name}`,
+      id: productShadeId(product.id, variant.id),
+      label: variant.id === selected?.id && product.name.endsWith(` · ${variant.name}`) ? product.name : `${product.name} · ${variant.name}`,
       hex: variant.shadeHex ?? (variant.id === selected?.id ? product.shadeHex : undefined),
       variantId: variant.id, approximate: variant.shadeApproximate === true,
     }));
@@ -205,14 +214,19 @@ function SavedShades({ palette, selected, onSelect }: { palette: PaletteColor[];
   </fieldset>;
 }
 
-export function MakeupStudio({ products, trialProducts = noTrialProducts, preset, palette, paletteEditor, savedLooks, onChangeLooks, initialTab = "look" }: {
+export function MakeupStudio({ products, trialProducts = noTrialProducts, trialRequest, preset, palette, paletteEditor,
+  savedLooks, onChangeLooks, draft, onDraftChange, defaultPortrait, initialTab = "look" }: {
   products: Product[];
   trialProducts?: Product[];
+  trialRequest?: StudioTrialRequest;
   preset?: MakeupStylePreset;
   palette: PaletteColor[];
   paletteEditor: ReactNode;
   savedLooks: readonly SavedStudioLook[];
   onChangeLooks: (apply: (current: SavedStudioLook[]) => SavedStudioLook[]) => boolean;
+  draft?: StudioDraft;
+  onDraftChange?: (draft: StudioDraft) => void;
+  defaultPortrait?: StudioPortrait;
   initialTab?: StudioTab;
 }) {
   const { t, formatNumber } = useLocale();
@@ -223,22 +237,23 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
   const previewPanel = useRef<HTMLElement>(null);
   const portrait = useRef<HTMLDivElement>(null);
   const placementTrigger = useRef<HTMLButtonElement>(null);
-  const loadedTrial = useRef<Product | undefined>(undefined);
   const loadedPreset = useRef<MakeupStylePreset | undefined>(undefined);
+  const hadDraft = useRef(Boolean(draft));
+  const initialPortrait = useRef(draft?.snapshot.portrait ?? defaultPortrait ?? defaultStudioPortrait);
   const [tab, setTab] = useState<StudioTab>(initialTab);
-  const [previewMode, setPreviewMode] = useState<PreviewMode>("look");
-  const [{ area, tool }, setSelection] = useState<StudioSelection>({ area: "joues", tool: "blush" });
-  const [skinTone, setSkinTone] = useState(skinTones[1]);
-  const [iris, setIris] = useState("#5A4359");
-  const [hair, setHair] = useState("#473342");
-  const [showHair, setShowHair] = useState(false);
-  const [look, setLook] = useState<StudioLookLayers>({});
-  const [placements, setPlacements] = useState<StudioPlacements>({});
-  const [activeLookId, setActiveLookId] = useState<string>();
-  const [guideVisible, setGuideVisible] = useState(false);
-  const [setting, setSetting] = useState<StudioSetting | null>(null);
-  const [pendingProduct, setPendingProduct] = useState<{ id: string; selection: StudioSelection }>();
-  const [side, setSide] = useState<StudioSide>("left");
+  const [previewMode, setPreviewMode] = useState<PreviewMode>(draft?.previewMode ?? "look");
+  const [{ area, tool }, setSelection] = useState<StudioSelection>(draft?.selection ?? { area: "joues", tool: "blush" });
+  const [portraitStyle, setPortraitStyle] = useState(initialPortrait.current);
+  const { skinTone, iris, hair, showHair } = portraitStyle;
+  const [look, setLook] = useState<StudioLookLayers>(draft?.snapshot.layers ?? {});
+  const [placements, setPlacements] = useState<StudioPlacements>(draft?.snapshot.placements ?? {});
+  const [activeLookId, setActiveLookId] = useState(draft?.activeLookId);
+  const [guideVisible, setGuideVisible] = useState(draft?.guideVisible ?? false);
+  const [setting, setSetting] = useState<StudioSetting | null>(draft?.snapshot.setting ?? null);
+  const [pendingProduct, setPendingProduct] = useState(draft?.pendingProduct);
+  const [side, setSide] = useState<StudioSide>(draft?.side ?? "left");
+  const [handledTrial, setHandledTrial] = useState(draft?.handledTrial);
+  const [unassignedTrial, setUnassignedTrial] = useState(draft?.unassignedTrial);
   const [positioningTool, setPositioningTool] = useState<"blush" | "brow">();
   const { shadesByProduct, settingPowders } = useMemo(() => {
     const ownedIds = new Set(products.map(({ id }) => id));
@@ -277,6 +292,9 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
       placement: selectedPlacement(kind, placements)?.id, details: layer.details }];
   }));
   const hasLook = layers.length > 0 || settingApplied;
+  const canUseProfilePortrait = defaultPortrait && (showHair !== defaultPortrait.showHair ||
+    skinTone.toUpperCase() !== defaultPortrait.skinTone.toUpperCase() || iris.toUpperCase() !== defaultPortrait.iris.toUpperCase() ||
+    hair.toUpperCase() !== defaultPortrait.hair.toUpperCase());
   const currentHex = active?.mix ? blendedHex(active.hex, active.mix) : active?.hex;
   const swatchChoices: Swatch[] = [
     ...shadesByProduct.flatMap((choice) => choice.hex ? [{
@@ -298,6 +316,18 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
 
   useEffect(() => { setTab(initialTab); }, [initialTab]);
 
+  useLayoutEffect(() => {
+    if (!onDraftChange) return;
+    // An unedited visit leaves room for later profile changes to seed the Studio.
+    if (!hadDraft.current && !hasLook && !pendingProduct && !handledTrial && portraitStyle === initialPortrait.current && !Object.keys(placements).length) return;
+    hadDraft.current = true;
+    onDraftChange({
+      snapshot: { portrait: portraitStyle, layers: look, placements, setting },
+      selection: { area, tool }, previewMode, activeLookId, guideVisible, pendingProduct, side, handledTrial, unassignedTrial,
+    });
+  }, [onDraftChange, hasLook, portraitStyle, look, placements, setting, area, tool, previewMode, activeLookId,
+    guideVisible, pendingProduct, side, handledTrial, unassignedTrial]);
+
   useEffect(() => {
     const panel = previewPanel.current;
     if (!panel) return;
@@ -318,19 +348,22 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
     };
   }, []);
 
-  const latestTrial = trialProducts.at(-1);
   useEffect(() => {
-    if (!latestTrial || loadedTrial.current === latestTrial) return;
-    loadedTrial.current = latestTrial;
-    if (isSettingPowder(latestTrial)) {
+    if (!trialRequest || handledTrial === trialRequest) return;
+    setHandledTrial(trialRequest);
+    setUnassignedTrial(undefined);
+    const { product } = trialRequest;
+    if (isSettingPowder(product)) {
       setSelection({ area: "visage", tool: "setting-powder" });
-      applySetting(latestTrial.id);
+      setPositioningTool(undefined);
+      applySetting(product.id);
     } else {
-      const choices = shadesByProduct.filter(({ product }) => product.id === latestTrial.id);
-      const choice = choices.find(({ variantId }) => variantId === latestTrial.selectedVariantId) ?? (choices.length === 1 ? choices[0] : undefined);
-      if (choice) applyProduct(choice);
+      const choices = shadesByProduct.filter((choice) => choice.product.id === product.id);
+      const choice = choices.find(({ variantId }) => variantId === product.selectedVariantId) ?? (choices.length === 1 ? choices[0] : undefined);
+      if (choice?.selection) applyProduct(choice);
+      else if (choices.length) setUnassignedTrial(product.name);
     }
-  }, [latestTrial]);
+  }, [trialRequest, handledTrial]);
 
   useEffect(() => {
     if (!preset || loadedPreset.current === preset) return;
@@ -359,6 +392,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
   }
 
   function applyProduct(choice?: ProductShade) {
+    setUnassignedTrial(undefined);
     if (!choice) {
       setPendingProduct(undefined);
       if (active?.productId) updateLayer({ productId: undefined, variantId: undefined, approximate: undefined, name: active.hex });
@@ -450,7 +484,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
       name,
       updatedAt: new Date().toISOString(),
       snapshot: {
-        portrait: { skinTone, iris, hair, showHair },
+        portrait: portraitStyle,
         layers: look,
         placements: savedPlacements,
         setting: settingApplied ? setting : null,
@@ -470,12 +504,8 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
   function openSnapshot(snapshot: StudioLookSnapshot, id?: string) {
     const selection = studioAreas.flatMap((zone) => studioToolsByArea[zone].filter((kind) =>
       kind !== "setting-powder" && snapshot.layers[zone]?.[kind]).map((kind) => ({ area: zone, tool: kind })))[0];
-    const { skinTone: savedSkin, iris: savedIris, hair: savedHair, showHair: savedShowHair } = snapshot.portrait;
     setSetting(snapshot.setting);
-    setSkinTone(savedSkin);
-    setIris(savedIris);
-    setHair(savedHair);
-    setShowHair(savedShowHair);
+    setPortraitStyle(snapshot.portrait);
     setLook(snapshot.layers);
     setPlacements(snapshot.placements);
     setSelection(selection ?? (snapshot.setting ? { area: "visage", tool: "setting-powder" } : { area: "joues", tool: "blush" }));
@@ -483,6 +513,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
     setPreviewMode("look");
     setActiveLookId(id);
     setPendingProduct(undefined);
+    setUnassignedTrial(undefined);
     setPositioningTool(undefined);
     setTab("look");
     requestAnimationFrame(() => preview.current?.focus());
@@ -545,23 +576,30 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
           </div>
           <fieldset className={styles.skinTones}>
             <legend>{t("Carnation de l’illustration", "Illustrated skin tone")}</legend>
-            {skinTones.map((tone, index) => {
+            {studioSkinTones.map((tone, index) => {
               const number = formatNumber(index + 1);
               const label = t(`Carnation ${number} · ${tone}`, `Skin tone ${number} · ${tone}`);
               return <button type="button" key={tone} className={styles.skinTone}
                 style={{ "--swatch": tone } as CSSProperties} aria-pressed={skinTone === tone}
-                aria-label={label} title={label} onClick={() => setSkinTone(tone)}/>;
+                aria-label={label} title={label} onClick={() => setPortraitStyle({ ...portraitStyle, skinTone: tone })}/>;
             })}
             <input type="color" className={styles.customSkinTone} aria-label={t("Choisir une carnation personnalisée", "Choose a custom skin tone")}
-              title={t("Carnation personnalisée", "Custom skin tone")} value={skinTone} onChange={(event) => setSkinTone(event.target.value.toUpperCase())}/>
+              title={t("Carnation personnalisée", "Custom skin tone")} value={skinTone}
+              onChange={(event) => setPortraitStyle({ ...portraitStyle, skinTone: event.target.value.toUpperCase() })}/>
             <output className={styles.skinValue}>{skinTone.toUpperCase()}</output>
           </fieldset>
           <details className={styles.portraitOptions}>
             <summary>{t("Couleurs des yeux et des cheveux", "Eye and hair colours")}</summary>
             <div>
-              <label>{t("Yeux", "Eyes")}<input type="color" value={iris} onChange={(event) => setIris(event.target.value)}/></label>
-              <label><input type="checkbox" checked={showHair} onChange={(event) => setShowHair(event.target.checked)}/>{t("Afficher les cheveux", "Show hair")}</label>
-              {showHair && <label>{t("Cheveux", "Hair")}<input type="color" value={hair} onChange={(event) => setHair(event.target.value)}/></label>}
+              <label>{t("Yeux", "Eyes")}<input type="color" value={iris}
+                onChange={(event) => setPortraitStyle({ ...portraitStyle, iris: event.target.value })}/></label>
+              <label><input type="checkbox" checked={showHair} onChange={(event) => setPortraitStyle({ ...portraitStyle, showHair: event.target.checked })}/>{t("Afficher les cheveux", "Show hair")}</label>
+              {showHair && <label>{t("Cheveux", "Hair")}<input type="color" value={hair}
+                onChange={(event) => setPortraitStyle({ ...portraitStyle, hair: event.target.value })}/></label>}
+              {defaultPortrait && canUseProfilePortrait && <button type="button" className="button button-secondary" onClick={(event) => {
+                event.currentTarget.closest("details")?.querySelector("summary")?.focus();
+                setPortraitStyle(defaultPortrait);
+              }}>{t("Utiliser le visage de mon profil", "Use my profile portrait")}</button>}
             </div>
           </details>
           {(layers.length > 0 || settingApplied) && <ul className={styles.layerList} aria-label={t("Couches du look", "Look layers")}>
@@ -597,6 +635,10 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, preset
               onClick={() => { setSelection({ area, tool: kind }); setPositioningTool(undefined); }}>{t(...toolLabels[kind])}</button>)}
           </div>}
           {!isSetting && <ProductShades choices={shadesByProduct} value={selectedProduct?.id} onSelect={applyProduct}/>}
+          {unassignedTrial && <p className={styles.sourceHint} role="status">{t(
+            `Pour essayer « ${unassignedTrial} », choisis le type de maquillage, puis sélectionne le produit.`,
+            `To try “${unassignedTrial}”, choose the makeup type, then select the product.`,
+          )}</p>}
           {currentPlacement && <fieldset className={styles.placementPanel}>
             <legend>{t("Placement", "Placement")}</legend>
             <div className={styles.placements}>

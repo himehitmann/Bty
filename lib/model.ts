@@ -2,7 +2,7 @@ import { z } from "zod";
 import { catalogCommunityImageUrl, catalogImageUrl } from "./catalog-images";
 import { isDefaultBeautyList } from "./beauty-list-destinations";
 import { makeupPlacementIds } from "./makeup-placements";
-import { savedStudioLookSchema, studioLookLimits } from "./studio-looks";
+import { savedStudioLookSchema, studioLookLimits, studioPortraitSchema } from "./studio-looks";
 
 export const categories = ["soin", "maquillage", "cheveux", "parfums"] as const;
 export const categoryLabels = { soin: "Soin", maquillage: "Maquillage", cheveux: "Cheveux", parfums: "Parfums" };
@@ -172,8 +172,11 @@ const beautyListSchema = z.object({
 export const skinFeels = ["seche", "brillante", "mixte", "equilibree", "incertaine"] as const;
 export const skinConcerns = ["tiraillements", "brillance", "rougeurs", "imperfections", "texture"] as const;
 export const undertones = ["froid", "chaud", "neutre", "olive", "incertain"] as const;
+export const profileNameLimit = 40;
 export const preferenceSchema = z.object({
   locale: z.enum(["fr", "en", "es", "it"]).optional(),
+  displayName: z.string().trim().min(1).max(profileNameLimit).optional(),
+  studioPortrait: studioPortraitSchema.optional(),
   fragranceFree: z.boolean(),
   sensitive: z.boolean(),
   avoid: z.string().trim().max(600),

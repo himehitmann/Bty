@@ -23,6 +23,15 @@ export const studioLookLimits = { looks: 30, name: 60 } as const;
 const identifier = z.string().min(1).max(160);
 const hex = z.string().regex(/^#[0-9a-f]{6}$/i);
 const percentage = z.number().int().min(0).max(100);
+export const studioSkinTones = [
+  "#F8E2D3", "#EBC5B0", "#DDBEA6", "#D7A385", "#C89577", "#B78263", "#A87863",
+  "#945C46", "#875849", "#714733", "#68463F", "#513329", "#3F2B2A", "#342420",
+] as const;
+export const studioPortraitSchema = z.object({ skinTone: hex, iris: hex, hair: hex, showHair: z.boolean() });
+export type StudioPortrait = z.infer<typeof studioPortraitSchema>;
+export const defaultStudioPortrait: StudioPortrait = {
+  skinTone: studioSkinTones[1], iris: "#5A4359", hair: "#473342", showHair: false,
+};
 
 const studioLayerSchema = z.object({
   name: z.string().trim().min(1).max(140),
@@ -63,7 +72,7 @@ const studioPlacementsSchema = z.partialRecord(z.enum(studioTools), z.enum(makeu
 const studioSettingSchema = z.object({ productId: identifier.optional() });
 
 const studioLookSnapshotSchema = z.object({
-  portrait: z.object({ skinTone: hex, iris: hex, hair: hex, showHair: z.boolean() }),
+  portrait: studioPortraitSchema,
   layers: studioLookLayersSchema,
   placements: studioPlacementsSchema,
   setting: studioSettingSchema.nullable(),

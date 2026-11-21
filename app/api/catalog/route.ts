@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { catalogBarcode, normalizeCatalogQuery, rankCatalogProducts, searchLocalCatalog, type CatalogSearchMode } from "@/lib/catalog";
+import { canSupplementCatalog, catalogBarcode, normalizeCatalogQuery, rankCatalogProducts, searchLocalCatalog, supplementCatalog, type CatalogSearchMode } from "@/lib/catalog";
 import type { Product } from "@/lib/model";
 import { catalogProviderQuery, catalogSearchMode, catalogSearchQuery, searchOpenBeautyFacts } from "@/lib/open-beauty-facts";
 
@@ -55,18 +55,23 @@ export async function GET(request: NextRequest) {
   const barcode = mode.data === "all" ? catalogBarcode(query.data) : undefined;
   const normalizedQuery = normalizeCatalogQuery(query.data);
   const localResults = searchLocalCatalog(query.data, mode.data);
+  const supplement = params.get("supplement") === "1" && canSupplementCatalog(query.data, localResults, mode.data);
 
-  if (normalizedQuery.length < 2 || localResults.some(({ source }) => source === "manufacturer")) {
+  if (normalizedQuery.length < 2 || (!supplement && localResults.some(({ source }) => source === "manufacturer"))) {
     return NextResponse.json({ products: localResults, externalStatus: "not-requested" });
   }
 
   try {
     const externalResults = await cachedExternalSearch(query.data, mode.data, barcode);
     return NextResponse.json({
-      products: rankCatalogProducts([...externalResults, ...localResults], query.data, mode.data),
+      products: supplement ? supplementCatalog(localResults, externalResults, query.data, mode.data)
+        : rankCatalogProducts([...externalResults, ...localResults], query.data, mode.data),
       externalStatus: "ok",
     });
   } catch {
-    return NextResponse.json({ products: localResults, externalStatus: "unavailable" });
+    return NextResponse.json({
+      products: supplement ? supplementCatalog(localResults, [], query.data, mode.data) : localResults,
+      externalStatus: "unavailable",
+    });
   }
 }

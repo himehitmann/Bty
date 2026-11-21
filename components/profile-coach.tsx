@@ -52,33 +52,42 @@ export function ProfileFields({ preferences }: { preferences: Preferences }) {
 }
 
 const searchable = (value: string) => value.toLocaleLowerCase("fr").normalize("NFD").replace(/\p{Diacritic}/gu, "");
+const sunscreenPattern = /\b(?:spf|fps)(?:\b|\d)|solaire|sunscreen/;
 
 const steps = [
   { id: "cleanse", label: ["Nettoyer", "Cleanse"], match: /nettoy|cleanser/, note: ["Utilise-le en premier si ce nettoyage fait partie de ta routine. Suis la notice pour le rinçage.", "Use it first if cleansing is part of your routine. Follow the label’s rinsing instructions."] },
   { id: "moisturise", label: ["Hydrater", "Moisturise"], match: /hydrat|moisturi/, note: ["Utilise après le nettoyage selon la notice.", "Apply after cleansing as directed on the label."] },
-  { id: "protect", label: ["Protéger du soleil le matin", "Apply sun protection in the morning"], match: /\bspf\b|\bfps\b|solaire|sunscreen/, note: ["Suis la notice pour la quantité et la fréquence de réapplication. Utilise-le en dernière étape de soin avant le maquillage.", "Follow the label for how much to use and when to reapply. Make it the final skincare step before makeup."] },
+  { id: "protect", label: ["Protéger du soleil le matin", "Apply sun protection in the morning"], match: sunscreenPattern, note: ["Suis la notice pour la quantité et la fréquence de réapplication. Utilise-le en dernière étape de soin avant le maquillage.", "Follow the label for how much to use and when to reapply. Make it the final skincare step before makeup."] },
 ] as const;
 
 export function RoutineCoach({ preferences, products, onCreate }: {
   preferences: Preferences; products: Product[]; onCreate: (routine: Routine) => boolean;
 }) {
   const { t, locale } = useLocale();
-  const [picked, setPicked] = useState<Record<string, string>>({});
+  const [period, setPeriod] = useState<"matin" | "soir">("matin");
+  const [picked, setPicked] = useState<Record<"matin" | "soir", Record<string, string>>>({ matin: {}, soir: {} });
   const [show, setShow] = useState(false);
   const focusComfort = preferences.skinFeel === "seche" || preferences.skinConcerns?.includes("tiraillements");
   const focusShine = preferences.skinFeel === "brillante" || preferences.skinConcerns?.includes("brillance");
   const focusReactive = preferences.sensitive || preferences.skinConcerns?.includes("rougeurs");
   const filtered = products.filter((product) => product.category === "soin");
-  const selections = steps.map((step) => {
-    const candidates = filtered.filter((product) => step.match.test(searchable(product.name)));
-    const selection = picked[step.id] ?? "";
+  const selections = steps.filter((step) => period === "matin" || step.id !== "protect").map((step) => {
+    const candidates = filtered.filter((product) => {
+      const label = searchable(product.name);
+      return step.match.test(label) && (step.id === "protect" || !sunscreenPattern.test(label));
+    });
+    const selection = picked[period][step.id] ?? "";
     return { ...step, candidates, product: candidates.find((item) => item.id === selection) };
   });
   const selectionCount = selections.filter(({ product }) => product).length;
   function create() {
     const selectedSteps = selections.flatMap(({ product, note }) => product
       ? [{ id: crypto.randomUUID(), productId: product.id, zone: "visage" as const, note: t(note[0], note[1]) }] : []);
-    if (selectedSteps.length) onCreate({ id: crypto.randomUUID(), name: t("Ma routine du matin", "My morning beauty routine"), period: "matin", steps: selectedSteps });
+    if (selectedSteps.length) onCreate({
+      id: crypto.randomUUID(),
+      name: period === "matin" ? t("Ma routine du matin", "My morning beauty routine") : t("Ma routine du soir", "My evening beauty routine"),
+      period, steps: selectedSteps,
+    });
   }
   return <section className="dashboard-card profile-coach" aria-labelledby="profile-coach-title">
     <h2 id="profile-coach-title">{t("Préparer une routine avec mes produits", "Build a routine from my collection")}</h2>
@@ -87,11 +96,20 @@ export function RoutineCoach({ preferences, products, onCreate }: {
       : focusShine ? t("Si la brillance te gêne, observe quand elle apparaît avant de multiplier les étapes.", "If shine bothers you, note when it appears before adding more steps.")
       : t("Commence par quelques gestes que tu peux reconnaître sur tes produits.", "Start with a few steps you can identify from your product labels.")}</p>
     <p className="muted">{t("Les suggestions se basent sur les noms des produits que tu possèdes. Confirme leur rôle sur l’emballage. Renseigne la fréquence dans ta routine à partir de la notice ou de tes habitudes.", "Suggestions are based on the names of products you own. Confirm their purpose on the packaging and set a frequency using the label or your usual routine.")}</p>
-    <button type="button" className="button button-secondary" aria-expanded={show} onClick={() => setShow(!show)}>{show ? t("Replier les suggestions", "Hide suggestions") : t("Voir une trame du matin", "See a morning routine outline")}</button>
+    <button type="button" className="button button-secondary" aria-expanded={show} onClick={() => setShow(!show)}>{show ? t("Replier les suggestions", "Hide suggestions") : t("Choisir une trame de routine", "Choose a routine outline")}</button>
     {show && <div className="stacked-form">
+      <label>{t("Moment de la routine", "Routine time")}
+        <select value={period} onChange={(event) => setPeriod(event.target.value === "soir" ? "soir" : "matin")}>
+          <option value="matin">{t("Matin", "Morning")}</option>
+          <option value="soir">{t("Soir", "Evening")}</option>
+        </select>
+      </label>
       {selections.map(({ id, label, candidates, product }) => <div key={id}>
         <label>{t(label[0], label[1])}
-          <select value={picked[id] ?? ""} onChange={(event) => setPicked((current) => ({ ...current, [id]: event.target.value }))} disabled={!candidates.length}>
+          <select value={product?.id ?? ""} onChange={(event) => {
+            const value = event.currentTarget.value;
+            setPicked((current) => ({ ...current, [period]: { ...current[period], [id]: value } }));
+          }} disabled={!candidates.length}>
             <option value="">{candidates.length ? t("Choisir dans ma trousse", "Choose from my collection") : t("Aucun produit identifié", "No matching products")}</option>
             {candidates.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>

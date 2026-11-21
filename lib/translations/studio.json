@@ -2,6 +2,8 @@
   "Brows": ["Cejas", "Sopracciglia"],
   "Current colour": ["Color actual", "Colore attuale"],
   "Finish placement": ["Terminar la colocación", "Termina il posizionamento"],
+  "Use my profile portrait": ["Usar el retrato de mi perfil", "Usa il ritratto del mio profilo"],
+  "To try “{0}”, choose the makeup type, then select the product.": ["Para probar «{0}», elige el tipo de maquillaje y selecciona el producto.", "Per provare «{0}», scegli il tipo di trucco, poi seleziona il prodotto."],
   "Build a look with your makeup bag, catalogue shades or colours sampled from your photos.": ["Crea un look con los productos de tu neceser, los tonos del catálogo o los colores que extraigas de tus fotos.", "Crea un look con i prodotti del tuo beauty case, le tonalità del catalogo o i colori prelevati dalle tue foto."],
   "Sample a shade": ["Extraer un tono", "Preleva una tonalità"],
   "Skin tone {0} · {1}": ["Tono de piel {0} · {1}", "Carnagione {0} · {1}"],
