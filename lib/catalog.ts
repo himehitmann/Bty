@@ -1,5 +1,5 @@
 import type { Product } from "@/lib/model";
-import { catalogCommunityImageUrl, catalogImageUrl } from "./catalog-images";
+import { catalogImageUrl } from "./catalog-images";
 import { manufacturerCatalog } from "./manufacturer-catalog";
 
 export { catalogImageUrl } from "./catalog-images";
@@ -133,7 +133,7 @@ export function normalizeCatalogText(value: string): string {
 
 export function normalizeCatalogQuery(value: string): string {
   return normalizeCatalogText(value).replaceAll("œ", "oe").replaceAll("æ", "ae")
-    .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    .normalize("NFC").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
 export function catalogBarcode(value: string): string | undefined {
@@ -141,9 +141,51 @@ export function catalogBarcode(value: string): string | undefined {
   return /^\d{8,14}$/.test(digits) ? digits : undefined;
 }
 
+const catalogBrandNames = [
+  ["Huda Beauty", "huda"],
+  ["rom&nd", "romand", "롬앤"],
+  ["CLIO", "clubclio", "클리오"],
+  ["peripera", "페리페라"],
+  ["ETUDE", "etude house", "에뛰드", "에뛰드 하우스"],
+  ["dasique", "데이지크"],
+  ["TIRTIR", "티르티르"],
+  ["3CE", "3ce stylenanda", "3 concept eyes", "3ce 3 concept eyes", "쓰리씨이"],
+  ["fwee", "퓌"],
+  ["hince", "힌스"],
+  ["Medicube", "메디큐브"],
+  ["COSRX", "코스알엑스"],
+  ["Beauty of Joseon", "조선미녀"],
+  ["Anua", "아누아"],
+] as const;
+
+const brandAliases = new Map<string, string>(catalogBrandNames.flatMap(([brand, ...aliases]) =>
+  [brand, ...aliases].map((alias) => [normalizeCatalogQuery(alias).replaceAll(" ", ""), brand] as const),
+));
+
 export function catalogBrandAlias(query: string): string | undefined {
-  const name = normalizeCatalogQuery(query);
-  return name === "huda" || name === "hudabeauty" || name === "huda beauty" ? "Huda Beauty" : undefined;
+  return brandAliases.get(normalizeCatalogQuery(query.replace(/^[a-z]{2}:/i, "")).replaceAll(" ", ""));
+}
+
+function brandPrefix(words: string[]): { brand: string; wordCount: number } | undefined {
+  for (let wordCount = Math.min(4, words.length); wordCount > 0; wordCount -= 1) {
+    const brand = catalogBrandAlias(words.slice(0, wordCount).join(" "));
+    if (brand) return { brand, wordCount };
+  }
+}
+
+export function catalogBrandInTitle(title: string): string | undefined {
+  return brandPrefix(normalizeCatalogQuery(title).split(" "))?.brand;
+}
+
+export function normalizeCatalogBrandPrefix(value: string): string {
+  const words = normalizeCatalogQuery(value).split(" ");
+  const prefix = brandPrefix(words);
+  return prefix ? [normalizeCatalogQuery(prefix.brand), ...words.slice(prefix.wordCount)].join(" ") : words.join(" ");
+}
+
+function normalizeBrand(value: string): string {
+  const name = value.replace(/^[a-z]{2}:/i, "");
+  return normalizeCatalogQuery(catalogBrandAlias(name) ?? name);
 }
 
 function matchWords(words: string[], text: string): boolean {
@@ -152,7 +194,7 @@ function matchWords(words: string[], text: string): boolean {
 }
 
 function brandScore(value: string, query: string, words: string[]): number {
-  const brand = normalizeCatalogQuery(value.replace(/^[a-z]{2}:/i, ""));
+  const brand = normalizeBrand(value);
   if (!brand) return 0;
   if (brand === query || brand.replaceAll(" ", "") === query.replaceAll(" ", "")) return 90;
   if (brand.startsWith(`${query} `)) return 78;
@@ -160,6 +202,8 @@ function brandScore(value: string, query: string, words: string[]): number {
 }
 
 export function matchesCatalogBrand(brands: readonly string[], query: string): boolean {
+  const alias = catalogBrandAlias(query);
+  if (alias) return brands.some((brand) => catalogBrandAlias(brand) === alias);
   const name = normalizeCatalogQuery(query);
   if (!name) return false;
   const words = name.split(" ");
@@ -167,13 +211,14 @@ export function matchesCatalogBrand(brands: readonly string[], query: string): b
 }
 
 function rankProduct(product: Product, query: string, words: string[], mode: CatalogSearchMode): number {
-  const brand = Math.max(0, ...product.brand.split(/[,;|]/).map((part) => brandScore(part, query, words)));
+  const brands = product.brand.split(/[,;|]/);
+  const brand = Math.max(0, ...brands.map((part) => brandScore(part, query, words)));
   if (mode === "brand") return brand;
 
-  const name = normalizeCatalogQuery(product.name);
+  const name = normalizeCatalogBrandPrefix(product.name);
   if (name === query) return 100;
   if (brand === 90) return brand;
-  const brandedName = `${name} ${normalizeCatalogQuery(product.brand)}`;
+  const brandedName = `${name} ${brands.map(normalizeBrand).join(" ")}`;
   const matchesName = matchWords(words, name);
   if (!matchesName && matchWords(words, brandedName)) return 88;
   if (name.startsWith(`${query} `)) return 86;
@@ -188,53 +233,52 @@ function rankProduct(product: Product, query: string, words: string[], mode: Cat
   return matchWords(words, `${brandedName} ${other}`) ? 20 : 0;
 }
 
+const titleOrder = new Intl.Collator("fr", { sensitivity: "base", numeric: true });
+
+function sourcePriority(source: Product["source"]): number {
+  return source === "manufacturer" ? 2 : source === "open-beauty-facts" ? 1 : 0;
+}
+
 export function rankCatalogProducts(
   products: readonly Product[],
   search: string,
   mode: CatalogSearchMode = "all",
-  keepUnmatched = true,
 ): Product[] {
-  const query = normalizeCatalogQuery(catalogBrandAlias(search) ?? search);
-  const barcode = mode === "all" ? catalogBarcode(search) : undefined;
-  const gtin = barcode?.padStart(14, "0");
+  const query = normalizeCatalogBrandPrefix(search);
+  const brand = catalogBrandAlias(search);
+  const gtin = mode === "all" ? catalogBarcode(search)?.padStart(14, "0") : undefined;
   const words = query.split(" ");
-  const photosByGtin = new Map<string, string>();
-  for (const product of products) {
-    const key = product.barcode?.padStart(14, "0");
-    const photo = catalogCommunityImageUrl(product.imageUrl, product.barcode);
-    if (key && photo && product.source === "open-beauty-facts" && !photosByGtin.has(key)) photosByGtin.set(key, photo);
-  }
-
   const ranked = products.flatMap((product) => {
     const productGtin = product.barcode?.padStart(14, "0");
-    const key = productGtin ? `barcode:${productGtin}` : product.id;
     if (gtin && productGtin !== gtin) return [];
-    const score = query && !barcode ? rankProduct(product, query, words, mode) : 0;
-    if (query && !barcode && !score && !keepUnmatched) return [];
-    const imageUrl = catalogImageUrl(product.imageUrl, product.barcode, product.manufacturerUrl) ??
-      (productGtin && product.source === "open-beauty-facts" ? photosByGtin.get(productGtin) : undefined);
+    if (brand && !matchesCatalogBrand(product.brand.split(/[,;|]/), brand)) return [];
+    const score = query && !gtin ? rankProduct(product, query, words, mode) : 0;
+    if (query && !gtin && !score) return [];
+    const imageUrl = catalogImageUrl(product.imageUrl, product.barcode, product.manufacturerUrl);
     const entry = imageUrl === product.imageUrl ? product : { ...product, imageUrl };
-    return [{ product: entry, key, score, hasPhoto: Boolean(imageUrl) }];
-  }).sort((left, right) => right.score - left.score
-    || Number(right.product.source === "manufacturer") - Number(left.product.source === "manufacturer")
-    || Number(right.hasPhoto) - Number(left.hasPhoto));
-
-  const seen = new Set<string>();
-  return ranked.flatMap(({ product, key }) => {
-    if (seen.has(key)) return [];
-    seen.add(key);
-    return [product];
+    return [{ product: entry, key: productGtin ? `barcode:${productGtin}` : product.id, score }];
   });
+
+  // For duplicate barcodes, the first source is authoritative (official, then live community, then offline).
+  const canonical = new Map<string, (typeof ranked)[number]>();
+  for (const entry of ranked) {
+    if (!canonical.has(entry.key)) canonical.set(entry.key, entry);
+  }
+  return [...canonical.values()].sort((left, right) => right.score - left.score
+    || sourcePriority(right.product.source) - sourcePriority(left.product.source)
+    || titleOrder.compare(left.product.brand, right.product.brand)
+    || titleOrder.compare(left.product.name, right.product.name)
+    || left.product.id.localeCompare(right.product.id)).map(({ product }) => product);
 }
 
 export function searchOfficialCatalog(query: string, mode: CatalogSearchMode = "all"): Product[] {
   const barcode = mode === "all" ? catalogBarcode(query) : undefined;
-  if (!barcode) return rankCatalogProducts(manufacturerCatalog, query, mode, false);
+  if (!barcode) return rankCatalogProducts(manufacturerCatalog, query, mode);
 
   const gtin = barcode.padStart(14, "0");
   return manufacturerCatalog.flatMap((product) => {
     const variant = product.variants?.find((item) => item.barcode?.padStart(14, "0") === gtin);
-    if (!variant) return [];
+    if (!variant) return product.barcode?.padStart(14, "0") === gtin ? [product] : [];
     return [{
       ...product,
       barcode: variant.barcode,
@@ -246,40 +290,36 @@ export function searchOfficialCatalog(query: string, mode: CatalogSearchMode = "
 
 export function searchLocalCatalog(query: string, mode: CatalogSearchMode = "all"): Product[] {
   const official = searchOfficialCatalog(query, mode);
-  if (official.length) return official;
-  return rankCatalogProducts(localCatalog, query, mode, false);
-}
-
-export function canSupplementCatalog(query: string, products: readonly Product[], mode: CatalogSearchMode = "all"): boolean {
-  return normalizeCatalogQuery(query).length >= 2
-    && !(mode === "all" && catalogBarcode(query))
-    && products.some(({ source }) => source === "manufacturer");
+  return mergeCatalogResults(official, [], query, mode);
 }
 
 function catalogTitleKeys(product: Product): string[] {
-  const title = normalizeCatalogQuery(product.name);
-  return product.brand.split(/[,;|]/).map(normalizeCatalogQuery).filter(Boolean).map((brand) => {
+  const title = normalizeCatalogBrandPrefix(product.name);
+  return product.brand.split(/[,;|]/).map(normalizeBrand).filter(Boolean).map((brand) => {
     const productName = title.startsWith(`${brand} `) ? title.slice(brand.length + 1) : title;
     return `${brand}:${productName.replace(/\bpads$/, "pad")}`;
   });
 }
 
-export function supplementCatalog(
-  official: readonly Product[],
-  remote: readonly Product[],
+export function mergeCatalogResults(
+  current: readonly Product[],
+  incoming: readonly Product[],
   query: string,
   mode: CatalogSearchMode = "all",
 ): Product[] {
-  const knownCodes = new Set<string>();
-  const titlesWithoutCodes = new Set<string>();
-  for (const product of official) {
-    const codes = [product.barcode, ...(product.variants ?? []).map(({ barcode }) => barcode)].filter((code) => code !== undefined);
-    for (const code of codes) knownCodes.add(code.padStart(14, "0"));
-    if (!codes.length) for (const key of catalogTitleKeys(product)) titlesWithoutCodes.add(key);
-  }
-
-  const community = [...remote, ...localCatalog].filter((product) => product.source === "open-beauty-facts"
-    && (!product.barcode || !knownCodes.has(product.barcode.padStart(14, "0")))
-    && !catalogTitleKeys(product).some((key) => titlesWithoutCodes.has(key)));
-  return [...official, ...rankCatalogProducts(community, query, mode, false)];
+  const candidates = [...current.filter(({ source }) => source === "manufacturer"), ...incoming,
+    ...current.filter(({ source }) => source !== "manufacturer"), ...localCatalog];
+  const official = candidates.filter(({ source }) => source === "manufacturer");
+  const knownCodes = new Set(official.flatMap((product) =>
+    [product.barcode, ...(product.variants ?? []).map(({ barcode }) => barcode)]
+      .flatMap((code) => code ? [code.padStart(14, "0")] : [])));
+  const officialTitles = new Set(official
+    .filter((product) => !product.barcode && !product.variants?.some(({ barcode }) => barcode))
+    .flatMap(catalogTitleKeys));
+  const barcode = mode === "all" ? catalogBarcode(query) : undefined;
+  const distinct = candidates.filter((product) => product.source !== "open-beauty-facts"
+    || ((!product.barcode || !knownCodes.has(product.barcode.padStart(14, "0")))
+      && (barcode || !catalogTitleKeys(product).some((key) => officialTitles.has(key)))));
+  const results = rankCatalogProducts(distinct, query, mode);
+  return results.some(({ source }) => source !== "local") ? results.filter(({ source }) => source !== "local") : results;
 }

@@ -1,4 +1,8 @@
 import type { Product } from "./model";
+import { dasiqueTirtirCatalog } from "./dasique-tirtir-catalog";
+import { koreanMakeupCatalog } from "./korean-makeup-catalog";
+import { otherKoreanMakeupCatalog } from "./other-korean-makeup-catalog";
+import { periperaEtudeCatalog } from "./peripera-etude-catalog";
 
 type VariantEntry = readonly [id: string, name: string, barcode?: string, shadeHex?: string];
 
@@ -57,6 +61,10 @@ function medicubeProduct(handle: string, name: string, imageUrl: string, details
 // from their own shade-picker swatches. These values approximate on-screen color.
 // Product photos are representative pack shots hosted by each manufacturer’s store.
 export const manufacturerCatalog: readonly Product[] = [
+  ...dasiqueTirtirCatalog,
+  ...koreanMakeupCatalog,
+  ...otherKoreanMakeupCatalog,
+  ...periperaEtudeCatalog,
   officialProduct("huda-blush", "Blush Filter Liquid Blush", "Huda Beauty", "https://hudabeauty.com/en-us/products/blush-filter-liquid-blush-hb01345m",
     "https://cdn.shopify.com/s/files/1/0959/8962/9206/files/PDP-SECTION1-BLUSHFILTER-COTTONCANDY-TILE1_ded21597-e66d-4e97-afa5-e814766cdd67.webp?v=1759616942&width=480",
     "blush", "tinted", [

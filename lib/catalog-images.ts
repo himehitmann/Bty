@@ -10,7 +10,12 @@ function isManufacturerImage(url: URL, manufacturerUrl?: string): boolean {
   const base = `${url.origin}${url.pathname}`;
   const prefixes = manufacturerUrl ? [manufacturerSources[new URL(manufacturerUrl).origin]].filter(Boolean) : manufacturerPrefixes;
   const prefix = prefixes.find((candidate) => base.startsWith(candidate));
-  if (!prefix || !/^[\w .()+,-]+\.(?:jpe?g|png|webp|avif)$/i.test(decodeURIComponent(base.slice(prefix.length)))) return false;
+  if (!prefix) return false;
+  const path = decodeURIComponent(base.slice(prefix.length));
+  if (prefix === manufacturerSources["https://clubclio.co.kr"]) return /^(?:\d{2}\/){5}m\.gif$/.test(path) && !url.search;
+  const basename = prefix === manufacturerSources["https://int.etude.com"]
+    ? /^\d{4}\/(?:0[1-9]|1[0-2])\/(.+)$/.exec(path)?.[1] : path;
+  if (!basename || !/^[\p{L}\p{M}\p{N}_ .()+,-]+\.(?:jpe?g|png|webp|avif)$/iu.test(basename)) return false;
 
   const params = [...url.searchParams.entries()];
   if (new Set(params.map(([key]) => key)).size !== params.length) return false;
@@ -24,7 +29,7 @@ export function catalogImageUrl(value?: string | null, barcode?: string, manufac
 
   try {
     const url = new URL(value);
-    if (url.username || url.password || url.hash) return undefined;
+    if (url.protocol !== "https:" || url.username || url.password || url.hash) return undefined;
     if (isManufacturerImage(url, manufacturerUrl)) return url.href;
     if (manufacturerUrl || !communityOrigins.has(url.origin) || url.search) return undefined;
     const match = /^\/images\/products\/(\d+(?:\/\d+)*)\/front(?:_[\w-]+)?\.\d+\.(?:100|200|400)\.(?:jpe?g|png|webp)$/i.exec(url.pathname);
@@ -40,4 +45,10 @@ export function catalogImageUrl(value?: string | null, barcode?: string, manufac
 export function catalogCommunityImageUrl(value?: string | null, barcode?: string): string | undefined {
   const url = catalogImageUrl(value, barcode);
   return url?.startsWith("https://") && communityOrigins.has(new URL(url).origin) ? url : undefined;
+}
+
+export function catalogImageCrossOrigin(url?: string): "anonymous" | undefined {
+  // These two brand asset directories serve ordinary embeds without a CORS response.
+  return url?.startsWith(manufacturerSources["https://int.etude.com"]) ||
+    url?.startsWith(manufacturerSources["https://clubclio.co.kr"]) ? undefined : "anonymous";
 }

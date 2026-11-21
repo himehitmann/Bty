@@ -34,8 +34,20 @@ const evidenceUrl = z.string().trim().max(700).refine((value) => {
   }
 });
 const catalogSourceUrl = evidenceUrl.regex(/^https:\/\/world\.openbeautyfacts\.org\/product\/\d{8,14}\/?$/i);
-const manufacturerProductUrl = evidenceUrl.regex(/^https:\/\/(?:hudabeauty\.com\/en-us|www\.rarebeauty\.com|fentybeauty\.com|medicube\.us)\/products\/[a-z0-9-]+$/);
-const manufacturerVariantUrl = evidenceUrl.regex(/^https:\/\/(?:hudabeauty\.com\/en-us|www\.rarebeauty\.com|fentybeauty\.com|medicube\.us)\/products\/[a-z0-9-]+(?:\?variant=\d{1,20})?$/);
+const manufacturerProductPatterns = [
+  /^https:\/\/(?:hudabeauty\.com\/en-us|www\.rarebeauty\.com|fentybeauty\.com|medicube\.us|romandbeauty\.com|clubclio\.shop|fwee\.us|dasique\.com|tirtir\.global)\/products\/[a-z0-9-]+$/,
+  /^https:\/\/clubclio\.co\.kr\/shop\/goodsView\/\d{10}$/,
+  /^https:\/\/int\.etude\.com\/shop\/category\/(?:lip|eye|face)\/[a-z0-9-]+\/$/,
+  /^https:\/\/www\.3cecosmetics\.com\/all-products\/[a-z-]+\/[a-z-]+\/3ce-[a-z0-9-]+$/,
+  /^https:\/\/hince\.co\.kr\/product\/(?:%[0-9A-F]{2}|[a-z0-9-])+\/\d{1,8}\/$/i,
+];
+const officialProductLink = (value: string) => manufacturerProductPatterns.some((pattern) => pattern.test(value));
+const manufacturerProductUrl = evidenceUrl.refine(officialProductLink);
+const manufacturerVariantUrl = evidenceUrl.refine((value) => {
+  const [product, query, extra] = value.split("?");
+  return extra === undefined && officialProductLink(product) && (query === undefined ||
+    (manufacturerProductPatterns[0].test(product) && /^variant=\d{1,20}$/.test(query)));
+});
 const catalogEvidence = z.object({ source: z.literal("open-beauty-facts"), url: catalogSourceUrl });
 const manufacturerEvidence = z.object({ source: z.literal("manufacturer"), url: evidenceUrl });
 const claimEvidence = z.discriminatedUnion("source", [
@@ -47,6 +59,8 @@ const instructionText = z.string().trim().min(1).max(1200);
 export const productFeedbackOptions = ["favorite", "liked", "disappointed"] as const;
 export const personalProductNoteLimit = 800;
 const productBarcode = z.string().trim().regex(/^\d{8,14}$/);
+const productDescriptor = z.string().trim().min(1).max(100);
+const productInci = z.string().trim().max(6500).transform(declaredProductText);
 const manufacturerVariantSchema = z.object({
   id: identifier,
   name,
@@ -54,6 +68,10 @@ const manufacturerVariantSchema = z.object({
   barcode: productBarcode.optional(),
   shadeHex: hex.optional(),
   shadeApproximate: z.literal(true).optional(),
+  ingredients: productInci.optional(),
+  imageUrl: productImage.optional(),
+  finish: productDescriptor.optional(),
+  size: productDescriptor.optional(),
 });
 
 export function declaredProductText(value: string): string {
@@ -68,7 +86,7 @@ export const productInput = z.object({
   name,
   brand: z.string().trim().max(140),
   category: z.enum(categories),
-  ingredients: z.string().trim().max(6500).transform(declaredProductText),
+  ingredients: productInci,
   barcode: productBarcode.optional(),
   openedOn: z.iso.date().optional(),
   paoMonths: z.number().int().min(1).max(60).optional(),
@@ -93,6 +111,8 @@ export const productSchema = productInput.extend({
   source: z.enum(["manuel", "local", "open-beauty-facts", "manufacturer"]),
   sourceUrl: catalogSourceUrl.optional(),
   manufacturerUrl: manufacturerProductUrl.optional(),
+  finish: productDescriptor.optional(),
+  size: productDescriptor.optional(),
   variants: z.array(manufacturerVariantSchema).max(80).optional(),
   selectedVariantId: identifier.optional(),
   tint: hex.optional(),
@@ -129,11 +149,14 @@ export const productSchema = productInput.extend({
     }
   }
 }).transform((product) => {
-  if (!product.imageUrl) return product.imageUrl === undefined ? product : { ...product, imageUrl: undefined };
-  const image = product.manufacturerUrl ? catalogImageUrl(product.imageUrl, product.barcode, product.manufacturerUrl)
-    : product.imageUrl.startsWith("/") ? catalogImageUrl(product.imageUrl)
+  const imageUrl = product.manufacturerUrl ? catalogImageUrl(product.imageUrl, product.barcode, product.manufacturerUrl)
+    : product.imageUrl?.startsWith("/") ? catalogImageUrl(product.imageUrl)
       : catalogCommunityImageUrl(product.imageUrl, product.barcode);
-  return image === product.imageUrl ? product : { ...product, imageUrl: image };
+  const variants = product.variants?.map((variant) => {
+    const variantImage = product.manufacturerUrl && catalogImageUrl(variant.imageUrl, variant.barcode, product.manufacturerUrl);
+    return variantImage === variant.imageUrl ? variant : { ...variant, imageUrl: variantImage || undefined };
+  });
+  return { ...product, ...(imageUrl === product.imageUrl ? {} : { imageUrl }), ...(variants ? { variants } : {}) };
 });
 
 const zoneSchema = z.enum(["visage", "front", "joues", "yeux", "levres", "menton", "cheveux"]);

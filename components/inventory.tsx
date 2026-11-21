@@ -4,7 +4,8 @@ import { useEffect, useId, useRef, useState, type Ref } from "react";
 import { ArrowLeft, Brush, CalendarClock, Check, ChevronRight, CircleAlert, Columns2, Droplets, ExternalLink, FileText, Heart, Plus, Scissors, Search, SprayCan, SwatchBook, Trash2, X } from "lucide-react";
 import { beautyListName, sameProductVariant, vanityDestination } from "@/lib/beauty-list-destinations";
 import { analyzeProduct, ingredientList } from "@/lib/analysis";
-import { canSupplementCatalog, catalogImageUrl, normalizeCatalogQuery, normalizeCatalogText, rankCatalogProducts, searchLocalCatalog, supplementCatalog } from "@/lib/catalog";
+import { catalogBarcode, catalogImageUrl, mergeCatalogResults, normalizeCatalogQuery, normalizeCatalogText, searchLocalCatalog } from "@/lib/catalog";
+import { catalogImageCrossOrigin } from "@/lib/catalog-images";
 import { useLocale } from "@/lib/i18n";
 import { categories, categoryLabels, makeupEffectLabels, makeupKindLabels, productSchema, sourceLabels, type BeautyList, type Preferences, type Product } from "@/lib/model";
 import { searchOpenBeautyFacts } from "@/lib/open-beauty-facts";
@@ -44,23 +45,27 @@ function feedbackLabel(feedback: NonNullable<Product["feedback"]>, t: Translate)
   return t(french, english);
 }
 
-function ProductPhoto({ product, size = "card" }: { product: Product; size?: "card" | "thumb" | "detail" }) {
+function ProductPhoto({ product, size = "card" }: { product: Product; size?: "card" | "thumb" | "detail" | "preview" }) {
   const { t } = useLocale();
   const url = catalogImageUrl(product.imageUrl, product.barcode, product.manufacturerUrl);
   const [failed, setFailed] = useState<string>();
   const Icon = categoryIcons[product.category];
   const hasPhoto = Boolean(url && failed !== url);
-  const manufacturer = product.source === "manufacturer";
+  const selectedShade = product.variants?.find(({ id }) => id === product.selectedVariantId);
+  const caption = url?.startsWith("/") ? t("Image d’illustration", "Illustrative image")
+    : product.source !== "manufacturer" ? t("Photo communautaire", "Community photo")
+      : selectedShade && !selectedShade.imageUrl ? t("Photo de la référence", "Product-level photo")
+        : t("Photo de la marque", "Brand photo");
+  const showCredit = size === "card" || size === "preview";
   return <span className={styles.productPhoto} data-size={size}>
-    {hasPhoto ? <>
-      <img src={url} alt={size === "card" ? product.name : ""} loading="lazy" decoding="async" crossOrigin="anonymous" referrerPolicy="no-referrer"
-        onError={() => setFailed(url)}/>
-      {size === "card" && <small className={styles.photoCredit}>{manufacturer
-        ? t("Photo de la marque", "Brand photo") : t("Photo communautaire", "Community photo")}</small>}
-    </> : <span className={styles.photoPlaceholder}>
-        <Icon size={size === "thumb" ? 20 : 34} strokeWidth={1.4} aria-hidden="true"/>
+    <span className={styles.photoStage} data-photo={hasPhoto ? "available" : "missing"}>
+      {hasPhoto ? <img src={url} alt={size === "card" ? product.name : ""} loading="lazy" decoding="async" crossOrigin={catalogImageCrossOrigin(url)} referrerPolicy="no-referrer"
+        onError={() => setFailed(url)}/> : <span className={styles.photoPlaceholder}>
+        <Icon size={size === "thumb" ? 20 : 32} strokeWidth={1.45} aria-hidden="true"/>
         {size !== "thumb" && <small>{t("Photo indisponible", "Photo unavailable")}</small>}
       </span>}
+    </span>
+    {showCredit && hasPhoto && <small className={styles.photoCredit}>{caption}</small>}
   </span>;
 }
 
@@ -407,12 +412,13 @@ type CatalogueResult = {
   items: Product[];
   origin: "online" | "local" | "unavailable";
   query: string;
-  supplemented?: boolean;
+  nextPage?: number;
 };
 
 function localMatches(query: string) {
   const items = searchLocalCatalog(query);
-  return query ? items : items.filter(({ source }) => source === "manufacturer");
+  return query ? items : items.filter(({ source }) => source === "manufacturer")
+    .sort((left, right) => Number(Boolean(right.imageUrl)) - Number(Boolean(left.imageUrl)));
 }
 
 type CatalogueActions = {
@@ -438,13 +444,19 @@ function productForVariant(product: Product, variant?: CatalogueVariant): Produc
     selectedVariantId: variant.id,
     barcode: variant.barcode,
     shadeHex: variant.shadeHex,
+    ingredients: variant.ingredients || product.ingredients,
+    imageUrl: variant.imageUrl ?? product.imageUrl,
+    finish: variant.finish ?? product.finish,
+    size: variant.size ?? product.size,
     makeupEffect: product.makeupEffect ?? (variant.shadeHex ? "tinted" : undefined),
   };
 }
 
-function CataloguePreview({ product, variant, preferences, heading, onClose, headingId }: {
+function CataloguePreview({ product, variant, variantId, onVariantChange, preferences, heading, onClose, headingId }: {
   product: Product;
   variant?: CatalogueVariant;
+  variantId?: string;
+  onVariantChange: (variantId: string) => void;
   preferences: Preferences;
   heading: Ref<HTMLHeadingElement>;
   onClose: () => void;
@@ -452,22 +464,52 @@ function CataloguePreview({ product, variant, preferences, heading, onClose, hea
 }) {
   const { t } = useLocale();
   const entry = productForVariant(product, variant);
+  const sourceUrl = productSource(entry);
+  const compositionScope = !entry.ingredients.trim() ? t("Non renseignée", "Unspecified")
+    : variant?.ingredients?.trim() ? t("Pour cette teinte", "For this shade")
+      : product.source === "manufacturer" ? t("Pour la référence produit", "For the product listing")
+        : t(sourceLabels[entry.source], sourceLabelsEn[entry.source]);
 
   return <section className={styles.catalogPreview} aria-labelledby={headingId}>
     <header className={styles.previewHeader}>
       <div className={styles.panelHeading}>
-        <ProductPhoto product={product} size="detail"/>
+        <ProductPhoto product={entry} size="preview"/>
         <div>
           <p className={styles.category}>{t(categoryLabels[product.category], categoryLabelsEn[product.category])}</p>
           <h2 id={headingId} ref={heading} tabIndex={-1}>{product.name}</h2>
           <p>{brandLabel(product.brand, t)}</p>
-          {variant && <p className={styles.previewShade}>{t("Teinte", "Shade")} · <strong>{variant.name}</strong></p>}
         </div>
       </div>
       <button type="button" className="button button-secondary" onClick={onClose}>
         <X size={17} aria-hidden="true"/>{t("Fermer la fiche", "Close product details")}
       </button>
     </header>
+    <div className={styles.previewSummary}>
+      {Boolean(product.variants?.length) && <div className={styles.previewVariant}>
+        <label htmlFor={`${headingId}-shade`}>{t("Teinte", "Shade")}</label>
+        <div className={styles.shadeSelect}>
+          {entry.shadeHex && <span className={styles.shadeChip} style={{ backgroundColor: entry.shadeHex }} aria-hidden="true"/>}
+          <select id={`${headingId}-shade`} value={variantId ?? ""}
+            aria-describedby={variant?.shadeApproximate ? `${headingId}-shade-note` : undefined}
+            onChange={(event) => onVariantChange(event.target.value)}>
+            <option value="">{t("Choisir une teinte", "Choose a shade")}</option>
+            {product.variants?.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
+          </select>
+        </div>
+        {variant?.shadeApproximate && <small id={`${headingId}-shade-note`}>{t("Couleur indicative", "Approximate colour")}</small>}
+      </div>}
+      <dl className={styles.previewFacts}>
+        {entry.size && <div><dt>{t("Format", "Size")}</dt><dd>{entry.size}</dd></div>}
+        {entry.finish && <div><dt>{t("Fini", "Finish")}</dt><dd>{entry.finish}</dd></div>}
+        {entry.barcode && <div><dt>{t("Code-barres", "Barcode")}</dt><dd>{entry.barcode}</dd></div>}
+        <div><dt>{t("Source de la fiche", "Product data source")}</dt><dd>
+          {sourceUrl ? <a href={sourceUrl} target="_blank" rel="noreferrer">
+            {t(sourceLabels[product.source], sourceLabelsEn[product.source])}<ExternalLink size={13} aria-hidden="true"/>
+          </a> : t(sourceLabels[product.source], sourceLabelsEn[product.source])}
+        </dd></div>
+        <div><dt>{t("Composition affichée", "Formula shown")}</dt><dd>{compositionScope}</dd></div>
+      </dl>
+    </div>
     <div className={styles.previewColumns}>
       <div>
         <ProductComposition product={entry} preferences={preferences}/>
@@ -491,10 +533,9 @@ export function Catalog({ initialQuery = "", portable = false, preferences, ...a
     items: localMatches(initialQuery.trim()), origin: "local", query: initialQuery.trim(),
   }));
   const [pending, setPending] = useState(false);
-  const [supplementRequest, setSupplementRequest] = useState<{ query: string; attempt: number }>();
+  const [pageRequest, setPageRequest] = useState<{ query: string; page: number }>();
   const [previewedId, setPreviewedId] = useState<string>();
   const [variantSelections, setVariantSelections] = useState(() => new Map<string, string>());
-  const additionalResults = useRef<HTMLHeadingElement>(null);
   const previewSurface = useRef<HTMLDivElement>(null);
   const previewHeading = useRef<HTMLHeadingElement>(null);
   const previewTrigger = useRef<HTMLButtonElement>(null);
@@ -506,53 +547,53 @@ export function Catalog({ initialQuery = "", portable = false, preferences, ...a
     const normalized = normalizeCatalogQuery(input);
     const query = normalized ? input : "";
     const localItems = localMatches(query);
-    const hasOfficialMatch = localItems.some(({ source }) => source === "manufacturer");
-    const supplemented = supplementRequest?.query === query && canSupplementCatalog(query, localItems);
-    const items = supplemented ? supplementCatalog(localItems, [], query) : localItems;
-    const tryOnline = normalized.length >= 2 && (supplemented || !hasOfficialMatch);
-    if (!tryOnline || !navigator.onLine) {
-      setResult({ items, origin: tryOnline ? "unavailable" : "local", query, supplemented });
+    const page = pageRequest?.query === query ? pageRequest.page : 1;
+    const tryOnline = normalized.length >= 2 && !(catalogBarcode(query)
+      && localItems.some(({ source }) => source === "manufacturer"));
+
+    if (!tryOnline) {
+      setResult({ items: localItems, origin: "local", query });
       setPending(false);
       return;
     }
 
+    if (page === 1) setResult({ items: localItems, origin: "local", query });
     const request = new AbortController();
-    setResult({ items, origin: "local", query, supplemented });
     setPending(true);
     async function search() {
       try {
+        if (!navigator.onLine) throw new Error();
+        let incoming: Product[];
+        let hasMore: boolean;
         if (portable) {
-          const remote = await searchOpenBeautyFacts(query, "all", { signal: request.signal });
-          const products = supplemented ? supplementCatalog(localItems, remote, query) : rankCatalogProducts([...remote, ...items], query);
-          if (!request.signal.aborted) setResult({ items: products, origin: "online", query, supplemented });
-          return;
+          const remote = await searchOpenBeautyFacts(query, "all", { signal: request.signal, page });
+          incoming = remote.products;
+          hasMore = remote.hasMore;
+        } else {
+          const params = new URLSearchParams({ q: query, page: String(page) });
+          const response = await fetch(`/api/catalog?${params}`, { signal: request.signal, credentials: "omit" });
+          if (!response.ok) throw new Error();
+          const payload = await response.json() as { products?: unknown; externalStatus?: string; hasMore?: boolean };
+          if (payload.externalStatus === "unavailable" || !Array.isArray(payload.products)) throw new Error();
+          incoming = payload.products.flatMap((item) => {
+            const parsed = productSchema.safeParse(item);
+            return parsed.success ? [parsed.data] : [];
+          });
+          hasMore = payload.hasMore === true;
         }
-
-        const params = new URLSearchParams({ q: query });
-        if (supplemented) params.set("supplement", "1");
-        const response = await fetch(`/api/catalog?${params}`, { signal: request.signal, credentials: "omit" });
-        if (!response.ok) throw new Error();
-        const payload = await response.json() as { products?: unknown; externalStatus?: string };
-        if (request.signal.aborted) return;
-        const products = Array.isArray(payload.products) ? payload.products.flatMap((item) => {
-          const parsed = productSchema.safeParse(item);
-          return parsed.success ? [parsed.data] : [];
-        }) : items;
-        setResult({ items: supplemented ? supplementCatalog(localItems, products, query) : products, query, supplemented,
-          origin: payload.externalStatus === "ok" ? "online" : payload.externalStatus === "unavailable" ? "unavailable" : "local" });
+        if (!request.signal.aborted) setResult((current) => ({
+          items: mergeCatalogResults(page === 1 ? localItems : current.items, incoming, query),
+          origin: "online", query, nextPage: hasMore ? page + 1 : undefined,
+        }));
       } catch {
-        if (!request.signal.aborted) setResult({ items, origin: "unavailable", query, supplemented });
+        if (!request.signal.aborted) setResult((current) => ({ ...current, origin: "unavailable", query, nextPage: page }));
       } finally {
         if (!request.signal.aborted) setPending(false);
       }
     }
     void search();
     return () => request.abort();
-  }, [initialQuery, portable, supplementRequest]);
-
-  useEffect(() => {
-    if (result.supplemented && result.origin === "online") additionalResults.current?.focus();
-  }, [result.supplemented, result.origin]);
+  }, [initialQuery, portable, pageRequest]);
 
   useEffect(() => {
     if (!openProductId) return;
@@ -570,9 +611,13 @@ export function Catalog({ initialQuery = "", portable = false, preferences, ...a
     return variantSelections.get(product.id) ?? product.selectedVariantId ?? "";
   }
 
+  function selectVariant(productId: string, variantId: string) {
+    setVariantSelections((current) => new Map(current).set(productId, variantId));
+  }
+
   function renderCard(product: Product) {
     return <li key={product.id}><CatalogueCard product={product} {...actions} variantId={selectedVariant(product)}
-      onVariantChange={(variantId) => setVariantSelections((current) => new Map(current).set(product.id, variantId))}
+      onVariantChange={(variantId) => selectVariant(product.id, variantId)}
       previewId={previewId} previewExpanded={product.id === openProductId} onPreview={(trigger) => {
         if (product.id === openProductId) closePreview();
         else {
@@ -583,12 +628,10 @@ export function Catalog({ initialQuery = "", portable = false, preferences, ...a
   }
 
   const count = formatNumber(result.items.length);
-  const resultCount = result.items.length === 1
-    ? t(`${count} résultat pour « ${result.query} ».`, `${count} result for “${result.query}”.`)
-    : t(`${count} résultats pour « ${result.query} ».`, `${count} results for “${result.query}”.`);
-  const canSupplement = canSupplementCatalog(result.query, result.items) && (!result.supplemented || result.origin !== "online");
-  const primaryItems = result.supplemented ? result.items.filter(({ source }) => source === "manufacturer") : result.items;
-  const extraItems = result.supplemented ? result.items.filter(({ source }) => source === "open-beauty-facts") : [];
+  const resultCount = (result.items.length === 1
+    ? t("{count} résultat pour « {query} ».", "{count} result for “{query}”.")
+    : t("{count} résultats pour « {query} ».", "{count} results for “{query}”."))
+    .replace("{count}", () => count).replace("{query}", () => result.query);
 
   return <section className={styles.catalog} aria-labelledby="catalogue-title" onKeyDown={(event) => {
     if (openProductId && event.key === "Escape" && !event.defaultPrevented) {
@@ -603,37 +646,33 @@ export function Catalog({ initialQuery = "", portable = false, preferences, ...a
     <div id={previewId} ref={previewSurface} className={styles.previewAnchor} hidden={!previewedProduct}>
       {previewedProduct && <CataloguePreview product={previewedProduct} preferences={preferences} heading={previewHeading}
         variant={previewedProduct.variants?.find(({ id }) => id === selectedVariant(previewedProduct))}
+        variantId={selectedVariant(previewedProduct)} onVariantChange={(id) => selectVariant(previewedProduct.id, id)}
         headingId={`${previewId}-title`} onClose={closePreview}/>}
     </div>
     <section className={styles.resultsPanel} aria-labelledby="catalogue-results-title">
       <h2 id="catalogue-results-title">{result.query || pending ? t("Résultats", "Results") : t("Produits à découvrir", "Products to explore")}</h2>
       <div role="status" className={styles.searchStatus}>
-        {pending ? t("Recherche en cours…", "Searching…") : result.query ? resultCount
-          : t("Sélection disponible hors ligne.", "Selection available offline.")}
+        {result.query ? resultCount : t("Sélection disponible hors ligne.", "Selection available offline.")}
+        {pending && <p>{t("Recherche dans Open Beauty Facts…", "Searching Open Beauty Facts…")}</p>}
         {!pending && result.origin === "unavailable" && <p>{t(
-          "Open Beauty Facts est indisponible. Les résultats locaux sont affichés ici.",
-          "Open Beauty Facts is unavailable. Local results are displayed here.",
+          "Open Beauty Facts est momentanément indisponible.",
+          "Open Beauty Facts is temporarily unavailable.",
         )}</p>}
       </div>
-      {canSupplement && <button className={`button button-secondary ${styles.supplementButton}`} type="button"
-        aria-controls="catalogue-supplement-results" disabled={pending}
-        onClick={() => setSupplementRequest((current) => ({ query: result.query, attempt: (current?.attempt ?? 0) + 1 }))}>
-        {result.supplemented && !pending ? t("Réessayer la recherche", "Retry search") : t("Voir d’autres résultats", "Show more results")}
-      </button>}
-      {primaryItems.length > 0 ? <ul className={styles.catalogResults} aria-label={t("Produits du catalogue", "Catalogue products")} aria-busy={pending}>
-        {primaryItems.map(renderCard)}
+      {result.items.length > 0 ? <ul id="catalogue-products" className={styles.catalogResults}
+        aria-label={t("Produits du catalogue", "Catalogue products")}>
+        {result.items.map(renderCard)}
       </ul> : !pending && <p className={styles.emptyState}>
-        {t("Aucun produit trouvé. Essaie un autre nom, une marque ou un code-barres dans la barre de recherche.", "No products found. Try another name, brand or barcode in the search bar.")}
+        {result.origin === "unavailable"
+          ? t("Aucun résultat dans la sélection embarquée. Tu peux relancer la recherche en ligne.", "No matches in the offline selection. You can retry the online search.")
+          : t("Aucun produit trouvé. Essaie un nom plus court, la marque seule ou un code-barres.", "No products found. Try a shorter name, the brand alone or a barcode.")}
       </p>}
-      <section id="catalogue-supplement-results" className={styles.supplementResults} aria-labelledby="catalogue-supplement-title"
-        hidden={!result.supplemented}>
-        <h2 id="catalogue-supplement-title" ref={additionalResults} tabIndex={-1}>{t("Résultats complémentaires", "Additional results")}</h2>
-        {extraItems.length > 0 ? <ul className={styles.catalogResults} aria-labelledby="catalogue-supplement-title" aria-busy={pending}>
-          {extraItems.map(renderCard)}
-        </ul> : !pending && result.origin === "online" && <p className={styles.emptyState}>
-          {t("Aucun résultat complémentaire.", "No additional results.")}
-        </p>}
-      </section>
+      {result.nextPage && <button className={`button button-secondary ${styles.loadMoreButton}`} type="button"
+        aria-controls={result.items.length ? "catalogue-products" : undefined} disabled={pending}
+        onClick={() => setPageRequest({ query: result.query, page: result.nextPage ?? 1 })}>
+        {pending ? t("Recherche en cours…", "Searching…") : result.origin === "unavailable"
+          ? t("Réessayer la recherche", "Retry search") : t("Afficher plus de résultats", "Show more results")}
+      </button>}
     </section>
     <p className={`muted ${styles.catalogAttribution}`}>{t("Fiches de marques et données complémentaires.", "Brand listings and supplementary data.")}{" "}
       <a href="https://world.openbeautyfacts.org/data" target="_blank" rel="noreferrer">Open Beauty Facts · ODbL</a>{" · "}
@@ -671,8 +710,6 @@ function CatalogueCard({ product, currentProducts, lists, destination, onSave, o
   const savedProduct = chosenDestination === vanityDestination ? currentProducts.find((item) => sameProductVariant(item, entry)) : undefined;
   const saved = !needsShade && Boolean(savedProduct || destinationList?.items.some((item) =>
     item.product ? sameProductVariant(item.product, entry) : item.productId === entry.id));
-  const sourceUrl = productSource(entry);
-  const official = product.source === "manufacturer";
 
   function requireShade() {
     if (!needsShade) return true;
@@ -704,7 +741,7 @@ function CatalogueCard({ product, currentProducts, lists, destination, onSave, o
 
   return <article className={styles.catalogCard} data-catalog-product={product.id}>
     <div className={styles.catalogVisual}>
-      <ProductPhoto product={product}/>
+      <ProductPhoto product={entry}/>
       {variants.some(({ shadeHex }) => shadeHex) && <span className={styles.catalogSwatches} aria-hidden="true">
         {variants.filter(({ shadeHex }) => shadeHex).slice(0, 7).map(({ id, shadeHex }) => <span key={id} style={{ backgroundColor: shadeHex }}/>)}
       </span>}
@@ -750,9 +787,7 @@ function CatalogueCard({ product, currentProducts, lists, destination, onSave, o
       {product.category === "maquillage" && <button type="button" className="button button-secondary" onClick={() => { if (requireShade()) onTry(entry); }}>
         <SwatchBook size={16} aria-hidden="true"/>{t("Essayer dans le Studio", "Try in the Studio")}<span className="sr-only"> · {product.name}</span>
       </button>}
-      {sourceUrl && <a className={styles.cardLink} href={sourceUrl} target="_blank" rel="noreferrer">
-        <ExternalLink size={14} aria-hidden="true"/>{official ? t("Voir chez la marque", "View on brand site") : t("Données communautaires", "Community data")}<span className="sr-only"> · {product.name}</span>
-      </a>}
+
     </div>
     <div className={styles.catalogExtra}>
       {choosing && <div className={styles.catalogField}>

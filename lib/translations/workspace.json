@@ -51,6 +51,8 @@
   "Find products": ["Buscar productos", "Cerca prodotti"],
   "Product name, brand or barcode": ["Nombre, marca o código de barras", "Nome, marca o codice a barre"],
   "Search catalogue": ["Buscar en el catálogo", "Cerca nel catalogo"],
+  "Enter a product name, brand or barcode.": ["Introduce un nombre de producto, una marca o un código de barras.", "Inserisci il nome di un prodotto, una marca o un codice a barre."],
+  "Clear search input": ["Borrar el texto de búsqueda", "Cancella il testo della ricerca"],
   "Clear search": ["Borrar búsqueda", "Cancella ricerca"],
   "Interface language": ["Idioma de la interfaz", "Lingua dell’interfaccia"],
   "Account": ["Cuenta", "Account"],

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { BookOpen, Brush, CalendarCheck, ChevronDown, ClipboardList, Globe, House, Layers, ListChecks, LogIn, Search, Settings, ShoppingBag, SwatchBook, UserRound, X } from "lucide-react";
 import { Account, type AccountEntry } from "./account";
 import { Catalog, Inventory } from "./inventory";
@@ -17,6 +17,7 @@ import { MakeupStyles, type MakeupStylePreset } from "./makeup-styles";
 import { WorkspaceSettings } from "./workspace-settings";
 import { beautyListsWithDefaults, productListSnapshot, sameProductVariant, storedBeautyLists, vanityDestination } from "@/lib/beauty-list-destinations";
 import { useBillingStatus } from "@/lib/billing-client";
+import { normalizeCatalogQuery } from "@/lib/catalog";
 import { LocaleProvider, useLocale, type Locale } from "@/lib/i18n";
 import { isLocale, localeOptions } from "@/lib/locale";
 import { beautyListLimits, type Product, type Routine } from "@/lib/model";
@@ -42,11 +43,22 @@ type View = (typeof navigation)[number]["id"];
 type WorkspaceData = ReturnType<typeof useWorkspaceState>;
 type StudioTrials = { products: Product[]; request: { product: Product } };
 const noTrials: Product[] = [];
+const catalogueQueryLimit = 120;
 
-function readView(portable: boolean): View {
+function cleanCatalogueQuery(value: string) {
+  const query = value.trim().slice(0, catalogueQueryLimit);
+  return normalizeCatalogQuery(query) ? query : "";
+}
+
+function readWorkspaceLocation(portable: boolean): { view: View; catalogueQuery: string; studioTab: "look" | "photo" } {
   const hash = location.hash.slice(1);
+  if (hash.startsWith("catalogue?")) {
+    const query = new URLSearchParams(hash.slice("catalogue?".length)).get("q") ?? "";
+    return { view: "catalogue", catalogueQuery: cleanCatalogueQuery(query), studioTab: "look" };
+  }
   const view = hash === "palette" ? "studio" : navigation.find((item) => item.id === hash)?.id ?? "accueil";
-  return portable && (view === "journal" || view === "offres") ? "accueil" : view;
+  return { view: portable && (view === "journal" || view === "offres") ? "accueil" : view,
+    catalogueQuery: "", studioTab: hash === "palette" ? "photo" : "look" };
 }
 
 export function Workspace({ portable = false }: { portable?: boolean }) {
@@ -64,7 +76,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   const [view, setView] = useState<View>("accueil");
   const [studioTab, setStudioTab] = useState<"look" | "photo">("look");
   const [catalogue, setCatalogue] = useState({ query: "", revision: 0 });
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchDraft, setSearchDraft] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedList, setSelectedList] = useState<string>();
   const [trialsByScope, setTrialsByScope] = useState(() => new Map<string, StudioTrials>());
@@ -80,16 +92,21 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   const workspaceHeader = useRef<HTMLElement>(null);
   const content = useRef<HTMLElement>(null);
   const searchInput = useRef<HTMLInputElement>(null);
+  const searchComposition = useRef({ active: false, committing: false });
+  const resetSearchDraft = useCallback(() => {
+    setSearchDraft("");
+    searchInput.current?.setCustomValidity("");
+    searchComposition.current.active = false;
+  }, []);
 
   useEffect(() => {
     const onHistoryChange = () => {
-      const next = readView(portable);
-      setView(next);
-      if (next === "catalogue") {
-        setCatalogue((current) => current.query ? { query: "", revision: current.revision + 1 } : current);
-        setSearchTerm("");
-      }
-      setStudioTab(location.hash === "#palette" ? "photo" : "look");
+      const next = readWorkspaceLocation(portable);
+      setView(next.view);
+      if (next.view === "catalogue") setCatalogue((current) => current.query === next.catalogueQuery
+        ? current : { query: next.catalogueQuery, revision: current.revision + 1 });
+      resetSearchDraft();
+      setStudioTab(next.studioTab);
       setSelected(null);
       setSelectedList(undefined);
       setPreset(undefined);
@@ -102,7 +119,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
       window.removeEventListener("popstate", onHistoryChange);
       window.removeEventListener("hashchange", onHistoryChange);
     };
-  }, [portable]);
+  }, [portable, resetSearchDraft]);
 
   useEffect(() => {
     if (portable || process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
@@ -146,15 +163,18 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
     setGuide(undefined);
   }, [studioScope]);
 
-  function navigate(next: View, focus = true) {
+  function navigate(next: View, { focus = true, catalogueQuery = "" }: { focus?: boolean; catalogueQuery?: string } = {}) {
     setView(next);
+    resetSearchDraft();
     setStudioTab("look");
     setSelected(null);
     setSelectedList(undefined);
     setPreset(undefined);
     setGuide(undefined);
     setNotice("");
-    if (location.hash !== `#${next}`) history.pushState(null, "", `#${next}`);
+    if (next === "catalogue") setCatalogue((current) => ({ query: catalogueQuery, revision: current.revision + 1 }));
+    const hash = next === "catalogue" && catalogueQuery ? `#catalogue?${new URLSearchParams({ q: catalogueQuery })}` : `#${next}`;
+    if (location.hash !== hash) history.pushState(null, "", hash);
     window.scrollTo(0, 0);
     if (focus) requestAnimationFrame(() => content.current?.focus({ preventScroll: true }));
   }
@@ -167,16 +187,21 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
   }
 
   function openCatalogue(query = "", focusSearch = false) {
-    setSearchTerm(query);
-    setCatalogue((current) => ({ query, revision: current.revision + 1 }));
-    navigate("catalogue", !focusSearch);
+    navigate("catalogue", { focus: !focusSearch, catalogueQuery: query });
     if (focusSearch) searchInput.current?.focus();
   }
 
-  function clearSearch() {
-    setSearchTerm("");
-    if (view === "catalogue") setCatalogue((current) => ({ query: "", revision: current.revision + 1 }));
-    searchInput.current?.focus();
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const input = searchInput.current;
+    if (!ready || !input || searchComposition.current.active || searchComposition.current.committing) return;
+    const query = cleanCatalogueQuery(input.value);
+    if (!query) {
+      input.setCustomValidity(t("Saisis un nom, une marque ou un code-barres.", "Enter a product name, brand or barcode."));
+      input.reportValidity();
+      return;
+    }
+    openCatalogue(query);
   }
 
   function saveProduct(product: Product, destination: string) {
@@ -279,17 +304,28 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
       <div className="workspace-masthead">
         <a className="brand" href="#accueil" aria-label={t("Navier, accueil", "Navier, home")}
           aria-current={view === "accueil" ? "page" : undefined} onClick={(event) => navClick(event, "accueil")}>Navier</a>
-        <form className="toolbar-search search-field" role="search" aria-label={t("Rechercher des produits", "Find products")} onSubmit={(event) => {
-          event.preventDefault();
-          openCatalogue(searchTerm.trim());
-        }}>
-          <input ref={searchInput} name="query" type="search" maxLength={120} spellCheck={false}
-            value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)}
+        <form className="toolbar-search search-field" role="search" aria-label={t("Rechercher des produits", "Find products")} noValidate onSubmit={submitSearch}>
+          <input ref={searchInput} type="search" enterKeyHint="search" maxLength={catalogueQueryLimit} spellCheck={false} disabled={!ready}
+            value={searchDraft} onChange={(event) => {
+              event.currentTarget.setCustomValidity("");
+              setSearchDraft(event.currentTarget.value);
+            }}
+            onCompositionStart={() => { searchComposition.current.active = true; }}
+            onCompositionEnd={() => { searchComposition.current.active = false; }}
+            onKeyDown={(event) => {
+              const composition = searchComposition.current;
+              if (event.key !== "Enter" || !(composition.active || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)) return;
+              // The IME still receives Enter to confirm a candidate; only form submission is ignored.
+              composition.committing = true;
+              window.setTimeout(() => { composition.committing = false; }, 0);
+            }}
             aria-label={t("Nom du produit, marque ou code-barres", "Product name, brand or barcode")}
             placeholder={t("Nom du produit, marque ou code-barres", "Product name, brand or barcode")}/>
-          {searchTerm && <button className="toolbar-search-clear" type="button" onClick={clearSearch}
-            aria-label={t("Effacer la recherche", "Clear search")}><X size={15} aria-hidden="true"/></button>}
-          <button className="toolbar-search-button" type="submit" aria-label={t("Lancer la recherche", "Search catalogue")}>
+          {searchDraft && <button className="toolbar-search-clear" type="button" disabled={!ready} onClick={() => {
+            resetSearchDraft();
+            searchInput.current?.focus();
+          }} aria-label={t("Effacer la saisie de recherche", "Clear search input")}><X size={15} aria-hidden="true"/></button>}
+          <button className="toolbar-search-button" type="submit" disabled={!ready} aria-label={t("Lancer la recherche", "Search catalogue")}>
             <Search size={18} strokeWidth={1.8} aria-hidden="true"/>
           </button>
         </form>

@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { catalogBarcode, catalogBrandAlias, localCatalog, matchesCatalogBrand, normalizeCatalogQuery, normalizeCatalogText, type CatalogSearchMode } from "@/lib/catalog";
+import { catalogBarcode, catalogBrandAlias, catalogBrandInTitle, localCatalog, matchesCatalogBrand, normalizeCatalogQuery, normalizeCatalogText, type CatalogSearchMode } from "@/lib/catalog";
 import { catalogCommunityImageUrl } from "@/lib/catalog-images";
 import { declaredProductText, productSchema, type Product } from "@/lib/model";
 
 const externalOrigin = "https://world.openbeautyfacts.org";
 const maxResponseBytes = 512 * 1024;
-const maxProducts = 12;
-const providerPageSize = 18;
+const providerPageSize = 24;
+export const maxCatalogPage = 20;
 const requestTimeout = 4000;
 const fieldNames = [
   "code",
@@ -16,7 +16,9 @@ const fieldNames = [
   "brands_tags",
   "ingredients_text_fr",
   "ingredients_text",
+  "image_front_url",
   "image_front_small_url",
+  "quantity",
   "categories_tags",
   "labels_tags",
   "usage_fr",
@@ -30,6 +32,7 @@ const fieldNames = [
 export const catalogSearchQuery = z.string().trim().max(120).refine((query) => !/\p{Cc}/u.test(query))
   .transform((query) => query.normalize("NFC").replace(/\s+/g, " "));
 export const catalogSearchMode = z.enum(["all", "brand"]);
+export const catalogSearchPage = z.string().regex(/^[1-9]\d?$/).transform(Number).pipe(z.number().max(maxCatalogPage));
 const optionalExternalText = (max: number) => z.string().max(max).nullish().catch(undefined);
 const externalName = z.string().max(1024).refine((value) => !/[\p{Cc}\p{Bidi_Control}]/u.test(value.trim()))
   .nullish().catch(undefined);
@@ -45,7 +48,9 @@ const externalProduct = z.object({
   brands_tags: externalTags,
   ingredients_text_fr: optionalExternalText(8192),
   ingredients_text: optionalExternalText(8192),
+  image_front_url: optionalExternalText(700),
   image_front_small_url: optionalExternalText(700),
+  quantity: optionalExternalText(100),
   categories_tags: externalTags,
   labels_tags: externalTags,
   usage_fr: optionalExternalText(1600),
@@ -56,6 +61,7 @@ const externalProduct = z.object({
   instructions: optionalExternalText(1600),
 });
 const externalSearch = z.object({
+  count: z.number().nonnegative().optional().catch(undefined),
   products: z.preprocess((value) => Array.isArray(value) ? value.slice(0, providerPageSize) : value, z.array(z.unknown())),
 });
 const externalLookup = z.object({ status: z.union([z.literal(0), z.literal(1)]), product: z.unknown().optional() });
@@ -83,7 +89,7 @@ function getCategory(name: string, tags: string[] = []): Product["category"] {
   if (tags.some((tag) => perfumes.has(normalizeTag(tag)))) return "parfums";
   const text = normalizeCatalogText([name, ...tags].join(" "));
   if (/shampoo|cheveux|capillaire|hair[- ]|demelant|conditioner|apres.shamp/.test(text)) return "cheveux";
-  if (/blush|mascara|teint\b|maquillage|make[- ]?up|fard\b|eye[- ]?(liner|shadow)|lip(stick|.gloss)|rouge a levres|concealer/.test(text)) {
+  if (/blush|mascara|teint\b|maquillage|make[- ]?up|fard\b|eye[- ]?(liner|shadow)|lip(stick|.gloss|.tint)|rouge a levres|concealer|setting.powder|cushion.foundation|eyebrow/.test(text)) {
     return "maquillage";
   }
   const productName = normalizeCatalogText(name);
@@ -111,7 +117,8 @@ function getClaimEvidence(labels: string[], url: string): Product["claims"] {
 function productNameIsUseful(name: string, brands: readonly string[]): boolean {
   const title = normalizeCatalogQuery(name);
   return Boolean(title) && !genericProductNames.has(title) && !/^(?:www\.|https?:)/i.test(name)
-    && !brands.some((brand) => normalizeCatalogQuery(brand.replace(/^[a-z]{2}:/i, "")) === title);
+    && !brands.some((brand) => normalizeCatalogQuery(brand.replace(/^[a-z]{2}:/i, "")) === title)
+    && !matchesCatalogBrand(brands, catalogBrandAlias(name) ?? "");
 }
 
 function normalizeProduct(product: unknown, barcode?: string, brandQuery?: string): Product | null {
@@ -120,15 +127,17 @@ function normalizeProduct(product: unknown, barcode?: string, brandQuery?: strin
 
   const data = parsed.data;
   if (barcode && data.code.padStart(14, "0") !== barcode.padStart(14, "0")) return null;
-  const brands = [...(data.brands?.split(/[,;|]/) ?? []), ...(data.brands_tags ?? [])];
-  const alias = brandQuery && catalogBrandAlias(brandQuery);
-  if (alias) {
-    const brand = normalizeCatalogQuery(alias);
-    if (!brands.some((label) => normalizeCatalogQuery(label.replace(/^[a-z]{2}:/i, "")) === brand)) return null;
-  } else if (brandQuery && !matchesCatalogBrand(brands, brandQuery)) return null;
+  const titles = [data.product_name_fr, data.product_name].map((value) => value?.trim());
+  const brands = [...(data.brands?.split(/[,;|]/) ?? []), ...(data.brands_tags ?? [])].filter((label) => label.trim());
+  const brandInTitle = !brands.length ? titles.flatMap((title) => {
+    const brand = title && catalogBrandInTitle(title);
+    return brand ? [brand] : [];
+  })[0] : undefined;
+  if (brandQuery && !matchesCatalogBrand(brandInTitle ? [brandInTitle] : brands, brandQuery)) return null;
+  const canonicalBrand = brands.map(catalogBrandAlias).find(Boolean);
+  const taggedBrand = data.brands_tags?.[0]?.replace(/^[a-z]{2}:/i, "").replaceAll("-", " ");
 
   const reference = localCatalog.find(({ barcode }) => barcode === data.code);
-  const titles = [data.product_name_fr, data.product_name].map((value) => value?.trim());
   const name = (titles.find((value) => value && (barcode || productNameIsUseful(value, brands))) || reference?.name)?.slice(0, 140);
   if (!name) return null;
 
@@ -142,11 +151,12 @@ function normalizeProduct(product: unknown, barcode?: string, brandQuery?: strin
   const normalized = productSchema.safeParse({
     id: `obf-${data.code}`,
     name,
-    brand: (data.brands?.trim() || "Marque non renseignée").slice(0, 140),
+    brand: (brandQuery && catalogBrandAlias(brandQuery) || data.brands?.trim() || canonicalBrand || taggedBrand || brandInTitle || "Marque non renseignée").slice(0, 140),
     category: reference?.category ?? getCategory(name, data.categories_tags ?? []),
     ingredients,
     barcode: data.code,
-    imageUrl: catalogCommunityImageUrl(data.image_front_small_url, data.code),
+    imageUrl: catalogCommunityImageUrl(data.image_front_url, data.code) ?? catalogCommunityImageUrl(data.image_front_small_url, data.code),
+    size: data.quantity?.trim() || undefined,
     source: "open-beauty-facts",
     sourceUrl,
     claims: getClaimEvidence(data.labels_tags ?? [], sourceUrl),
@@ -157,11 +167,11 @@ function normalizeProduct(product: unknown, barcode?: string, brandQuery?: strin
 }
 
 export function catalogProviderQuery(query: string, mode: CatalogSearchMode): string {
-  // The provider distinguishes certain hyphenated brand names in combined searches.
-  return catalogBrandAlias(query) ?? (mode === "brand" ? normalizeCatalogQuery(query) : query.replace(/[\u2010-\u2015]/g, "-").replace(/[‘’]/g, "'"));
+  const alias = catalogBrandAlias(query);
+  return alias ?? (mode === "brand" ? normalizeCatalogQuery(query) : query.replace(/[\u2010-\u2015]/g, "-").replace(/[‘’]/g, "'"));
 }
 
-function externalUrl(query: string, mode: CatalogSearchMode, barcode: string | undefined): URL {
+function externalUrl(query: string, mode: CatalogSearchMode, barcode: string | undefined, page: number): URL {
   // The native Huda Beauty brand facet omits identifiable products returned by text search.
   const useBrandFacet = mode === "brand" && !catalogBrandAlias(query);
   const path = barcode ? `/api/v2/product/${barcode}.json`
@@ -172,6 +182,7 @@ function externalUrl(query: string, mode: CatalogSearchMode, barcode: string | u
 
   if (!barcode) {
     url.searchParams.set("page_size", String(providerPageSize));
+    url.searchParams.set("page", String(page));
     if (!useBrandFacet) {
       url.searchParams.set("search_terms", query);
       url.searchParams.set("search_simple", "1");
@@ -183,13 +194,15 @@ function externalUrl(query: string, mode: CatalogSearchMode, barcode: string | u
   return url;
 }
 
-type SearchOptions = { signal?: AbortSignal; userAgent?: string };
+type SearchOptions = { signal?: AbortSignal; userAgent?: string; page?: number };
+export type ExternalCatalogPage = { products: Product[]; hasMore: boolean };
+const emptyPage: ExternalCatalogPage = { products: [], hasMore: false };
 
 export async function searchOpenBeautyFacts(
-  input: string, mode: CatalogSearchMode, { signal, userAgent }: SearchOptions = {},
-): Promise<Product[]> {
+  input: string, mode: CatalogSearchMode, { signal, userAgent, page = 1 }: SearchOptions = {},
+): Promise<ExternalCatalogPage> {
   const raw = catalogSearchQuery.parse(input);
-  if (normalizeCatalogQuery(raw).length < 2) return [];
+  if (normalizeCatalogQuery(raw).length < 2 || !catalogSearchPage.safeParse(String(page)).success) return emptyPage;
   if (signal?.aborted) throw signal.reason;
 
   const query = catalogProviderQuery(raw, mode);
@@ -202,7 +215,7 @@ export async function searchOpenBeautyFacts(
   try {
     const headers = new Headers({ Accept: "application/json" });
     if (userAgent) headers.set("User-Agent", userAgent);
-    const response = await fetch(externalUrl(query, mode, barcode), {
+    const response = await fetch(externalUrl(query, mode, barcode, page), {
       headers,
       mode: "cors",
       credentials: "omit",
@@ -214,19 +227,24 @@ export async function searchOpenBeautyFacts(
 
     if (!response.ok) {
       void response.body?.cancel().catch(() => undefined);
-      if ((barcode || mode === "brand") && response.status === 404) return [];
+      if ((barcode || mode === "brand") && response.status === 404) return emptyPage;
       throw new Error("Open Beauty Facts unavailable");
     }
 
     const payload = await readExternalResponse(response);
     const lookup = barcode ? externalLookup.parse(payload) : undefined;
-    if (lookup?.status === 0) return [];
-    const products = lookup ? [lookup.product] : externalSearch.parse(payload).products;
-    const brandQuery = mode === "brand" || catalogBrandAlias(raw) ? query : undefined;
-    return products.flatMap((product) => {
-      const normalized = normalizeProduct(product, barcode, brandQuery);
-      return normalized ? [normalized] : [];
-    }).slice(0, maxProducts);
+    if (lookup?.status === 0) return emptyPage;
+    const search = lookup ? undefined : externalSearch.parse(payload);
+    const products = search?.products ?? [lookup?.product];
+    const brandQuery = mode === "brand" || catalogBrandAlias(raw) ? raw : undefined;
+    return {
+      products: products.flatMap((product) => {
+        const normalized = normalizeProduct(product, barcode, brandQuery);
+        return normalized ? [normalized] : [];
+      }),
+      hasMore: Boolean(search && page < maxCatalogPage && (search.count === undefined
+        ? products.length === providerPageSize : search.count > page * providerPageSize)),
+    };
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener("abort", abort);
