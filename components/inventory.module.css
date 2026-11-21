@@ -193,6 +193,47 @@
   max-width: 64rem;
 }
 
+.previewAnchor { scroll-margin-block-start: 0.85rem; }
+
+@media (min-width: 1080px) {
+  .previewAnchor { scroll-margin-block-start: calc(var(--workspace-header-height, 7.5rem) + .8rem); }
+}
+
+.catalogPreview {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(0.85rem, 2.5vw, 1.5rem);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.previewHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.7rem 1rem;
+}
+
+.previewHeader > :global(.button) { justify-self: start; max-width: 100%; }
+.previewHeader .panelHeading { flex-wrap: nowrap; align-items: flex-start; }
+.previewHeader .panelHeading .category { margin: 0 0 0.25rem; color: var(--brand-dark); }
+.previewHeader .panelHeading .previewShade { color: var(--brand-dark); }
+
+.previewColumns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.previewColumns > div { display: grid; min-width: 0; gap: 0.75rem; }
+.previewColumns :global(.product-detail-panel) { min-width: 0; overflow-wrap: anywhere; margin: 0; }
+
+@media (max-width: 660px) {
+  .previewHeader, .previewColumns { grid-template-columns: minmax(0, 1fr); }
+}
+
 .resultsPanel {
   gap: 0.65rem;
 }
@@ -392,6 +433,7 @@
 .destinationLine { justify-content: space-between; color: var(--muted); font-size: .78rem; }
 .destinationLine > span { overflow-wrap: anywhere; }
 .destinationActions :global(.button), .cardActions > :global(.button-secondary) { min-height: 2.75rem; font-size: .82rem; }
+.cardActions > [aria-expanded="true"][aria-controls] { border-color: var(--brand); background: var(--lavender); }
 
 @supports (grid-template-rows: subgrid) {
   .catalogResults { row-gap: 0; }

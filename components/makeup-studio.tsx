@@ -7,14 +7,14 @@ import { useLocale } from "@/lib/i18n";
 import { findMakeupPlacement, getMakeupPlacements } from "@/lib/makeup-placements";
 import type { MakeupStylePreset } from "@/lib/makeup-styles";
 import type { FaceZone, PaletteColor, Product } from "@/lib/model";
-import { getStudioAnchor, setStudioAnchor, type StudioAnchor, type StudioSide } from "@/lib/studio-advanced";
+import { getStudioAnchor, setStudioAnchor, shadowZones, type StudioAnchor, type StudioShadowZone, type StudioSide } from "@/lib/studio-advanced";
 import {
-  defaultStudioPortrait, studioAreas, studioLookLimits, studioSkinTones, studioToolsByArea,
-  type SavedStudioLook, type StudioArea, type StudioLayer, type StudioLookLayers, type StudioLookSnapshot, type StudioPlacements, type StudioPortrait, type StudioSetting, type StudioTool,
+  defaultStudioPortrait, editableStudioLayers, studioAreas, studioLookLimits, studioSkinTones, studioToolsByArea,
+  type SavedStudioLook, type StudioArea, type StudioLayer, type StudioLookSnapshot, type StudioPlacements, type StudioPortrait, type StudioSetting, type StudioTool,
 } from "@/lib/studio-looks";
 import { FaceChart } from "./face-chart";
 import { StudioLookLibrary } from "./studio-look-library";
-import { StudioPlacementEditor } from "./studio-placements";
+import { StudioPlacementEditor, StudioShadowZonePicker, studioShadowLabel } from "./studio-placements";
 import { ProductShades, SwatchComparison, type ProductShade, type Swatch } from "./studio-shades";
 import styles from "./makeup-studio.module.css";
 
@@ -23,7 +23,7 @@ type PreviewMode = "look" | "bare";
 type PigmentKind = PigmentLayer["kind"];
 type StudioSelection = { area: StudioArea; tool: StudioTool };
 type StudioTrialRequest = { product: Product };
-type PendingProduct = { id: string; selection: StudioSelection };
+type PendingProduct = { id: string; selection: StudioSelection; shadowZone?: StudioShadowZone };
 export type StudioDraft = {
   snapshot: StudioLookSnapshot;
   selection: StudioSelection;
@@ -32,6 +32,7 @@ export type StudioDraft = {
   guideVisible: boolean;
   pendingProduct?: PendingProduct;
   side: StudioSide;
+  shadowZone: StudioShadowZone;
   handledTrial?: StudioTrialRequest;
   unassignedTrial?: string;
 };
@@ -229,7 +230,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
   defaultPortrait?: StudioPortrait;
   initialTab?: StudioTab;
 }) {
-  const { t, formatNumber } = useLocale();
+  const { t, locale, formatNumber } = useLocale();
   const id = useId();
   const lookTab = useRef<HTMLButtonElement>(null);
   const photoTab = useRef<HTMLButtonElement>(null);
@@ -237,6 +238,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
   const previewPanel = useRef<HTMLElement>(null);
   const portrait = useRef<HTMLDivElement>(null);
   const placementTrigger = useRef<HTMLButtonElement>(null);
+  const shadowZonePicker = useRef<HTMLSelectElement>(null);
   const loadedPreset = useRef<MakeupStylePreset | undefined>(undefined);
   const hadDraft = useRef(Boolean(draft));
   const initialPortrait = useRef(draft?.snapshot.portrait ?? defaultPortrait ?? defaultStudioPortrait);
@@ -245,7 +247,8 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
   const [{ area, tool }, setSelection] = useState<StudioSelection>(draft?.selection ?? { area: "joues", tool: "blush" });
   const [portraitStyle, setPortraitStyle] = useState(initialPortrait.current);
   const { skinTone, iris, hair, showHair } = portraitStyle;
-  const [look, setLook] = useState<StudioLookLayers>(draft?.snapshot.layers ?? {});
+  const [{ layers: look, eyeshadows }, setStudioLayers] = useState(() => editableStudioLayers(draft?.snapshot));
+  const [shadowZone, setShadowZone] = useState<StudioShadowZone>(draft?.shadowZone ?? "whole");
   const [placements, setPlacements] = useState<StudioPlacements>(draft?.snapshot.placements ?? {});
   const [activeLookId, setActiveLookId] = useState(draft?.activeLookId);
   const [guideVisible, setGuideVisible] = useState(draft?.guideVisible ?? false);
@@ -266,10 +269,12 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
   const settingProduct = setting?.productId ? settingPowders.find((product) => product.id === setting.productId) : undefined;
   const settingApplied = setting !== null;
   const isSetting = tool === "setting-powder";
+  const isShadow = tool === "eyeshadow";
   const areaConfig = areas[area];
   const shades = (!isSetting ? toolShades[tool] : undefined) ?? areaConfig.shades;
-  const active = !isSetting ? look[area]?.[tool] : undefined;
-  const pendingHere = pendingProduct?.selection.area === area && pendingProduct.selection.tool === tool;
+  const active = isShadow ? eyeshadows[shadowZone] : !isSetting ? look[area]?.[tool] : undefined;
+  const pendingHere = pendingProduct?.selection.area === area && pendingProduct.selection.tool === tool &&
+    (!isShadow || pendingProduct.shadowZone === shadowZone);
   const selectedProduct = shadesByProduct.find((choice) => choice.id === (pendingHere ? pendingProduct.id
     : active?.productId ? productShadeId(active.productId, active.variantId) : undefined));
   const productWithoutShade = selectedProduct?.hex ? undefined : selectedProduct;
@@ -285,11 +290,12 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
   } : undefined;
   const layers: PigmentLayer[] = studioAreas.flatMap((zone) => areas[zone].tools.flatMap((kind) => {
     if (kind === "setting-powder") return [];
+    if (kind === "eyeshadow") return shadowZones.flatMap((shadow) => {
+      const layer = eyeshadows[shadow];
+      return layer ? [chartPigment(layer, zone, kind, shadow)] : [];
+    });
     const layer = look[zone]?.[kind];
-    if (!layer) return [];
-    return [{ effect: "tinted" as const, kind, hex: layer.mix ? blendedHex(layer.hex, layer.mix) : layer.hex,
-      name: layer.name, productName: layer.name, opacity: layer.intensity / 100, stepId: `${zone}-${kind}`, zone,
-      placement: selectedPlacement(kind, placements)?.id, details: layer.details }];
+    return layer ? [chartPigment(layer, zone, kind)] : [];
   }));
   const hasLook = layers.length > 0 || settingApplied;
   const canUseProfilePortrait = defaultPortrait && (showHair !== defaultPortrait.showHair ||
@@ -319,14 +325,15 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
   useLayoutEffect(() => {
     if (!onDraftChange) return;
     // An unedited visit leaves room for later profile changes to seed the Studio.
-    if (!hadDraft.current && !hasLook && !pendingProduct && !handledTrial && portraitStyle === initialPortrait.current && !Object.keys(placements).length) return;
+    if (!hadDraft.current && !hasLook && !pendingProduct && !handledTrial && shadowZone === "whole" &&
+      portraitStyle === initialPortrait.current && !Object.keys(placements).length) return;
     hadDraft.current = true;
     onDraftChange({
-      snapshot: { portrait: portraitStyle, layers: look, placements, setting },
-      selection: { area, tool }, previewMode, activeLookId, guideVisible, pendingProduct, side, handledTrial, unassignedTrial,
+      snapshot: { portrait: portraitStyle, layers: look, eyeshadows, placements, setting },
+      selection: { area, tool }, previewMode, activeLookId, guideVisible, pendingProduct, side, shadowZone, handledTrial, unassignedTrial,
     });
-  }, [onDraftChange, hasLook, portraitStyle, look, placements, setting, area, tool, previewMode, activeLookId,
-    guideVisible, pendingProduct, side, handledTrial, unassignedTrial]);
+  }, [onDraftChange, hasLook, portraitStyle, look, eyeshadows, placements, setting, area, tool, previewMode, activeLookId,
+    guideVisible, pendingProduct, side, shadowZone, handledTrial, unassignedTrial]);
 
   useEffect(() => {
     const panel = previewPanel.current;
@@ -379,16 +386,38 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
     (next === "look" ? lookTab : photoTab).current?.focus();
   }
 
+  function chartPigment(layer: StudioLayer, zone: StudioArea, kind: PigmentKind, shadow?: StudioShadowZone): PigmentLayer {
+    return {
+      effect: "tinted", kind, zone,
+      hex: layer.mix ? blendedHex(layer.hex, layer.mix) : layer.hex,
+      name: layer.name, productName: layer.name, opacity: layer.intensity / 100,
+      stepId: shadow ? `${zone}-${kind}-${shadow}` : `${zone}-${kind}`,
+      placement: selectedPlacement(kind, placements)?.id,
+      details: shadow ? { ...layer.details, shadow: { zone: shadow } } : layer.details,
+    };
+  }
+
+  function editPigment(zone: StudioArea, kind: PigmentKind, edit: (before?: StudioLayer) => StudioLayer | undefined) {
+    setStudioLayers((previous) => {
+      if (kind === "eyeshadow") {
+        const next = edit(previous.eyeshadows[shadowZone]);
+        const updated = { ...previous.eyeshadows };
+        if (next) updated[shadowZone] = next;
+        else delete updated[shadowZone];
+        return { ...previous, eyeshadows: updated };
+      }
+      const layers = previous.layers;
+      return { ...previous, layers: { ...layers, [zone]: { ...layers[zone], [kind]: edit(layers[zone]?.[kind]) } } };
+    });
+  }
+
   function applyVirtual(hex: string, name: string, pigmentTool: StudioTool = tool, swatchId?: string, product?: ProductShade) {
     if (pigmentTool === "setting-powder" || !hexPattern.test(hex)) return;
     setPendingProduct(undefined);
     setPreviewMode("look");
-    setLook((previous) => {
-      const prior = previous[area]?.[pigmentTool];
-      return { ...previous, [area]: { ...previous[area], [pigmentTool]: { hex, name: product?.label.slice(0, 140) ?? name,
-        productId: product?.product.id, variantId: product?.variantId, swatchId, details: prior?.details,
-        intensity: prior?.intensity ?? toolIntensity[pigmentTool] ?? areaConfig.intensity } } };
-    });
+    editPigment(area, pigmentTool, (prior) => ({ hex, name: product?.label.slice(0, 140) ?? name,
+      productId: product?.product.id, variantId: product?.variantId, swatchId, details: prior?.details,
+      intensity: prior?.intensity ?? toolIntensity[pigmentTool] ?? areaConfig.intensity }));
   }
 
   function applyProduct(choice?: ProductShade) {
@@ -404,7 +433,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
     setSelection(selection);
     setPreviewMode("look");
     if (!choice.hex || !hexPattern.test(choice.hex)) {
-      setPendingProduct({ id: choice.id, selection });
+      setPendingProduct({ id: choice.id, selection, shadowZone: pigment === "eyeshadow" ? shadowZone : undefined });
       return;
     }
     setPendingProduct(undefined);
@@ -412,23 +441,17 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
     const appearance = makeupAppearance({ ...choice.product, makeupEffect: "tinted", shadeHex: hex }, {
       id: choice.product.id, productId: choice.product.id, zone, note: "",
     }, []);
-    setLook((previous) => {
-      const prior = previous[zone]?.[pigment];
-      return { ...previous, [zone]: { ...previous[zone], [pigment]: {
-        hex, name: choice.label.slice(0, 140), productId: choice.product.id, variantId: choice.variantId, approximate: choice.approximate,
-        intensity: prior?.intensity ?? (appearance.effect === "tinted" ? Math.round(appearance.opacity * 100) : toolIntensity[pigment] ?? areas[zone].intensity),
-        details: prior?.details,
-      } } };
-    });
+    editPigment(zone, pigment, (prior) => ({
+      hex, name: choice.label.slice(0, 140), productId: choice.product.id, variantId: choice.variantId, approximate: choice.approximate,
+      intensity: prior?.intensity ?? (appearance.effect === "tinted" ? Math.round(appearance.opacity * 100) : toolIntensity[pigment] ?? areas[zone].intensity),
+      details: prior?.details,
+    }));
   }
 
   function updateLayer(change: Partial<StudioLayer>) {
     if (tool === "setting-powder") return;
     setPreviewMode("look");
-    setLook((previous) => {
-      const layer = previous[area]?.[tool];
-      return layer ? { ...previous, [area]: { ...previous[area], [tool]: { ...layer, ...change } } } : previous;
-    });
+    editPigment(area, tool, (layer) => layer ? { ...layer, ...change } : undefined);
   }
 
   function selectArea(zone: StudioArea) {
@@ -486,6 +509,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
       snapshot: {
         portrait: portraitStyle,
         layers: look,
+        eyeshadows: Object.keys(eyeshadows).length ? eyeshadows : undefined,
         placements: savedPlacements,
         setting: settingApplied ? setting : null,
       },
@@ -502,11 +526,14 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
   }
 
   function openSnapshot(snapshot: StudioLookSnapshot, id?: string) {
+    const restored = editableStudioLayers(snapshot);
+    const firstShadow = shadowZones.find((zone) => restored.eyeshadows[zone]);
     const selection = studioAreas.flatMap((zone) => studioToolsByArea[zone].filter((kind) =>
-      kind !== "setting-powder" && snapshot.layers[zone]?.[kind]).map((kind) => ({ area: zone, tool: kind })))[0];
+      kind !== "setting-powder" && (kind === "eyeshadow" ? firstShadow : restored.layers[zone]?.[kind])).map((kind) => ({ area: zone, tool: kind })))[0];
     setSetting(snapshot.setting);
     setPortraitStyle(snapshot.portrait);
-    setLook(snapshot.layers);
+    setStudioLayers(restored);
+    setShadowZone(firstShadow ?? "whole");
     setPlacements(snapshot.placements);
     setSelection(selection ?? (snapshot.setting ? { area: "visage", tool: "setting-powder" } : { area: "joues", tool: "blush" }));
     setGuideVisible(false);
@@ -603,16 +630,21 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
             </div>
           </details>
           {(layers.length > 0 || settingApplied) && <ul className={styles.layerList} aria-label={t("Couches du look", "Look layers")}>
-            {layers.map((layer) => <li key={layer.stepId}>
-              <button type="button" aria-pressed={layer.zone === area && layer.kind === tool} onClick={() => {
-                if (!isStudioArea(layer.zone)) return;
-                if (layer.kind !== tool) setPositioningTool(undefined);
-                setSelection({ area: layer.zone, tool: layer.kind });
-                setPreviewMode("look");
-              }} title={layer.name}>
-                <span style={{ backgroundColor: layer.hex }} aria-hidden="true"/>{t(...toolLabels[layer.kind])}
-              </button>
-            </li>)}
+            {layers.map((layer) => {
+              const shadow = layer.kind === "eyeshadow" ? layer.details?.shadow?.zone : undefined;
+              return <li key={layer.stepId}>
+                <button type="button" aria-pressed={layer.zone === area && layer.kind === tool && (!shadow || shadow === shadowZone)} onClick={() => {
+                  if (!isStudioArea(layer.zone)) return;
+                  if (layer.kind !== tool) setPositioningTool(undefined);
+                  if (shadow) setShadowZone(shadow);
+                  setSelection({ area: layer.zone, tool: layer.kind });
+                  setPreviewMode("look");
+                }} title={layer.name}>
+                  <span style={{ backgroundColor: layer.hex }} aria-hidden="true"/>{t(...toolLabels[layer.kind])}
+                  {shadow && ` · ${studioShadowLabel(shadow, locale)}`}
+                </button>
+              </li>;
+            })}
             {settingApplied && <li><button type="button" aria-pressed={isSetting} onClick={() => {
               setPositioningTool(undefined);
               setSelection({ area: "visage", tool: "setting-powder" });
@@ -633,6 +665,10 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
           {areaConfig.tools.length > 1 && <div className={styles.tools} role="group" aria-label={t("Type de maquillage", "Makeup type")}>
             {areaConfig.tools.map((kind) => <button type="button" key={kind} aria-pressed={tool === kind}
               onClick={() => { setSelection({ area, tool: kind }); setPositioningTool(undefined); }}>{t(...toolLabels[kind])}</button>)}
+          </div>}
+          {isShadow && <div className={styles.shadowZones}>
+            <StudioShadowZonePicker selected={shadowZone} layers={eyeshadows} onSelect={setShadowZone} selectRef={shadowZonePicker} hintId={`${id}-shadow-hint`}/>
+            <p id={`${id}-shadow-hint`} className={styles.sourceHint}>{t("Choisis une zone, puis applique une teinte. Les fards se superposent.", "Choose an area, then apply a shade. Eye shadows layer on top of each other.")}</p>
           </div>}
           {!isSetting && <ProductShades choices={shadesByProduct} value={selectedProduct?.id} onSelect={applyProduct}/>}
           {unassignedTrial && <p className={styles.sourceHint} role="status">{t(
@@ -678,7 +714,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
               photoTab.current?.focus();
             }}><SwatchBook size={16} aria-hidden="true"/>{t("Prélever une teinte sur une photo", "Sample a shade from a photo")}</button>}
           </div>
-          <ColourField label={t("Couleur personnalisée", "Custom colour")} hex={active?.hex ?? shades[0].hex}
+          <ColourField key={isShadow ? shadowZone : undefined} label={t("Couleur personnalisée", "Custom colour")} hex={active?.hex ?? shades[0].hex}
             onChange={(hex) => applyVirtual(hex, hex, tool, undefined, productWithoutShade)}/>
           <details className={styles.exampleShades}>
             <summary>{t("Couleurs d’exemple", "Example colours")}</summary>
@@ -710,7 +746,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
               mix: active.mix ? undefined : { hex: shades[1].hex, amount: 50 },
             })}><SlidersHorizontal size={16} aria-hidden="true"/>{t("Mélanger deux teintes", "Mix two shades")}</button>
             {active.mix && <div className={styles.mixControls}>
-              <ColourField label={t("Seconde teinte", "Second shade")} hex={active.mix.hex}
+              <ColourField key={isShadow ? shadowZone : undefined} label={t("Seconde teinte", "Second shade")} hex={active.mix.hex}
                 onChange={(hex) => updateLayer({ mix: { hex, amount: active.mix?.amount ?? 50 } })}/>
               <label className={styles.range}>
                 <span>{t("Part de la seconde teinte", "Second shade proportion")} <output>{formatNumber(active.mix.amount)} %</output></span>
@@ -727,25 +763,28 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
                 setPendingProduct(undefined);
                 setPositioningTool(undefined);
                 if (isSetting) setSetting(null);
-                else setLook((previous) => ({ ...previous, [area]: { ...previous[area], [tool]: undefined } }));
+                else editPigment(area, tool, () => undefined);
+                if (isShadow) shadowZonePicker.current?.focus();
               }}>
-              <CircleX size={16} aria-hidden="true"/>{t("Effacer la couche", "Clear layer")}
+              <CircleX size={16} aria-hidden="true"/>{isShadow ? t("Effacer le fard de cette zone", "Clear eye shadow in this area") : t("Effacer la couche", "Clear layer")}
             </button>}
             <button type="button" className="button button-secondary" disabled={!layers.some((layer) => layer.zone === area) && !(area === "visage" && settingApplied)}
               onClick={() => {
                 setPreviewMode("look");
                 setPendingProduct(undefined);
                 setPositioningTool(undefined);
-                setLook((previous) => ({ ...previous, [area]: undefined }));
+                setStudioLayers((previous) => ({
+                  layers: { ...previous.layers, [area]: undefined }, eyeshadows: area === "yeux" ? {} : previous.eyeshadows,
+                }));
                 if (area === "visage") setSetting(null);
               }}>
-              <CircleX size={16} aria-hidden="true"/>{t("Effacer la zone", "Clear area")}
+              <CircleX size={16} aria-hidden="true"/>{area === "yeux" ? t("Effacer le maquillage des yeux", "Clear all eye makeup") : t("Effacer la zone", "Clear area")}
             </button>
             <button type="button" className="button button-secondary" disabled={!hasLook} onClick={() => {
               setPreviewMode("look");
               setPendingProduct(undefined);
               setPositioningTool(undefined);
-              setLook({});
+              setStudioLayers({ layers: {}, eyeshadows: {} });
               setSetting(null);
             }}>
               <RotateCcw size={16} aria-hidden="true"/>{t("Effacer le look", "Clear look")}

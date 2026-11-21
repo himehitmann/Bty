@@ -2,7 +2,8 @@ import { z } from "zod";
 import type { MakeupPlacement } from "./makeup-placements";
 
 export const linerStyles = ["classic", "winged", "puppy", "graphic"] as const;
-export const shadowZones = ["lid", "crease", "outer", "inner", "lower", "whole"] as const;
+// Paint the broader bases before the smaller accents.
+export const shadowZones = ["whole", "lid", "crease", "outer", "inner", "lower"] as const;
 export const browShapes = ["natural", "arched", "straight", "soft"] as const;
 export type StudioSide = "left" | "right";
 export type StudioPositionTool = "blush" | "brow";

@@ -34,15 +34,20 @@ function officialProduct(
   };
 }
 
-function medicubeProduct(handle: string, name: string, imageUrl: string): Product {
+function medicubeProduct(handle: string, name: string, imageUrl: string, details?: {
+  ingredients: readonly string[];
+  directions: string;
+}): Product {
+  const manufacturerUrl = `https://medicube.us/products/${handle}`;
   return {
     id: `manufacturer-medicube-${handle}`,
     name,
     brand: "Medicube",
     category: "soin",
-    ingredients: "",
+    ingredients: details?.ingredients.join(", ") ?? "",
     source: "manufacturer",
-    manufacturerUrl: `https://medicube.us/products/${handle}`,
+    manufacturerUrl,
+    usageInstructions: details ? { source: "manufacturer", url: manufacturerUrl, text: details.directions } : undefined,
     imageUrl,
   };
 }
@@ -259,7 +264,17 @@ export const manufacturerCatalog: readonly Product[] = [
   medicubeProduct("pdrn-pink-collagen-capsule-cream", "PDRN Pink Collagen Capsule Cream",
     "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/pdrn_4bb18716-9e52-43c7-b477-1699ac1e4c8f.jpg?v=1768373058&width=480"),
   medicubeProduct("collagen-night-wrapping-mask", "Collagen Night Wrapping Mask",
-    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/00_6d878aff-381d-4cd6-b9e1-d8b924225025.jpg?v=1766713832&width=480"),
+    "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/00_6d878aff-381d-4cd6-b9e1-d8b924225025.jpg?v=1766713832&width=480", {
+      ingredients: [
+        "Water", "Polyvinyl Alcohol", "Glycerin", "Agave Americana Stem Extract", "Niacinamide",
+        "Sodium Hyaluronate", "1,2-Hexanediol", "Caprylyl Glycol", "Polyglyceryl-10 Laurate",
+        "Chlorella Vulgaris Extract", "Glucose", "Butylene Glycol", "Ethylhexylglycerin",
+        "Fructooligosaccharides", "Fructose", "Adenosine", "Xanthan Gum", "Cynanchum Atratum Extract",
+        "Caprylic/Capric Triglyceride", "Hydrogenated Lecithin", "Althaea Rosea Flower Extract",
+        "Ceramide NP", "Tocopherol", "Pancratium Maritimum Extract", "Collagen Extract", "Sodium Stearoyl Glutamate",
+      ],
+      directions: "Applique une couche fine et uniforme en dernière étape de ta routine du soir. Laisse sécher complètement et retire délicatement le film le lendemain matin. Rince les résidus à l’eau tiède.",
+    }),
   medicubeProduct("pdrn-pink-collagen-gel-mask", "Salmon PDRN Pink Collagen Jelly Gel Mask",
     "https://cdn.shopify.com/s/files/1/0156/3905/2336/files/mask.jpg?v=1767340292&width=480"),
   medicubeProduct("triple-collagen-serum", "Triple Collagen Serum",

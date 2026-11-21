@@ -332,7 +332,7 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
             onProduct={(id) => { navigate("vanity"); setSelected(id); }}
             onRoutine={(routine) => { navigate("routines"); if (routine.steps.length) setGuide(routine.id); }}/>}
           {view === "catalogue" && <Catalog key={catalogue.revision} initialQuery={catalogue.query} currentProducts={state.products}
-            lists={lists} destination={state.preferences.catalogueDestination} onSave={saveProduct} portable={portable}
+            lists={lists} preferences={state.preferences} destination={state.preferences.catalogueDestination} onSave={saveProduct} portable={portable}
             onTry={tryProduct} onOpenDestination={openDestination}/>}
           {view === "vanity" && <>
             <div className="page-heading">

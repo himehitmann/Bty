@@ -326,6 +326,7 @@
   border-radius: 1rem;
   background: #fff8;
   font-size: 0.76rem;
+  text-align: left;
 }
 
 .layerList button[aria-pressed="true"] {
@@ -485,6 +486,12 @@
   font-size: 0.86rem;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.shadowZones {
+  display: grid;
+  min-width: 0;
+  gap: .35rem;
 }
 
 .swatchComparison summary,

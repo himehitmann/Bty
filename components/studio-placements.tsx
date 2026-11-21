@@ -6,8 +6,9 @@ import { useLocale, type Locale } from "@/lib/i18n";
 import type { MakeupPlacement } from "@/lib/makeup-placements";
 import {
   browShapes, getStudioAnchor, linerStyles, mirrorStudioAnchor, setStudioAnchor, shadowZones, studioPlacementBounds,
-  type StudioAnchor, type StudioPlacementDetails, type StudioPositionTool, type StudioSide,
+  type StudioAnchor, type StudioPlacementDetails, type StudioPositionTool, type StudioShadowZone, type StudioSide,
 } from "@/lib/studio-advanced";
+import type { StudioEyeshadows } from "@/lib/studio-looks";
 import styles from "./studio-placements.module.css";
 
 type Copy = readonly [fr: string, en: string, es: string, it: string];
@@ -27,7 +28,32 @@ const shadowLabels = {
   inner: ["Coin interne", "Inner corner", "Esquina interior", "Angolo interno"],
   lower: ["Ras des cils inférieurs", "Lower lash line", "Línea inferior de pestañas", "Rima ciliare inferiore"],
   whole: ["Ensemble de la paupière", "Whole lid", "Párpado completo", "Intera palpebra"],
-} satisfies Record<(typeof shadowZones)[number], Copy>;
+} satisfies Record<StudioShadowZone, Copy>;
+
+export function studioShadowLabel(zone: StudioShadowZone, locale: Locale) {
+  return shadowLabels[zone][languageIndex[locale]];
+}
+
+export function StudioShadowZonePicker({ selected, layers, onSelect, selectRef, hintId }: {
+  selected: StudioShadowZone;
+  layers: StudioEyeshadows;
+  onSelect: (zone: StudioShadowZone) => void;
+  selectRef: Ref<HTMLSelectElement>;
+  hintId: string;
+}) {
+  const { locale, t } = useLocale();
+  return <label className={styles.field}>
+    <span>{["Zone du fard", "Eyeshadow area", "Zona de la sombra", "Zona dell'ombretto"][languageIndex[locale]]}</span>
+    <select ref={selectRef} value={selected} aria-describedby={hintId} onChange={(event) => {
+      const zone = shadowZones.find((option) => option === event.currentTarget.value);
+      if (zone) onSelect(zone);
+    }}>
+      {shadowZones.map((zone) => <option key={zone} value={zone}>
+        {studioShadowLabel(zone, locale)}{layers[zone] ? ` · ${t("appliqué", "applied")}` : ""}
+      </option>)}
+    </select>
+  </label>;
+}
 
 const browLabels = {
   natural: ["Naturel", "Natural", "Natural", "Naturale"],
@@ -60,16 +86,6 @@ export function StudioPlacementEditor({ tool, details, placement, onChange, side
       if (style) onChange({ ...details, liner: { style } });
     }}>
       {linerStyles.map((style) => <option key={style} value={style}>{text(linerLabels[style])}</option>)}
-    </select>
-  </label>;
-
-  if (tool === "eyeshadow") return <label className={styles.field}>
-    <span>{text(["Zone du fard", "Eyeshadow area", "Zona de la sombra", "Zona dell'ombretto"])}</span>
-    <select value={details?.shadow?.zone ?? "whole"} onChange={(event) => {
-      const zone = shadowZones.find((option) => option === event.target.value);
-      if (zone) onChange({ ...details, shadow: { zone } });
-    }}>
-      {shadowZones.map((zone) => <option key={zone} value={zone}>{text(shadowLabels[zone])}</option>)}
     </select>
   </label>;
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { findMakeupPlacement, makeupPlacementIds } from "./makeup-placements";
-import { studioPlacementDetailsSchema } from "./studio-advanced";
+import { shadowZones, studioPlacementDetailsSchema } from "./studio-advanced";
 
 export const studioAreas = ["visage", "joues", "yeux", "levres"] as const;
 export type StudioArea = (typeof studioAreas)[number];
@@ -74,6 +74,7 @@ const studioSettingSchema = z.object({ productId: identifier.optional() });
 const studioLookSnapshotSchema = z.object({
   portrait: studioPortraitSchema,
   layers: studioLookLayersSchema,
+  eyeshadows: z.partialRecord(z.enum(shadowZones), studioLayerSchema).optional(),
   placements: studioPlacementsSchema,
   setting: studioSettingSchema.nullable(),
 });
@@ -87,7 +88,22 @@ export const savedStudioLookSchema = z.object({
 
 export type StudioLayer = z.infer<typeof studioLayerSchema>;
 export type StudioLookLayers = z.infer<typeof studioLookLayersSchema>;
+export type StudioEyeshadows = NonNullable<StudioLookSnapshot["eyeshadows"]>;
 export type StudioPlacements = z.infer<typeof studioPlacementsSchema>;
 export type StudioSetting = z.infer<typeof studioSettingSchema>;
 export type StudioLookSnapshot = z.infer<typeof studioLookSnapshotSchema>;
 export type SavedStudioLook = z.infer<typeof savedStudioLookSchema>;
+
+export function editableStudioLayers(snapshot?: StudioLookSnapshot): { layers: StudioLookLayers; eyeshadows: StudioEyeshadows } {
+  if (!snapshot) return { layers: {}, eyeshadows: {} };
+  const { layers, eyeshadows } = snapshot;
+  const legacy = layers.yeux?.eyeshadow;
+  if (!legacy) return { layers, eyeshadows: eyeshadows ?? {} };
+
+  const eyes = { ...layers.yeux };
+  delete eyes.eyeshadow;
+  return {
+    layers: { ...layers, yeux: eyes },
+    eyeshadows: eyeshadows ?? { [legacy.details?.shadow?.zone ?? "whole"]: legacy },
+  };
+}

@@ -27,6 +27,8 @@
   "INCI ingredients": ["Ingredientes INCI", "Ingredienti INCI"],
   "Ingredients are missing. Check the ingredient list on the packaging.": ["No se indican los ingredientes. Consulta la lista del envase.", "Gli ingredienti non sono indicati. Controlla l’elenco sulla confezione."],
   "View the original catalogue entry": ["Consultar la ficha original del catálogo", "Vedi la scheda originale del catalogo"],
+  "View product details": ["Ver ficha del producto", "Apri la scheda prodotto"],
+  "Close product details": ["Cerrar ficha del producto", "Chiudi la scheda prodotto"],
   "Things to check": ["Aspectos que conviene revisar", "Aspetti da verificare"],
   "There are no matches in the supplied list for your current preferences.": ["La lista facilitada no presenta coincidencias con tus preferencias actuales.", "L’elenco fornito non presenta corrispondenze con le tue preferenze attuali."],
   "Ingredient lists can be incomplete or out of date. Check the packaging for the current list.": ["Las listas de ingredientes pueden estar incompletas o desactualizadas. Consulta la lista actual en el envase.", "Gli elenchi degli ingredienti possono essere incompleti o non aggiornati. Controlla l’elenco sulla confezione."],
