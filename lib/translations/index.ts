@@ -11,6 +11,7 @@ import plans from "./plans.json";
 import privacy from "./privacy.json";
 import publicAndProfile from "./public-and-profile.json";
 import routines from "./routines.json";
+import skinObservations from "./skin-observations.json";
 import studio from "./studio.json";
 import tutorials from "./tutorials.json";
 import workspace from "./workspace.json";
@@ -31,6 +32,7 @@ const translations: Readonly<Record<string, readonly string[]>> = {
   ...home,
   ...workspace,
   ...privacy,
+  ...skinObservations,
 };
 const placeholders = /\{(\d+)\}/g;
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

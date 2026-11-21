@@ -375,7 +375,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
   useEffect(() => {
     if (!preset || loadedPreset.current === preset) return;
     loadedPreset.current = preset;
-    openSnapshot(preset.snapshot);
+    openSnapshot(preset.snapshot, { merge: preset.apply === "merge" });
   }, [preset]);
 
   function changeTab(event: KeyboardEvent<HTMLButtonElement>) {
@@ -525,20 +525,32 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
     return true;
   }
 
-  function openSnapshot(snapshot: StudioLookSnapshot, id?: string) {
+  function openSnapshot(snapshot: StudioLookSnapshot, { id, merge = false }: { id?: string; merge?: boolean } = {}) {
     const restored = editableStudioLayers(snapshot);
     const firstShadow = shadowZones.find((zone) => restored.eyeshadows[zone]);
     const selection = studioAreas.flatMap((zone) => studioToolsByArea[zone].filter((kind) =>
       kind !== "setting-powder" && (kind === "eyeshadow" ? firstShadow : restored.layers[zone]?.[kind])).map((kind) => ({ area: zone, tool: kind })))[0];
-    setSetting(snapshot.setting);
-    setPortraitStyle(snapshot.portrait);
-    setStudioLayers(restored);
-    setShadowZone(firstShadow ?? "whole");
-    setPlacements(snapshot.placements);
-    setSelection(selection ?? (snapshot.setting ? { area: "visage", tool: "setting-powder" } : { area: "joues", tool: "blush" }));
-    setGuideVisible(false);
+    if (merge) {
+      setStudioLayers((previous) => {
+        const layers = { ...previous.layers };
+        for (const zone of studioAreas) if (restored.layers[zone]) layers[zone] = { ...layers[zone], ...restored.layers[zone] };
+        return { layers, eyeshadows: { ...previous.eyeshadows, ...restored.eyeshadows } };
+      });
+      setPlacements((previous) => ({ ...previous, ...snapshot.placements }));
+      if (firstShadow) setShadowZone(firstShadow);
+      if (snapshot.setting) setSetting(snapshot.setting);
+      if (selection || snapshot.setting) setSelection(selection ?? { area: "visage", tool: "setting-powder" });
+    } else {
+      setSetting(snapshot.setting);
+      setPortraitStyle(snapshot.portrait);
+      setStudioLayers(restored);
+      setShadowZone(firstShadow ?? "whole");
+      setPlacements(snapshot.placements);
+      setSelection(selection ?? (snapshot.setting ? { area: "visage", tool: "setting-powder" } : { area: "joues", tool: "blush" }));
+      setGuideVisible(false);
+      setActiveLookId(id);
+    }
     setPreviewMode("look");
-    setActiveLookId(id);
     setPendingProduct(undefined);
     setUnassignedTrial(undefined);
     setPositioningTool(undefined);
@@ -571,7 +583,7 @@ export function MakeupStudio({ products, trialProducts = noTrialProducts, trialR
 
     <div className={styles.tabPanel} role="tabpanel" id={`${id}-panel-look`} aria-labelledby={`${id}-tab-look`} hidden={tab !== "look"}>
       <StudioLookLibrary looks={savedLooks} activeId={activeLookId} canSave={hasLook} onSave={saveLook}
-        onOpen={({ id, snapshot }) => openSnapshot(snapshot, id)} onDelete={deleteLook}/>
+        onOpen={({ id, snapshot }) => openSnapshot(snapshot, { id })} onDelete={deleteLook}/>
       <div className={styles.workspace}>
         <section className={styles.preview} aria-labelledby={`${id}-preview`} ref={previewPanel}>
           <div className={styles.previewHeader}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { analyzeProduct } from "@/lib/analysis";
 import { useLocale } from "@/lib/i18n";
 import { skinConcerns, skinFeels, undertones, type Preferences, type Product, type Routine } from "@/lib/model";
@@ -28,18 +28,18 @@ export function ProfileFields({ preferences }: { preferences: Preferences }) {
   const { t } = useLocale();
   return <>
     <label>{t("Comment ta peau se sent habituellement", "How your skin usually feels")}
-      <select name="skinFeel" defaultValue={preferences.skinFeel ?? ""}>
+      <select key={preferences.skinFeel ?? ""} name="skinFeel" defaultValue={preferences.skinFeel ?? ""}>
         <option value="">{t("Non renseigné", "Not specified")}</option>
         {skinFeels.map((value) => <option key={value} value={value}>{t(feels[value][0], feels[value][1])}</option>)}
       </select>
     </label>
-    <fieldset className="profile-checklist">
+    <fieldset className="profile-checklist" key={[...(preferences.skinConcerns ?? [])].sort().join(",")}>
       <legend>{t("Ce que tu observes sur ta peau", "What you notice about your skin")}</legend>
       {skinConcerns.map((value) => <ProfileCheckbox key={value} name="skinConcerns" value={value}
         checked={preferences.skinConcerns?.includes(value)} label={t(concerns[value][0], concerns[value][1])}/>)}
     </fieldset>
     <label>{t("Sous-ton de teint, selon ton observation", "Undertone, based on what you notice")}
-      <select name="undertone" defaultValue={preferences.undertone ?? ""}>
+      <select key={preferences.undertone ?? ""} name="undertone" defaultValue={preferences.undertone ?? ""}>
         <option value="">{t("Non renseigné", "Not specified")}</option>
         {undertones.map((value) => <option key={value} value={value}>{t(tones[value][0], tones[value][1])}</option>)}
       </select>
@@ -52,35 +52,76 @@ export function ProfileFields({ preferences }: { preferences: Preferences }) {
 }
 
 const searchable = (value: string) => value.toLocaleLowerCase("fr").normalize("NFD").replace(/\p{Diacritic}/gu, "");
-const sunscreenPattern = /\b(?:spf|fps)(?:\b|\d)|solaire|sunscreen/;
+const spfPattern = /\b(?:spf|fps)(?:\b|\d)/;
+const sunscreenPattern = /\b(?:solaire|sunscreen|sunblock|sun protection|protector solar|proteccion solar|protezione solare|crema solare)\b/;
+const afterSunPattern = /\b(?:apres[- ]+solaire|apres[- ]+soleil|after[- ]*sun|doposole)\b/;
 
 const steps = [
-  { id: "cleanse", label: ["Nettoyer", "Cleanse"], match: /nettoy|cleanser/, note: ["Utilise-le en premier si ce nettoyage fait partie de ta routine. Suis la notice pour le rinçage.", "Use it first if cleansing is part of your routine. Follow the label’s rinsing instructions."] },
-  { id: "moisturise", label: ["Hydrater", "Moisturise"], match: /hydrat|moisturi/, note: ["Utilise après le nettoyage selon la notice.", "Apply after cleansing as directed on the label."] },
-  { id: "protect", label: ["Protéger du soleil le matin", "Apply sun protection in the morning"], match: sunscreenPattern, note: ["Suis la notice pour la quantité et la fréquence de réapplication. Utilise-le en dernière étape de soin avant le maquillage.", "Follow the label for how much to use and when to reapply. Make it the final skincare step before makeup."] },
+  {
+    id: "cleanse", label: ["Nettoyer", "Cleanse"],
+    verify: ["L’emballage indique que ce produit nettoie le visage.", "The label says this product cleanses the face."],
+    note: ["Utilise-le en premier si ce nettoyage fait partie de ta routine. Suis la notice pour le rinçage.", "Use it first if cleansing is part of your routine. Follow the label’s rinsing instructions."],
+  },
+  {
+    id: "moisturise", label: ["Hydrater", "Moisturise"],
+    verify: ["L’emballage indique que ce produit hydrate le visage.", "The label says this product moisturises the face."],
+    note: ["Utilise après le nettoyage selon la notice.", "Apply after cleansing as directed on the label."],
+  },
+  {
+    id: "protect", label: ["Protéger du soleil le matin", "Apply sun protection in the morning"],
+    verify: ["L’emballage indique une protection solaire pour le visage.", "The label specifies sun protection for the face."],
+    note: ["Suis la notice pour la quantité et la fréquence de réapplication. Utilise-le en dernière étape de soin avant le maquillage.", "Follow the label for how much to use and when to reapply. Make it the final skincare step before makeup."],
+  },
 ] as const;
 
-export function RoutineCoach({ preferences, products, onCreate }: {
-  preferences: Preferences; products: Product[]; onCreate: (routine: Routine) => boolean;
+type StepKind = (typeof steps)[number]["id"];
+type Period = "matin" | "soir";
+type Choices = Partial<Record<StepKind, { id: string; confirmed: boolean }>>;
+
+function guessRole(product: Product): StepKind | undefined {
+  const name = searchable(product.name);
+  if (spfPattern.test(name) || (sunscreenPattern.test(name) && !afterSunPattern.test(name))) return "protect";
+  if (/nettoy|cleanser|face wash|limpiador|detergente/.test(name)) return "cleanse";
+  if (/hydrat|hidrat|idrat|moisturi/.test(name)) return "moisturise";
+}
+
+export function RoutineCoach({ preferences, products, onCreate, openRequest = 0 }: {
+  preferences: Preferences; products: Product[]; onCreate: (routine: Routine) => boolean; openRequest?: number;
 }) {
   const { t, locale } = useLocale();
-  const [period, setPeriod] = useState<"matin" | "soir">("matin");
-  const [picked, setPicked] = useState<Record<"matin" | "soir", Record<string, string>>>({ matin: {}, soir: {} });
-  const [show, setShow] = useState(false);
-  const focusComfort = preferences.skinFeel === "seche" || preferences.skinConcerns?.includes("tiraillements");
-  const focusShine = preferences.skinFeel === "brillante" || preferences.skinConcerns?.includes("brillance");
+  const id = useId();
+  const [period, setPeriod] = useState<Period>("matin");
+  const [picked, setPicked] = useState<Record<Period, Choices>>({ matin: {}, soir: {} });
+  const [show, setShow] = useState(openRequest > 0);
+  useEffect(() => { if (openRequest > 0) setShow(true); }, [openRequest]);
+
+  const discomfort = preferences.skinFeel === "seche" || preferences.skinConcerns?.includes("tiraillements");
+  const shine = preferences.skinFeel === "brillante" || preferences.skinConcerns?.includes("brillance");
+  const focus = preferences.routineFocus ?? (discomfort ? "comfort" : shine ? "shine" : "simple");
   const focusReactive = preferences.sensitive || preferences.skinConcerns?.includes("rougeurs");
-  const filtered = products.filter((product) => product.category === "soin");
+  const priority = focusReactive ? undefined : focus === "comfort" ? "moisturise" : focus === "shine" ? "cleanse" : undefined;
+  const skincare = products.filter(({ category }) => category === "soin").map((product) => ({ product, role: guessRole(product) }));
+  const periodPicks = picked[period];
   const selections = steps.filter((step) => period === "matin" || step.id !== "protect").map((step) => {
-    const candidates = filtered.filter((product) => {
-      const label = searchable(product.name);
-      return step.match.test(label) && (step.id === "protect" || !sunscreenPattern.test(label));
-    });
-    const selection = picked[period][step.id] ?? "";
-    return { ...step, candidates, product: candidates.find((item) => item.id === selection) };
+    const usedElsewhere = new Set(Object.entries(periodPicks).flatMap(([kind, choice]) => choice && kind !== step.id ? [choice.id] : []));
+    const options = skincare.filter(({ product, role }) => !usedElsewhere.has(product.id) && (step.id === "protect" || role !== "protect"));
+    const choice = periodPicks[step.id];
+    const selection = options.find(({ product }) => product.id === choice?.id);
+    const needsConfirmation = Boolean(selection && selection.role !== step.id);
+    return { ...step, likely: options.filter(({ role }) => role === step.id), other: options.filter(({ role }) => role !== step.id),
+      product: selection?.product, needsConfirmation, confirmed: !needsConfirmation || choice?.confirmed === true };
   });
-  const selectionCount = selections.filter(({ product }) => product).length;
+  const selectionCount = selections.filter(({ product, confirmed }) => product && confirmed).length;
+  const waitingForConfirmation = selections.some(({ confirmed }) => !confirmed);
+
+  function pick(kind: StepKind, productId: string, confirmed = false) {
+    setPicked((current) => ({ ...current, [period]: {
+      ...current[period], [kind]: productId ? { id: productId, confirmed } : undefined,
+    } }));
+  }
+
   function create() {
+    if (waitingForConfirmation) return;
     const selectedSteps = selections.flatMap(({ product, note }) => product
       ? [{ id: crypto.randomUUID(), productId: product.id, zone: "visage" as const, note: t(note[0], note[1]) }] : []);
     if (selectedSteps.length) onCreate({
@@ -89,35 +130,49 @@ export function RoutineCoach({ preferences, products, onCreate }: {
       period, steps: selectedSteps,
     });
   }
-  return <section className="dashboard-card profile-coach" aria-labelledby="profile-coach-title">
-    <h2 id="profile-coach-title">{t("Préparer une routine avec mes produits", "Build a routine from my collection")}</h2>
+  return <section className="dashboard-card profile-coach" aria-labelledby={`${id}-title`}>
+    <h2 id={`${id}-title`}>{t("Préparer une routine avec mes produits", "Build a routine from my collection")}</h2>
     <p>{focusReactive ? t("Si ta peau réagit facilement, garde les gestes que tu connais et observe un changement à la fois.", "If your skin reacts easily, stick to familiar steps and observe one change at a time.")
-      : focusComfort ? t("Si tu observes des tiraillements, commence par repérer un hydratant dont tu connais déjà la façon de l’utiliser.", "If your skin feels tight, start by picking a moisturiser you already know how to use.")
-      : focusShine ? t("Si la brillance te gêne, observe quand elle apparaît avant de multiplier les étapes.", "If shine bothers you, note when it appears before adding more steps.")
-      : t("Commence par quelques gestes que tu peux reconnaître sur tes produits.", "Start with a few steps you can identify from your product labels.")}</p>
-    <p className="muted">{t("Les suggestions se basent sur les noms des produits que tu possèdes. Confirme leur rôle sur l’emballage. Renseigne la fréquence dans ta routine à partir de la notice ou de tes habitudes.", "Suggestions are based on the names of products you own. Confirm their purpose on the packaging and set a frequency using the label or your usual routine.")}</p>
-    <button type="button" className="button button-secondary" aria-expanded={show} onClick={() => setShow(!show)}>{show ? t("Replier les suggestions", "Hide suggestions") : t("Choisir une trame de routine", "Choose a routine outline")}</button>
-    {show && <div className="stacked-form">
+      : focus === "comfort" ? t("Pour le confort, commence par repérer un hydratant que tu connais et suis sa notice.", "For comfort, start with a familiar moisturiser and follow its label.")
+      : focus === "shine" ? t("Pour observer la brillance, garde un nettoyage doux que tu connais et note quand elle apparaît.", "To track shine, stick to a gentle cleanser you know and note when shine appears.")
+      : t("Pour une routine simple, garde les étapes que tu souhaites suivre et laisse les autres vides.", "For a simple routine, keep the steps you want to follow and leave the rest blank.")}</p>
+    <p className="muted">{t("Un nom reconnaissable donne une piste. Pour les autres produits, confirme leur usage sur l’emballage. Tu peux laisser des étapes vides.", "Recognisable names give a starting point. For other products, confirm their purpose on the packaging. You can leave steps blank.")}</p>
+    <button type="button" className="button button-secondary" aria-expanded={show} aria-controls={show ? `${id}-choices` : undefined}
+      onClick={() => setShow(!show)}>{show ? t("Replier les suggestions", "Hide suggestions") : t("Choisir une trame de routine", "Choose a routine outline")}</button>
+    {show && <div className="stacked-form" id={`${id}-choices`}>
       <label>{t("Moment de la routine", "Routine time")}
         <select value={period} onChange={(event) => setPeriod(event.target.value === "soir" ? "soir" : "matin")}>
           <option value="matin">{t("Matin", "Morning")}</option>
           <option value="soir">{t("Soir", "Evening")}</option>
         </select>
       </label>
-      {selections.map(({ id, label, candidates, product }) => <div key={id}>
-        <label>{t(label[0], label[1])}
-          <select value={product?.id ?? ""} onChange={(event) => {
-            const value = event.currentTarget.value;
-            setPicked((current) => ({ ...current, [period]: { ...current[period], [id]: value } }));
-          }} disabled={!candidates.length}>
-            <option value="">{candidates.length ? t("Choisir dans ma trousse", "Choose from my collection") : t("Aucun produit identifié", "No matching products")}</option>
-            {candidates.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+      {selections.map(({ id: kind, label, verify, likely, other, product, needsConfirmation, confirmed }) => <div key={kind}>
+        <label htmlFor={`${id}-${kind}`}>
+          {t(label[0], label[1])}
+          <select id={`${id}-${kind}`} value={product?.id ?? ""} onChange={(event) => pick(kind, event.currentTarget.value)}
+            disabled={!likely.length && !other.length} aria-describedby={priority === kind ? `${id}-priority` : undefined}>
+            <option value="">{likely.length || other.length ? t("Choisir dans ma trousse", "Choose from my collection") : t("Aucun produit disponible pour cette étape", "No products available for this step")}</option>
+            {likely.length > 0 && <optgroup label={t("Repérés par leur nom", "Suggested by name")}>
+              {likely.map(({ product: item }) => <option key={item.id} value={item.id}>{item.name}{item.brand && ` · ${item.brand}`}</option>)}
+            </optgroup>}
+            {other.length > 0 && <optgroup label={t("Après vérification de l’emballage", "After checking the label")}>
+              {other.map(({ product: item }) => <option key={item.id} value={item.id}>{item.name}{item.brand && ` · ${item.brand}`}</option>)}
+            </optgroup>}
           </select>
         </label>
+        {priority === kind && <p className="muted" id={`${id}-priority`}>{preferences.routineFocus
+          ? t("Point de départ d’après ton quiz", "Starting point from your quiz")
+          : t("Point de départ d’après ton profil", "Starting point from your profile")}</p>}
+        {product && needsConfirmation && <label className="check-field">
+          <input type="checkbox" checked={confirmed} onChange={(event) => pick(kind, product.id, event.currentTarget.checked)}/>{t(verify[0], verify[1])}
+        </label>}
         {product && analyzeProduct(product, preferences, locale).map((note) => <p className="muted" key={note}>{note}</p>)}
       </div>)}
+      {waitingForConfirmation && <p role="status" className="muted">{t("Confirme l’usage sur l’emballage ou retire le produit sélectionné.", "Confirm the product’s purpose on the label or clear the selection.")}</p>}
       <p className="muted">{t("N’ajoute pas un exfoliant ou un rétinoïde sur la seule base d’une observation de peau. Vérifie la notice de chaque produit avant de les superposer.", "Check each product’s directions before layering. An observation alone cannot establish whether an exfoliant or retinoid suits your routine.")}</p>
-      <button className="button button-primary" type="button" disabled={!selectionCount} onClick={create}>{t("Créer la routine", "Create routine")} ({selectionCount})</button>
+      <p><a className="text-button" href="https://www.aad.org/public/everyday-care/skin-care-basics/care/skin-care-budget"
+        target="_blank" rel="noreferrer">{t("Routine de base recommandée par l’AAD", "Basic routine guidance from the AAD")}</a></p>
+      <button className="button button-primary" type="button" disabled={!selectionCount || waitingForConfirmation} onClick={create}>{t("Créer la routine", "Create routine")} ({selectionCount})</button>
     </div>}
   </section>;
 }

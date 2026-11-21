@@ -371,7 +371,8 @@ function WorkspaceShell({ data, portable }: { data: WorkspaceData; portable: boo
           {view === "styles" && <MakeupStyles onTry={(look) => { navigate("studio"); setPreset({ account: studioScope, value: look }); }}/>}
           {view === "profile" && <BeautyProfile key={user?.id ?? "guest"} preferences={state.preferences} products={state.products} onCreate={createRoutine}
             onSave={(profile) => update((previous) => ({ ...previous, preferences: { ...previous.preferences, ...profile } }), activeAccount ?? null, saveOptions)}/>}
-          {view === "tutoriels" && <Tutorials key={user?.id ?? "guest"} products={state.products} onCreateRoutine={createRoutine}/>}
+          {view === "tutoriels" && <Tutorials key={studioScope} products={state.products} portrait={state.preferences.studioPortrait}
+            onCreateRoutine={createRoutine} onTryMakeup={(look) => { navigate("studio"); setPreset({ account: studioScope, value: look }); }}/>}
           {view === "journal" && !portable && <Journal key={user?.id ?? "guest"} userId={user?.id} client={client} plus={billing.plus} entitlementLoading={billing.loading}
             products={state.products} routines={state.routines} completed={state.completed} onOpenPlans={() => navigate("offres")}/>}
           {view === "offres" && !portable && <Plans key={user?.id ?? "guest"} signedIn={Boolean(user)} billing={billing} onSignIn={() => setAuth("login")}/>}

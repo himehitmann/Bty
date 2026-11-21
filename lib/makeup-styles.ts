@@ -4,7 +4,7 @@ import type { StudioPlacementDetails } from "./studio-advanced";
 import { studioToolsByArea, type StudioArea, type StudioLookSnapshot } from "./studio-looks";
 
 export type GuideCopy = readonly [french: string, english: string, spanish: string, italian: string];
-export type MakeupStylePreset = { name: string; snapshot: StudioLookSnapshot };
+export type MakeupStylePreset = { name: string; snapshot: StudioLookSnapshot; apply?: "merge" };
 export type MakeupStyleCategory = "everyday" | "evening" | "creative";
 
 type StyleLayer = {

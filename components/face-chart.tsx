@@ -11,7 +11,7 @@ import { FacePortrait, mix } from "./face-chart-portrait";
 import styles from "./face-chart.module.css";
 
 type HairArea = "scalp" | "lengths" | "ends";
-type Application = { kind: "care" | "hair"; hairArea?: HairArea; massage?: boolean };
+type Application = { kind: "care" | "makeup" | "hair"; hairArea?: HairArea; massage?: boolean };
 
 const zoneNames = {
   visage: ["Visage", "Face"], front: ["Front", "Forehead"], joues: ["Joues", "Cheeks"], yeux: ["Yeux", "Eyes"],
@@ -52,7 +52,7 @@ export function FaceChart({ selected, layers, onSelect, availableZones, classNam
   const hairVisible = showHair || application?.kind === "hair" || (!availableZones && selected === "cheveux");
   const targets = availableZones ?? guideZones;
   const markings = application?.kind === "hair" ? (application.hairArea ? hairGeometry[application.hairArea] : zoneGeometry.cheveux)
-    : application?.kind === "care" ? zoneGeometry[selected] : [];
+    : application ? zoneGeometry[selected] : [];
   const guidedLayer = placementGuide && layers.find((layer) => layer.placement === placementGuide && layer.kind === "blush");
   const guideShapes = guidedLayer ? pigmentShapes(guidedLayer) : placementGuide ? placementShapes[placementGuide] : [];
   const editing = Boolean(placementMode && onPlace);

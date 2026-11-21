@@ -1,18 +1,20 @@
 "use client";
 
 import { Check, UserRound } from "lucide-react";
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { useLocale } from "@/lib/i18n";
-import { preferenceSchema, profileNameLimit, type Preferences, type Product, type Routine } from "@/lib/model";
+import { preferenceSchema, profileNameLimit, routineFocusOptions, type Preferences, type Product, type Routine } from "@/lib/model";
+import { routineFocusLabels } from "@/lib/skin-observations";
 import { defaultStudioPortrait, studioSkinTones, type StudioPortrait } from "@/lib/studio-looks";
 import { portraitHeight } from "./face-chart-geometry";
 import { FacePortrait } from "./face-chart-portrait";
 import { ProfileCheckbox, ProfileFields, RoutineCoach } from "./profile-coach";
+import { SkinObservations } from "./skin-observations";
 import styles from "./beauty-profile.module.css";
 
 const profileSchema = preferenceSchema.pick({
   displayName: true, studioPortrait: true, skinFeel: true, skinConcerns: true, undertone: true,
-  fragranceFree: true, sensitive: true, avoid: true,
+  fragranceFree: true, sensitive: true, avoid: true, routineFocus: true,
 });
 
 function PortraitFields({ value, onEdit }: { value?: StudioPortrait; onEdit: () => void }) {
@@ -83,12 +85,14 @@ function PortraitFields({ value, onEdit }: { value?: StudioPortrait; onEdit: () 
 export function BeautyProfile({ preferences, products, onSave, onCreate }: {
   preferences: Preferences;
   products: Product[];
-  onSave: (profile: ReturnType<typeof profileSchema.parse>) => boolean;
+  onSave: (profile: Partial<ReturnType<typeof profileSchema.parse>>) => boolean;
   onCreate: (routine: Routine) => boolean;
 }) {
   const { t } = useLocale();
   const id = useId();
   const [notice, setNotice] = useState<"saved" | "invalid" | "failed">();
+  const [routineRequest, setRoutineRequest] = useState(0);
+  const coach = useRef<HTMLDivElement>(null);
   const profile = profileSchema.parse(preferences);
   const initials = profile.displayName?.split(/\s+/).slice(0, 2).map((word) => Array.from(word)[0]).join("").toLocaleUpperCase();
 
@@ -106,6 +110,7 @@ export function BeautyProfile({ preferences, products, onSave, onCreate }: {
       studioPortrait,
       skinFeel: values.get("skinFeel") || undefined,
       skinConcerns: values.getAll("skinConcerns"),
+      routineFocus: values.get("routineFocus") || undefined,
       undertone: values.get("undertone") || undefined,
       fragranceFree: values.has("fragranceFree"),
       sensitive: values.has("sensitive"),
@@ -129,32 +134,46 @@ export function BeautyProfile({ preferences, products, onSave, onCreate }: {
         <bdi>{profile.displayName}</bdi>
       </div>}
     </header>
+    <SkinObservations preferences={preferences} onSave={(observations) => {
+      const saved = onSave(observations);
+      if (saved) setNotice(undefined);
+      return saved;
+    }} onOpenRoutine={() => {
+      setRoutineRequest((request) => request + 1);
+      requestAnimationFrame(() => coach.current?.focus());
+    }}/>
     <div className={styles.layout}>
       <form className={`dashboard-card stacked-form ${styles.profileForm}`} aria-labelledby={`${id}-form`} onSubmit={submit}
         onChange={() => { if (notice) setNotice(undefined); }}>
-        <div key={JSON.stringify(profile)} className={styles.fields}>
+        <div className={styles.fields}>
           <div className={styles.intro}>
             <h2 id={`${id}-form`}>{t("Mes préférences beauté", "My beauty preferences")}</h2>
             <p className="muted">{t("Renseigne seulement ce que tu souhaites garder dans ton profil.", "Fill in only what you’d like to keep in your profile.")}</p>
           </div>
           <label>{t("Prénom ou pseudo", "First name or nickname")}
-            <input name="displayName" autoComplete="nickname" dir="auto" maxLength={profileNameLimit} defaultValue={profile.displayName ?? ""}/>
+            <input key={profile.displayName ?? ""} name="displayName" autoComplete="nickname" dir="auto" maxLength={profileNameLimit} defaultValue={profile.displayName ?? ""}/>
           </label>
           <fieldset className={styles.group}>
             <legend>{t("Peau et sous-ton", "Skin and undertone")}</legend>
             <ProfileFields preferences={preferences}/>
+            <label>{t("Priorité de ma routine", "My routine priority")}
+              <select key={profile.routineFocus ?? ""} name="routineFocus" defaultValue={profile.routineFocus ?? ""}>
+                <option value="">{t("Aucune priorité", "No priority")}</option>
+                {routineFocusOptions.map((value) => <option key={value} value={value}>{t(...routineFocusLabels[value])}</option>)}
+              </select>
+            </label>
           </fieldset>
           <fieldset className={styles.group}>
             <legend>{t("Tolérance et ingrédients", "Tolerance and ingredients")}</legend>
-            <ProfileCheckbox name="sensitive" checked={preferences.sensitive} label={t("Ma peau réagit facilement", "My skin reacts easily")}/>
-            <ProfileCheckbox name="fragranceFree" checked={preferences.fragranceFree} label={t("Je préfère éviter le parfum", "I prefer to avoid fragrance")}/>
+            <ProfileCheckbox key={`sensitive-${preferences.sensitive}`} name="sensitive" checked={preferences.sensitive} label={t("Ma peau réagit facilement", "My skin reacts easily")}/>
+            <ProfileCheckbox key={`fragrance-${preferences.fragranceFree}`} name="fragranceFree" checked={preferences.fragranceFree} label={t("Je préfère éviter le parfum", "I prefer to avoid fragrance")}/>
             <label>{t("Ingrédients à éviter", "Ingredients to avoid")}
-              <textarea name="avoid" maxLength={600} rows={3} defaultValue={preferences.avoid}
+              <textarea key={preferences.avoid} name="avoid" maxLength={600} rows={3} defaultValue={preferences.avoid}
                 aria-describedby={`${id}-avoid-help`} placeholder={t("Ex. Parfum, Limonene", "E.g. Parfum, Limonene")}/>
             </label>
             <small id={`${id}-avoid-help`} className="muted">{t("Sépare les noms par des virgules.", "Separate names with commas.")}</small>
           </fieldset>
-          <PortraitFields value={profile.studioPortrait} onEdit={() => setNotice(undefined)}/>
+          <PortraitFields key={JSON.stringify(profile.studioPortrait)} value={profile.studioPortrait} onEdit={() => setNotice(undefined)}/>
         </div>
         <div className={styles.actions}>
           <button className="button button-primary" type="submit">{t("Enregistrer le profil", "Save profile")}</button>
@@ -163,8 +182,8 @@ export function BeautyProfile({ preferences, products, onSave, onCreate }: {
         {notice === "invalid" && <p className="form-error" role="alert">{t("Vérifie les valeurs du profil.", "Check the profile entries.")}</p>}
         {notice === "failed" && <p className="form-error" role="alert">{t("Le profil n’a pas pu être enregistré.", "The profile couldn’t be saved.")}</p>}
       </form>
-      <div className={styles.coach}>
-        <RoutineCoach preferences={preferences} products={products} onCreate={onCreate}/>
+      <div className={styles.coach} ref={coach} tabIndex={-1} role="group" aria-label={t("Préparer ma routine", "Build my routine")}>
+        <RoutineCoach preferences={preferences} products={products} onCreate={onCreate} openRequest={routineRequest}/>
       </div>
     </div>
   </section>;

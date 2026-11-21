@@ -43,6 +43,32 @@
     "Aplica una pequeña cantidad en los pómulos y difumina con movimientos suaves.",
     "Applica poco prodotto sugli zigomi e sfuma con movimenti leggeri."
   ],
+  "Tap a little blush onto the apples of your cheeks and blend the edges gently.": [
+    "Da unos toques de colorete en la parte más redonda de las mejillas y difumina suavemente los bordes.",
+    "Picchietta un po’ di blush sulla parte più rotonda delle guance e sfuma delicatamente i bordi."
+  ],
+  "Choose from your collection or skip any steps you want to try later.": [
+    "Elige productos de tu neceser o salta los pasos que quieras probar más adelante.",
+    "Scegli tra i prodotti del tuo beauty case o salta i passaggi che vuoi provare più avanti."
+  ],
+  "Look summary": ["Resumen del look", "Riepilogo del look"],
+  "The outline shows where to apply the makeup.": [
+    "El contorno indica dónde aplicar el maquillaje.",
+    "Il contorno indica dove applicare il trucco."
+  ],
+  "The preview uses digital shades recorded in your collection.": [
+    "La vista previa usa los tonos digitales guardados en tu neceser.",
+    "L’anteprima usa le tonalità digitali registrate nel tuo beauty case."
+  ],
+  "Step skipped": ["Paso omitido", "Passaggio saltato"],
+  "Skip this step": ["Saltar este paso", "Salta questo passaggio"],
+  "Review the look": ["Ver el resumen", "Vedi il riepilogo"],
+  "Studio replaces only the layers that match these shades.": [
+    "El estudio sustituye solo las capas que corresponden a estos tonos.",
+    "Lo Studio sostituisce solo gli strati che corrispondono a queste tonalità."
+  ],
+  "Try my shades in Studio": ["Probar mis tonos en el estudio", "Prova le mie tonalità nello Studio"],
+  "Makeup basics · UC Santa Barbara": ["Maquillaje básico · UC Santa Barbara", "Le basi del trucco · UC Santa Barbara"],
   "Lip color": [
     "Color de labios",
     "Colore per le labbra"

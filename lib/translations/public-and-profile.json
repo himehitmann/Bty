@@ -107,5 +107,19 @@
   "Choose from my collection": ["Elegir entre mis productos", "Scegli tra i miei prodotti"],
   "No matching products": ["No hay productos que coincidan", "Nessun prodotto corrispondente"],
   "Check each product’s directions before layering. An observation alone cannot establish whether an exfoliant or retinoid suits your routine.": ["Consulta las instrucciones de cada producto antes de combinarlos. Una observación por sí sola no determina si un exfoliante o un retinoide es apropiado para tu rutina.", "Controlla le istruzioni di ogni prodotto prima di sovrapporli. Una singola osservazione non basta per capire se un esfoliante o un retinoide è adatto alla tua routine."],
-  "Create routine": ["Crear rutina", "Crea routine"]
+  "Create routine": ["Crear rutina", "Crea routine"],
+  "The label says this product cleanses the face.": ["El envase indica que este producto limpia el rostro.", "La confezione indica che questo prodotto deterge il viso."],
+  "The label says this product moisturises the face.": ["El envase indica que este producto hidrata el rostro.", "La confezione indica che questo prodotto idrata il viso."],
+  "The label specifies sun protection for the face.": ["El envase indica que ofrece protección solar para el rostro.", "La confezione indica che offre protezione solare per il viso."],
+  "For comfort, start with a familiar moisturiser and follow its label.": ["Para mayor comodidad, empieza por una hidratante que ya conozcas y sigue las indicaciones del envase.", "Per il comfort, parti da un idratante che già conosci e segui le indicazioni sulla confezione."],
+  "To track shine, stick to a gentle cleanser you know and note when shine appears.": ["Para observar los brillos, usa un limpiador suave que ya conozcas y anota cuándo aparecen.", "Per osservare la lucidità, usa un detergente delicato che già conosci e annota quando compare."],
+  "For a simple routine, keep the steps you want to follow and leave the rest blank.": ["Para una rutina sencilla, elige los pasos que quieres seguir y deja los demás en blanco.", "Per una routine semplice, scegli i passaggi che vuoi seguire e lascia gli altri vuoti."],
+  "Recognisable names give a starting point. For other products, confirm their purpose on the packaging. You can leave steps blank.": ["Los nombres reconocibles sirven de orientación. Comprueba la función de los demás productos en el envase. Puedes dejar pasos en blanco.", "I nomi riconoscibili sono un punto di partenza. Verifica la funzione degli altri prodotti sulla confezione. Puoi lasciare vuoti alcuni passaggi."],
+  "No products available for this step": ["No hay productos disponibles para este paso", "Nessun prodotto disponibile per questo passaggio"],
+  "Suggested by name": ["Sugeridos por el nombre", "Suggeriti in base al nome"],
+  "After checking the label": ["Tras comprobar el envase", "Dopo aver verificato la confezione"],
+  "Starting point from your quiz": ["Punto de partida según tus respuestas", "Punto di partenza in base alle tue risposte"],
+  "Starting point from your profile": ["Punto de partida según tu perfil", "Punto di partenza in base al tuo profilo"],
+  "Confirm the product’s purpose on the label or clear the selection.": ["Confirma la función del producto en el envase o borra la selección.", "Verifica la funzione del prodotto sulla confezione o annulla la selezione."],
+  "Basic routine guidance from the AAD": ["Recomendaciones de la AAD para una rutina básica", "Indicazioni dell’AAD per una routine di base"]
 }

@@ -35,6 +35,8 @@ Ouvre `http://localhost:3000` tant que le serveur tourne. Le site et le guide d�
 14. Dans **Profil beauté**, enregistre un prénom ou un pseudo, une observation et un sous-ton. Personnalise la carnation, les yeux et les cheveux du visage du Studio. Recharge puis ouvre le Studio pour retrouver le visage enregistré. Choisis ensuite une trame de routine du soir avec les produits de ta trousse.
 15. Cherche `Medicube`, puis ouvre **Voir la fiche** sur **Collagen Night Wrapping Mask**. Vérifie l’INCI et sa source, puis ferme la fiche avec la touche Échap. Sur un produit Huda Beauty, choisis une teinte puis ouvre et ferme la fiche. La teinte reste sélectionnée et la trousse ne change que si tu enregistres le produit.
 16. Dans le Studio, applique un fard clair au coin interne et un fard foncé au coin externe. Efface une seule zone et vérifie que l’autre reste visible. Enregistre le look, recharge puis rouvre-le pour vérifier ses fards.
+17. Dans **Profil beauté**, ouvre **Faire le point sur ma peau** et renseigne un ressenti et une priorité. Reviens en arrière pour modifier une réponse. Après avoir vérifié le récapitulatif, enregistre, recharge et contrôle les valeurs du profil. Ouvre **Préparer ma routine**, choisis le matin ou le soir et vérifie la confirmation du rôle lorsqu’un soin de la trousse a un nom ambigu.
+18. Dans **Tutoriels**, ouvre **Un teint frais**. Choisis un produit pour un geste, passe le suivant et consulte le récapitulatif. Avec une teinte numérique disponible, ouvre le Studio et vérifie que les autres couches du look restent présentes.
 
 ## Inventaire des fonctions
 

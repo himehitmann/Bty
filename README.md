@@ -44,12 +44,12 @@ Chaque compte démarre avec un espace vide. L’espace invité reste sur le navi
 - **Sources et photos** · les fiches vérifiées affichent une photo du produit chargée depuis le serveur de la marque, un lien officiel et, selon la référence, des teintes indicatives. Quand la recherche affiche des références de marque, tu peux l’élargir avec Open Beauty Facts sous les résultats officiels. Les photos communautaires sont signalées. `OPEN_BEAUTY_FACTS_CONTACT` renseigne le contact envoyé par le serveur web. [Open Beauty Facts et licences](https://world.openbeautyfacts.org/data)
 - **Simulation maquillage** · compare deux teintes sur le Face Chart SVG avec les produits de ta trousse, les essais du catalogue et les couleurs prélevées à la pipette. Ajuste le blush ou les sourcils sur le visage et reproduis le placement en miroir. Choisis la forme du liner et combine des fards sur différentes zones des yeux.
 - **Styles de maquillage** · huit exemples illustrés, de Douyin au liner graphique, avec étapes, sources éditoriales et ouverture du look dans le Studio.
-- **Profil beauté** · personnalise ton nom affiché et le visage de départ du Studio. Renseigne tes observations, ton sous-ton et les ingrédients que tu souhaites éviter. Prépare une trame de routine du matin ou du soir avec les produits de ta trousse.
+- **Profil beauté** · personnalise le visage de départ du Studio. Le parcours **Faire le point sur ma peau** résume ton ressenti, tes observations, ta réactivité et ta priorité. Prépare ensuite une trame du matin ou du soir à partir de ta trousse. Pour un nom de produit peu explicite, confirme le rôle indiqué sur l’emballage.
 - **Mes looks** · le Studio garde le look en cours quand tu changes d’écran dans le même onglet. Pour le retrouver après fermeture, enregistre-le parmi tes 30 looks nommés. Un look enregistré garde le portrait, les teintes et leur placement, même après la suppression des produits ou des teintes d’origine. Sur le web, les looks se synchronisent avec le compte lorsque Supabase est configuré.
 - **Paramètres** · change la langue, réduis les animations ou exporte tes données en JSON. Sur le web, retrouve l’état de synchronisation, les offres et la gestion du compte. Le compte propose la récupération du mot de passe et la déconnexion sur cet appareil.
 - **Routines** · création, réorganisation et suivi des étapes, points de vigilance et Face Chart utilisable au clavier. Indique un placement de maquillage, un accessoire, une consigne et, pour les cheveux, la zone et le massage prévu.
 - **Mes listes** · **Favoris**, **À essayer** et **Je ne rachète pas** sont proposés dès l’ouverture. Crée aussi tes propres listes, ajoute un produit ou du texte et note pourquoi tu souhaites le garder.
-- **Tutoriels** · suggestions à partir du nom et de la catégorie des produits possédés, puis personnalisation avant la création d’une routine.
+- **Tutoriels** · suggestions à partir des produits possédés. **Un teint frais** guide l’application en trois gestes facultatifs et transfère tes teintes disponibles vers le Studio.
 
 Les repères INCI concernent les ingrédients déclarés et quelques superpositions. Les données communautaires peuvent être incomplètes ou obsolètes. Les noms seuls ne permettent pas de déterminer une concentration, un pH ou une tolérance. Navier ne fournit aucun diagnostic ni garantie d’innocuité, d’efficacité ou de résultat esthétique.
 
@@ -77,3 +77,5 @@ Le [relevé concurrentiel et tarifaire](docs/veille-navier.md) décrit la propos
 Le [dossier de contrôle de sécurité](docs/securite-navier.md) précise les essais locaux et les validations nécessaires avant une mise en vente.
 
 La [recette locale et GitHub](docs/recette-navier.md) détaille le lancement et les vérifications. Le [relevé des besoins et du catalogue](docs/navier-catalogue-usages.md) explique les sources, les limites et les choix produit.
+
+La [veille des parcours beauté](docs/veille-parcours-beaute.md) recoupe les questionnaires, les analyses par photo et les guides maquillage qui ont nourri ces fonctions.

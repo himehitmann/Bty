@@ -171,6 +171,7 @@ const beautyListSchema = z.object({
 });
 export const skinFeels = ["seche", "brillante", "mixte", "equilibree", "incertaine"] as const;
 export const skinConcerns = ["tiraillements", "brillance", "rougeurs", "imperfections", "texture"] as const;
+export const routineFocusOptions = ["simple", "comfort", "shine"] as const;
 export const undertones = ["froid", "chaud", "neutre", "olive", "incertain"] as const;
 export const profileNameLimit = 40;
 export const preferenceSchema = z.object({
@@ -182,6 +183,7 @@ export const preferenceSchema = z.object({
   avoid: z.string().trim().max(600),
   skinFeel: z.enum(skinFeels).optional(),
   skinConcerns: z.array(z.enum(skinConcerns)).max(skinConcerns.length).optional(),
+  routineFocus: z.enum(routineFocusOptions).optional(),
   undertone: z.enum(undertones).optional(),
   catalogueDestination: identifier.optional(),
 });
